@@ -7,7 +7,7 @@ import { CHAIN_ID, RPC_URL } from '@/lib/chains';
 import { injected } from 'wagmi/connectors';
 import { sdk } from '@farcaster/miniapp-sdk';
 
-// حاول نجبد Farcaster connector بأسماء محتملة عبر require (باش ما يكسرش الـ build)
+// نحاول نجبد Farcaster connector من الباكدج بأسماء محتملة
 let farcasterConnFactory: any = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -28,27 +28,29 @@ const chain = defineChain({
   rpcUrls: { default: { http: [RPC_URL] } },
 });
 
-// v2: connectors كخاصية function
-const connectors = () => {
-  const list: any[] = [injected({ shimDisconnect: true })];
-  if (farcasterConnFactory) {
-    try {
-      const fc =
-        farcasterConnFactory?.({ sdk }) ||
-        farcasterConnFactory?.() ||
-        null;
-      if (fc) list.unshift(fc); // نعطيه الأولوية
-    } catch {
-      /* ignore */
-    }
+// 🧩 wagmi v2: connectors لازم تكون Array، ماشي function
+const connectorsArr: any[] = [];
+
+// Farcaster (إذا متوفر) نعطيوه الأولوية
+if (farcasterConnFactory) {
+  try {
+    const farcaster =
+      farcasterConnFactory?.({ sdk }) ||
+      farcasterConnFactory?.() ||
+      null;
+    if (farcaster) connectorsArr.push(farcaster);
+  } catch {
+    // ignore
   }
-  return list;
-};
+}
+
+// Injected (MetaMask / Rabby / Browser wallets)
+connectorsArr.push(injected({ shimDisconnect: true }));
 
 const config = createConfig({
   chains: [chain],
   transports: { [chain.id]: http(RPC_URL) },
-  connectors,
+  connectors: connectorsArr as any, // مصفوفة نهائية
 });
 
 export function WagmiProviders({ children }: { children: ReactNode }) {
