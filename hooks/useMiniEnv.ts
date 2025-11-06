@@ -16,7 +16,7 @@ export function useMiniEnv() {
         setIsMini(inside);
         if (!inside) return;
 
-        // ensure ready before using wallet/context on some versions
+        // ensure ready قبل استعمال أي wallet/context
         await (sdk as any).actions?.ready?.();
 
         const c = await (sdk as any).context;
@@ -38,9 +38,7 @@ export function useMiniEnv() {
     return () => {
       try {
         if (cleanup) cleanup();
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
     };
   }, []);
 
