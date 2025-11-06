@@ -1,11 +1,11 @@
-// ✅ فرض التشغيل على Node.js (sharp ما يخدمش على Edge)
+// ✅ لازم Node runtime (sharp ما يخدمش على Edge)
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 
-const MODEL_ID = 'stabilityai/sdxl-turbo'; // text->image
-const API_URL = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
+const MODEL_ID = 'stabilityai/sdxl-turbo';            // text -> image سريع
+const API_URL = `https://router.huggingface.co/hf-inference/models/${MODEL_ID}`;
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
 function buildPrompt(style?: string) {
@@ -41,7 +41,7 @@ async function pixelate(input: Buffer, targetMax = 512, blocks = 8) {
   return up;
 }
 
-// 🔁 طلب للـ HF مع retry تلقائي إذا كان 503 (model loading)
+// 🔁 نداء HF مع retry إذا كان 503 (model loading)
 async function callHF(prompt: string, tries = 4): Promise<Response> {
   let attempt = 0;
   while (attempt < tries) {
@@ -64,12 +64,11 @@ async function callHF(prompt: string, tries = 4): Promise<Response> {
       }),
     });
 
-    if (res.status !== 503) return res; // ماشي loading
-    // model is loading
+    if (res.status !== 503) return res;
     await new Promise((r) => setTimeout(r, 1200 * (attempt + 1)));
     attempt += 1;
   }
-  // آخر محاولة
+
   return fetch(API_URL, {
     method: 'POST',
     headers: {
@@ -91,24 +90,20 @@ export async function POST(req: Request) {
 
     const prompt = buildPrompt(style);
     const res = await callHF(prompt);
-
     const contentType = res.headers.get('content-type') || '';
 
     if (!res.ok) {
-      // رجّع تفاصيل مفهومة للواجهة
       let details: any = '';
       try { details = contentType.includes('json') ? await res.json() : await res.text(); } catch {}
       let friendly = 'Hugging Face API Error';
-
       if (res.status === 401 || res.status === 403)
-        friendly = 'Unauthorized: token غير صالح أو خاصك توافق على شروط الموديل (Open model page ثم Agree).';
+        friendly = 'Unauthorized: token غير صالح أو خاصك توافق على شروط الموديل.';
       else if (res.status === 404)
         friendly = 'Model not available on public Inference API.';
       else if (res.status === 429)
         friendly = 'Rate limit reached. جرّب بعد لحظات.';
       else if (res.status === 503)
         friendly = 'Model is loading… حاول ثانية بعد ثوانٍ.';
-
       return NextResponse.json({ error: friendly, details }, { status: res.status });
     }
 
