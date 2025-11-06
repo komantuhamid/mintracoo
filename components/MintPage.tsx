@@ -25,7 +25,7 @@ export default function MintPage() {
   const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // ✅ أعطِ الأولوية لعنوان wagmi، وإلا خذ عنوان MiniApp من السياق
+  // أولوية لعنوان wagmi، وإلا نأخذ العنوان من Mini App context
   useEffect(() => {
     if (wagmiAddress) {
       setActiveAddress(wagmiAddress);
@@ -36,11 +36,10 @@ export default function MintPage() {
     }
   }, [wagmiAddress, isMini, ctx?.user?.ethAddress, ctx?.user?.address]);
 
-  // ✅ جلب بروفايل Farcaster باستعمال أي حقل متاح (fid أو id) + مزج قيم user مباشرة إذا API رجّع ناقص
+  // جلب بروفايل Farcaster إن توفر
   useEffect(() => {
     const fid = ctx?.user?.fid || ctx?.user?.id;
     if (!fid) return;
-
     (async () => {
       try {
         const r = await fetch('/api/fetch-pfp', {
@@ -49,14 +48,11 @@ export default function MintPage() {
           body: JSON.stringify({ fid }),
         });
         const j = await r.json();
-
         setFarcasterProfile({
           display_name:
             j.display_name || j.name || ctx?.user?.displayName || ctx?.user?.name || '',
-          username:
-            j.username || ctx?.user?.username || '',
-          pfp_url:
-            j.pfp_url || ctx?.user?.pfpUrl || ctx?.user?.pfp || null,
+          username: j.username || ctx?.user?.username || '',
+          pfp_url: j.pfp_url || ctx?.user?.pfpUrl || ctx?.user?.pfp || null,
           fid,
         });
       } catch (e) {
@@ -65,14 +61,13 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // Auto-connect داخل Warpcast باستعمال Farcaster connector ديال wagmi
+  // Auto-connect داخل Warpcast (Farcaster connector عبر wagmi)
   useEffect(() => {
     (async () => {
       try {
         if (!isMini) return;
         if (activeAddress) return;
         await (sdk as any).actions?.ready?.();
-
         const farcaster = connectors.find(
           (c) =>
             c.id?.toLowerCase().includes('farcaster') ||
@@ -80,7 +75,6 @@ export default function MintPage() {
         );
         if (farcaster) {
           await connect({ connector: farcaster });
-          // حدّث العنوان فوراً (قبل ما يوصل حدث wagmi)
           const acc = (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
           if (acc) setActiveAddress(acc);
           setMessage('Mini wallet connected (auto)');
@@ -92,23 +86,37 @@ export default function MintPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMini, connectors]);
 
+  // ⬇️ توليد صورة Pixel Art Raccoon باستعمال HF (text→image) + رسائل أخطاء واضحة
   const generateRaccoon = async () => {
-    if (!farcasterProfile?.pfp_url) return setMessage('No PFP URL — open from Warpcast or provide an image');
-    setLoading(true); setMessage('Generating raccoon pixel art...');
+    setLoading(true);
+    setMessage('Generating raccoon pixel art…');
+    setGeneratedImage(null);
     try {
       const r = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pfp_url: farcasterProfile.pfp_url, style: 'pixel art raccoon' }),
+        // فنسخة HF كنستعملو style فقط (ماشي pfp_url)
+        body: JSON.stringify({ style: 'premium collectible, polished, vibrant' }),
       });
       const j = await r.json();
-      if (j.error) throw new Error(j.error);
+      if (!r.ok) {
+        setMessage(
+          (j?.error || 'Generation failed') +
+            (j?.details ? ` — ${typeof j.details === 'string' ? j.details.slice(0, 180) : JSON.stringify(j.details).slice(0, 180)}` : '')
+        );
+        setLoading(false);
+        return;
+      }
       setGeneratedImage(j.generated_image_url);
       setMessage('Done! You can mint now.');
-    } catch (e: any) { setMessage(e?.message || 'Generation failed'); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      setMessage(e?.message || 'Generation failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // طلب توقيع mint من الـ backend (نفس الخدمة السابقة)
   const requestSignedMint = async () => {
     const res = await fetch('/api/create-signed-mint', {
       method: 'POST',
@@ -167,8 +175,11 @@ export default function MintPage() {
         });
         setMessage('Submitted: ' + txHash);
       } else setMessage('No wallet provider');
-    } catch (e: any) { setMessage(e?.message || 'Mint failed'); }
-    finally { setMinting(false); }
+    } catch (e: any) {
+      setMessage(e?.message || 'Mint failed');
+    } finally {
+      setMinting(false);
+    }
   };
 
   return (
@@ -269,7 +280,7 @@ export default function MintPage() {
               </button>
             </div>
 
-            {message && <div className="mt-3 text-sm text-amber-200">{message}</div>}
+            {message && <div className="mt-3 text-sm text-amber-200 break-words">{message}</div>}
           </section>
 
           <aside className="space-y-4">
