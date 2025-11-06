@@ -9,7 +9,7 @@ import { CHAIN_ID, CONTRACT_ADDRESS } from '@/lib/chains';
 type AnyActions = any;
 
 const MINT_ABI = parseAbi([
-  'function mintWithSignature((address,address,uint256,address,string,uint256,address,uint128,uint128,bytes32), bytes) payable returns (uint256)'
+  'function mintWithSignature((address,address,uint256,address,string,uint256,address,uint128,uint128,bytes32), bytes) payable returns (uint256)',
 ]);
 
 export default function MintPage() {
@@ -33,65 +33,111 @@ export default function MintPage() {
     if (ctx?.user?.fid) {
       (async () => {
         try {
-          const r = await fetch('/api/fetch-pfp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ fid: ctx.user.fid }) });
+          const r = await fetch('/api/fetch-pfp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fid: ctx.user.fid }),
+          });
           const j = await r.json();
           setFarcasterProfile(j);
-        } catch(e){ console.error(e); }
+        } catch (e) {
+          console.error(e);
+        }
       })();
     }
   }, [ctx?.user?.fid]);
 
   const generateRaccoon = async () => {
     if (!farcasterProfile?.pfp_url) return setMessage('No PFP URL — open from Warpcast or provide an image');
-    setLoading(true); setMessage('Generating raccoon pixel art...');
+    setLoading(true);
+    setMessage('Generating raccoon pixel art...');
     try {
       const r = await fetch('/api/generate-art', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ pfp_url: farcasterProfile.pfp_url, style: 'pixel art raccoon' })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pfp_url: farcasterProfile.pfp_url, style: 'pixel art raccoon' }),
       });
       const j = await r.json();
       if (j.error) throw new Error(j.error);
       setGeneratedImage(j.generated_image_url);
       setMessage('Done! You can mint now.');
-    } catch(e:any) {
+    } catch (e: any) {
       setMessage(e?.message || 'Generation failed');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const requestSignedMint = async () => {
     const res = await fetch('/api/create-signed-mint', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: activeAddress, image_url: generatedImage, username: farcasterProfile?.username, fid: farcasterProfile?.fid })
+      body: JSON.stringify({
+        to: activeAddress,
+        image_url: generatedImage,
+        username: farcasterProfile?.username,
+        fid: farcasterProfile?.fid,
+      }),
     });
-    const j = await res.json(); if (j.error) throw new Error(j.error); return j;
+    const j = await res.json();
+    if (j.error) throw new Error(j.error);
+    return j; // { mintRequest, signature, priceWei }
   };
 
   const performMint = async () => {
     if (!activeAddress) return setMessage('Connect wallet first');
     if (!generatedImage) return setMessage('Generate image first');
-    setMinting(true); setMessage(null);
+    setMinting(true);
+    setMessage(null);
     try {
       const { mintRequest, signature, priceWei } = await requestSignedMint();
-      const data = encodeFunctionData({ abi: MINT_ABI, functionName: 'mintWithSignature', args: [mintRequest, signature] });
+      const data = encodeFunctionData({
+        abi: MINT_ABI,
+        functionName: 'mintWithSignature',
+        args: [mintRequest, signature],
+      });
 
       if (isMini) {
         const actions: AnyActions = (sdk as any).actions;
+
+        // أولاً جرّب batching
         if (actions && typeof actions.wallet_sendCalls === 'function') {
-          await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [{ to: CONTRACT_ADDRESS, data, value: toHex(BigInt(priceWei || '0')) }] });
-        } else if (actions && typeof actions.wallet_sendTransaction === 'function') {
-          await actions.wallet_sendTransaction({ chainId: CHAIN_ID, to: CONTRACT_ADDRESS, data, value: toHex(BigInt(priceWei || '0')) });
+          await actions.wallet_sendCalls({
+            chainId: CHAIN_ID,
+            calls: [{ to: CONTRACT_ADDRESS, data, value: toHex(BigInt(priceWei || '0')) }],
+          });
+        }
+        // وإلا single tx
+        else if (actions && typeof actions.wallet_sendTransaction === 'function') {
+          await actions.wallet_sendTransaction({
+            chainId: CHAIN_ID,
+            to: CONTRACT_ADDRESS,
+            data,
+            value: toHex(BigInt(priceWei || '0')),
+          });
         } else {
           throw new Error('Mini App wallet send is not available in this SDK version');
         }
         setMessage('Transaction submitted via Mini App wallet');
       } else if ((window as any).ethereum) {
-        const txHash = await (window as any).ethereum.request({ method: 'eth_sendTransaction', params: [{ from: activeAddress, to: CONTRACT_ADDRESS, data, value: toHex(BigInt(priceWei || '0')) }] });
+        const txHash = await (window as any).ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [
+            {
+              from: activeAddress,
+              to: CONTRACT_ADDRESS,
+              data,
+              value: toHex(BigInt(priceWei || '0')),
+            },
+          ],
+        });
         setMessage('Submitted: ' + txHash);
       } else setMessage('No wallet provider');
-    } catch(e:any) { setMessage(e?.message || 'Mint failed'); }
-    finally { setMinting(false); }
+    } catch (e: any) {
+      setMessage(e?.message || 'Mint failed');
+    } finally {
+      setMinting(false);
+    }
   };
 
   return (
@@ -99,20 +145,73 @@ export default function MintPage() {
       <div className="max-w-3xl mx-auto bg-slate-800/40 rounded-2xl p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h1 className="text-2xl font-extrabold">Raccoon Pixel Art Mint</h1>
+
           <div className="flex items-center gap-3">
             {activeAddress ? (
               <div className="flex items-center gap-3">
-                <div className="text-sm text-slate-300">{farcasterProfile?.username ? `@${farcasterProfile.username}` : `${activeAddress.slice(0,6)}...${activeAddress.slice(-4)}`}</div>
-                <button onClick={() => { if (isMini) setActiveAddress(null); else disconnect(); }} className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm">Disconnect</button>
+                <div className="text-sm text-slate-300">
+                  {farcasterProfile?.username
+                    ? `@${farcasterProfile.username}`
+                    : `${activeAddress.slice(0, 6)}...${activeAddress.slice(-4)}`}
+                </div>
+                <button
+                  onClick={() => {
+                    if (isMini) setActiveAddress(null);
+                    else disconnect();
+                  }}
+                  className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
+                >
+                  Disconnect
+                </button>
               </div>
             ) : (
               <div className="flex gap-2">
                 {isMini ? (
-                  <button onClick={async () => { try { const accs = await (sdk as any).actions?.requestEthereumAccounts?.(); if (accs?.length) setActiveAddress(accs[0]); } catch(e){console.error(e);} }} className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Connect (Mini)</button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const actions: any = (sdk as any).actions;
+
+                        if (typeof actions?.ready === 'function') await actions.ready();
+
+                        let addrs: string[] | undefined;
+
+                        if (typeof actions?.wallet_requestAddresses === 'function') {
+                          addrs = await actions.wallet_requestAddresses({ chainId: CHAIN_ID });
+                        } else if (typeof actions?.wallet_getAddresses === 'function') {
+                          addrs = await actions.wallet_getAddresses({ chainId: CHAIN_ID });
+                          if (!addrs?.length && typeof actions?.wallet_requestAddresses === 'function') {
+                            addrs = await actions.wallet_requestAddresses({ chainId: CHAIN_ID });
+                          }
+                        } else if (typeof actions?.requestEthereumAccounts === 'function') {
+                          addrs = await actions.requestEthereumAccounts();
+                        }
+
+                        if (addrs?.length) {
+                          setActiveAddress(addrs[0] as `0x${string}`);
+                          setMessage('Mini wallet connected');
+                        } else {
+                          setMessage('Mini wallet not available — open inside Warpcast or update client');
+                        }
+                      } catch (e: any) {
+                        console.error(e);
+                        setMessage(e?.message || 'Mini wallet connect failed');
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
+                  >
+                    Connect (Mini)
+                  </button>
                 ) : (
                   <div className="flex gap-2">
-                    {connectors.map(c => (
-                      <button key={c.id} onClick={() => connect({ connector: c })} className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500">{c.name}</button>
+                    {connectors.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => connect({ connector: c })}
+                        className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
+                      >
+                        {c.name}
+                      </button>
                     ))}
                   </div>
                 )}
@@ -125,18 +224,58 @@ export default function MintPage() {
           <section className="col-span-2 space-y-4">
             <div className="bg-slate-900/30 rounded-lg p-4">
               <div className="h-64 w-full bg-black rounded-md flex items-center justify-center overflow-hidden">
-                {generatedImage ? (<img src={generatedImage} alt="Generated" className="object-cover h-full w-full" />) : (<div className="text-slate-400">No image generated yet</div>)}
+                {generatedImage ? (
+                  <img src={generatedImage} alt="Generated" className="object-cover h-full w-full" />
+                ) : (
+                  <div className="text-slate-400">No image generated yet</div>
+                )}
               </div>
             </div>
+
             <div className="bg-slate-900/20 p-4 rounded-lg flex gap-3">
-              <button onClick={generateRaccoon} disabled={loading} className="flex-1 px-4 py-3 bg-pink-600 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50">{loading ? 'Generating…' : 'Generate Raccoon Pixel Art'}</button>
-              <button onClick={performMint} disabled={minting || !activeAddress || !generatedImage} className="px-4 py-3 bg-emerald-600 rounded-lg font-semibold disabled:opacity-50">{minting ? 'Minting…' : 'Mint 0.0001 ETH'}</button>
+              <button
+                onClick={generateRaccoon}
+                disabled={loading}
+                className="flex-1 px-4 py-3 bg-pink-600 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
+              >
+                {loading ? 'Generating…' : 'Generate Raccoon Pixel Art'}
+              </button>
+              <button
+                onClick={performMint}
+                disabled={minting || !activeAddress || !generatedImage}
+                className="px-4 py-3 bg-emerald-600 rounded-lg font-semibold disabled:opacity-50"
+              >
+                {minting ? 'Minting…' : 'Mint 0.0001 ETH'}
+              </button>
             </div>
+
             {message && <div className="mt-3 text-sm text-amber-200">{message}</div>}
           </section>
+
           <aside className="space-y-4">
-            <div className="bg-slate-900/30 p-4 rounded-lg"><h3 className="font-bold">Profile</h3><div className="mt-2 text-sm text-slate-300">{farcasterProfile ? (<><div className="font-medium">{farcasterProfile.display_name}</div><div className="text-xs">@{farcasterProfile.username}</div></>) : 'No Farcaster profile loaded'}</div></div>
-            <div className="bg-slate-900/30 p-4 rounded-lg text-sm text-slate-300"><div className="font-semibold">Mint info</div><div className="mt-2">Price: <span className="font-medium">0.0001 ETH</span></div><div>Supply cap: <span className="font-medium">5000</span></div></div>
+            <div className="bg-slate-900/30 p-4 rounded-lg">
+              <h3 className="font-bold">Profile</h3>
+              <div className="mt-2 text-sm text-slate-300">
+                {farcasterProfile ? (
+                  <>
+                    <div className="font-medium">{farcasterProfile.display_name}</div>
+                    <div className="text-xs">@{farcasterProfile.username}</div>
+                  </>
+                ) : (
+                  'No Farcaster profile loaded'
+                )}
+              </div>
+            </div>
+
+            <div className="bg-slate-900/30 p-4 rounded-lg text-sm text-slate-300">
+              <div className="font-semibold">Mint info</div>
+              <div className="mt-2">
+                Price: <span className="font-medium">0.0001 ETH</span>
+              </div>
+              <div>
+                Supply cap: <span className="font-medium">5000</span>
+              </div>
+            </div>
           </aside>
         </main>
       </div>
