@@ -1,17 +1,15 @@
 'use client';
-import { ReactNode, useMemo } from 'react';
+
+import { ReactNode } from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { defineChain } from 'viem';
 import { CHAIN_ID, RPC_URL } from '@/lib/chains';
 import { injected } from 'wagmi/connectors';
 import { sdk } from '@farcaster/miniapp-sdk';
 
-// نحاول نجيب Farcaster connector من الباكدج، مع fallback آمن
+// حاول نجبد Farcaster connector بأسماء محتملة عبر require (باش ما يكسرش الـ build)
 let farcasterConnFactory: any = null;
 try {
-  // بعض النسخ كتصدّر farcasterConnector
-  // وبعضها farcasterMiniAppConnector / farcaster
-  // نجرّب أشهر الأسماء:
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const fc = require('@farcaster/miniapp-wagmi-connector');
   farcasterConnFactory =
@@ -30,19 +28,18 @@ const chain = defineChain({
   rpcUrls: { default: { http: [RPC_URL] } },
 });
 
-// connectors كخاصية function فـ wagmi v2
+// v2: connectors كخاصية function
 const connectors = () => {
   const list: any[] = [injected({ shimDisconnect: true })];
   if (farcasterConnFactory) {
     try {
-      // أغلب الإصدارات كتقبل { sdk } أو بدون خيارات
       const fc =
         farcasterConnFactory?.({ sdk }) ||
         farcasterConnFactory?.() ||
         null;
-      if (fc) list.unshift(fc);
+      if (fc) list.unshift(fc); // نعطيه الأولوية
     } catch {
-      // ignore
+      /* ignore */
     }
   }
   return list;
