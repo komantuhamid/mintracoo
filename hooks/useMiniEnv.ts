@@ -8,7 +8,16 @@ export function useMiniEnv() {
 
   useEffect(() => {
     let cleanup: undefined | (() => void);
-    const handler = (next: any) => setCtx(next);
+    const handler = (next: any) => {
+      // نفس تجميع الـ user في كل تحديث
+      const user =
+        next?.user ||
+        next?.frameContext?.user ||
+        next?.frameContext?.viewer ||
+        next?.viewer ||
+        null;
+      setCtx({ ...next, user });
+    };
 
     (async () => {
       try {
@@ -16,18 +25,39 @@ export function useMiniEnv() {
         setIsMini(inside);
         if (!inside) return;
 
+        // ensure ready قبل استعمال أي wallet/context
         await (sdk as any).actions?.ready?.();
+
         const c = await (sdk as any).context;
-        setCtx(c);
+        const user =
+          c?.user ||
+          c?.frameContext?.user ||
+          c?.frameContext?.viewer ||
+          c?.viewer ||
+          null;
+
+        setCtx({ ...c, user });
 
         const anySdk: any = sdk as any;
         const maybeUnsub = anySdk.on?.('contextChanged', handler);
-        if (typeof maybeUnsub === 'function') cleanup = maybeUnsub as () => void;
-        else if (typeof anySdk.off === 'function') cleanup = () => anySdk.off('contextChanged', handler);
-      } catch (e) { console.error('MiniApp init failed', e); }
+
+        if (typeof maybeUnsub === 'function') {
+          cleanup = maybeUnsub as () => void;
+        } else if (typeof anySdk.off === 'function') {
+          cleanup = () => anySdk.off('contextChanged', handler);
+        }
+      } catch (e) {
+        console.error('MiniApp init failed', e);
+      }
     })();
 
-    return () => { try { if (cleanup) cleanup(); } catch {} };
+    return () => {
+      try {
+        if (cleanup) cleanup();
+      } catch {
+        /* ignore */
+      }
+    };
   }, []);
 
   return { isMini, ctx };
