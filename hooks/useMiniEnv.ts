@@ -16,30 +16,18 @@ export function useMiniEnv() {
         setIsMini(inside);
         if (!inside) return;
 
-        // ensure ready قبل استعمال أي wallet/context
         await (sdk as any).actions?.ready?.();
-
         const c = await (sdk as any).context;
         setCtx(c);
 
         const anySdk: any = sdk as any;
         const maybeUnsub = anySdk.on?.('contextChanged', handler);
-
-        if (typeof maybeUnsub === 'function') {
-          cleanup = maybeUnsub as () => void;
-        } else if (typeof anySdk.off === 'function') {
-          cleanup = () => anySdk.off('contextChanged', handler);
-        }
-      } catch (e) {
-        console.error('MiniApp init failed', e);
-      }
+        if (typeof maybeUnsub === 'function') cleanup = maybeUnsub as () => void;
+        else if (typeof anySdk.off === 'function') cleanup = () => anySdk.off('contextChanged', handler);
+      } catch (e) { console.error('MiniApp init failed', e); }
     })();
 
-    return () => {
-      try {
-        if (cleanup) cleanup();
-      } catch { /* ignore */ }
-    };
+    return () => { try { if (cleanup) cleanup(); } catch {} };
   }, []);
 
   return { isMini, ctx };
