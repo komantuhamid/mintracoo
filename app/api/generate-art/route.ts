@@ -1,16 +1,12 @@
-// لازم NodeJS runtime (باش sharp يخدم)
+// لازم NodeJS runtime (sharp ما يخدمش على Edge)
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { HfInference } from '@huggingface/inference';
 
-// اختار موديل مدعوم عند Inference Providers
-// فعلاً Hugging Face كينصح بـ FLUX و SDXL-Lightning
-// نبدأ بـ FLUX عبر مزوّد fal-ai (سريع ومتوفر فالرّاوتينغ)
 const MODEL_ID = 'black-forest-labs/FLUX.1-Krea-dev';
 const PROVIDER: 'fal-ai' | 'hf-inference' = 'fal-ai';
-
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
 function buildPrompt(extra?: string) {
@@ -19,7 +15,7 @@ function buildPrompt(extra?: string) {
     'cute expression, dark eye-mask, rounded ears',
     'crisp square pixels, clean outline',
     'simple flat background, limited palette',
-    'centered portrait, no text, no watermark'
+    'centered portrait, no text, no watermark',
   ].join(', ');
   return extra ? `${base}, ${extra}` : base;
 }
@@ -56,20 +52,17 @@ export async function POST(req: Request) {
     }
 
     const prompt = buildPrompt(style);
-
-    // عميل رسمي كيخدم مع Inference Providers / Router
     const hf = new HfInference(HF_TOKEN);
 
-    // retry بسيط إلا كان الموديل كيتحمّل
-    let blob: Blob | null = null;
+    // نسمح بأي ناتج (Blob | string) و نطبعوه لباينري
+    let output: any = null;
     let lastErr: any = null;
 
     for (let i = 0; i < 3; i++) {
       try {
-        // ملاحظة: هاد المتود كتقبل model + provider حسب الوثائق
-        // وكترد Blob (raw image bytes)
-        // كنطلب حجم 512x512 و few steps باش تكون سريعة
-        blob = await hf.textToImage({
+        // بعض تعريفات النوع ما كتعرّفش provider، فندوزو any باش ما يوقفش الـ TS
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        output = await (hf.textToImage as any)({
           inputs: prompt,
           model: MODEL_ID,
           provider: PROVIDER,
@@ -79,19 +72,17 @@ export async function POST(req: Request) {
             num_inference_steps: 8,
             guidance_scale: 2.0,
             negative_prompt:
-              'text, watermark, low quality, blurry, artifacts, frame, noisy, deformed'
-          }
+              'text, watermark, low quality, blurry, artifacts, frame, noisy, deformed',
+          },
         });
         break;
       } catch (e: any) {
         lastErr = e;
-        // إذا كان الموديل كيتحمّل أو rate limit، نصبر شوية ونعاود
         await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
       }
     }
 
-    if (!blob) {
-      // نحاول نعطي رسالة واضحة من الخطأ
+    if (!output) {
       const msg =
         lastErr?.message ||
         lastErr?.response?.statusText ||
@@ -100,12 +91,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status });
     }
 
-    const arrBuf = Buffer.from(await blob.arrayBuffer());
+    // طبّع النتيجة لباينري
+    let imgBuf: Buffer;
+    if (typeof output === 'string') {
+      if (output.startsWith('data:image')) {
+        // data URL
+        const b64 = output.split(',')[1] || '';
+        imgBuf = Buffer.from(b64, 'base64');
+      } else if (output.startsWith('http')) {
+        // URL -> fetch
+        const r = await fetch(output);
+        if (!r.ok) {
+          return NextResponse.json({ error: `Fetch image failed: ${r.status}` }, { status: 502 });
+        }
+        imgBuf = Buffer.from(await r.arrayBuffer());
+      } else {
+        return NextResponse.json({ error: 'Unexpected string output from provider' }, { status: 500 });
+      }
+    } else if (typeof Blob !== 'undefined' && output instanceof Blob) {
+      imgBuf = Buffer.from(await output.arrayBuffer());
+    } else {
+      // بعض المزوّدين كييرجعو { blob, url, … }
+      const maybeBlob: Blob | undefined = output?.blob || output?.image || output?.output;
+      if (maybeBlob && typeof maybeBlob.arrayBuffer === 'function') {
+        imgBuf = Buffer.from(await maybeBlob.arrayBuffer());
+      } else {
+        return NextResponse.json({ error: 'Unknown provider output format' }, { status: 500 });
+      }
+    }
 
-    // نطبّق pixelation باش الشكل يكون 8-bit واضح
-    const px = await pixelate(arrBuf, 512, 8);
+    const px = await pixelate(imgBuf, 512, 8);
     const dataUrl = `data:image/png;base64,${px.toString('base64')}`;
-
     return NextResponse.json({ generated_image_url: dataUrl });
   } catch (e: any) {
     console.error('HF route error:', e);
