@@ -1,22 +1,27 @@
-// ✅ لازم Node runtime (sharp ما يخدمش على Edge)
+// لازم NodeJS runtime (باش sharp يخدم)
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
+import { HfInference } from '@huggingface/inference';
 
-const MODEL_ID = 'stabilityai/sdxl-turbo';            // text -> image سريع
-const API_URL = `https://router.huggingface.co/hf-inference/models/${MODEL_ID}`;
+// اختار موديل مدعوم عند Inference Providers
+// فعلاً Hugging Face كينصح بـ FLUX و SDXL-Lightning
+// نبدأ بـ FLUX عبر مزوّد fal-ai (سريع ومتوفر فالرّاوتينغ)
+const MODEL_ID = 'black-forest-labs/FLUX.1-Krea-dev';
+const PROVIDER: 'fal-ai' | 'hf-inference' = 'fal-ai';
+
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
-function buildPrompt(style?: string) {
+function buildPrompt(extra?: string) {
   const base = [
     'pixel art raccoon avatar, 8-bit headshot',
     'cute expression, dark eye-mask, rounded ears',
     'crisp square pixels, clean outline',
-    'simple flat background, limited color palette',
-    'no text, no watermark, centered portrait'
+    'simple flat background, limited palette',
+    'centered portrait, no text, no watermark'
   ].join(', ');
-  return style ? `${base}, ${style}` : base;
+  return extra ? `${base}, ${extra}` : base;
 }
 
 async function pixelate(input: Buffer, targetMax = 512, blocks = 8) {
@@ -41,87 +46,69 @@ async function pixelate(input: Buffer, targetMax = 512, blocks = 8) {
   return up;
 }
 
-// 🔁 نداء HF مع retry إذا كان 503 (model loading)
-async function callHF(prompt: string, tries = 4): Promise<Response> {
-  let attempt = 0;
-  while (attempt < tries) {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${HF_TOKEN}`,
-        'Content-Type': 'application/json',
-        'X-Wait-For-Model': 'true',
-      },
-      body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          negative_prompt:
-            'text, watermark, low quality, blurry, artifacts, frame, noisy, deformed',
-          num_inference_steps: 15,
-          guidance_scale: 2.0,
-        },
-        options: { wait_for_model: true },
-      }),
-    });
-
-    if (res.status !== 503) return res;
-    await new Promise((r) => setTimeout(r, 1200 * (attempt + 1)));
-    attempt += 1;
-  }
-
-  return fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${HF_TOKEN}`,
-      'Content-Type': 'application/json',
-      'X-Wait-For-Model': 'true',
-    },
-    body: JSON.stringify({ inputs: prompt, options: { wait_for_model: true } }),
-  });
-}
-
 export async function POST(req: Request) {
   try {
-    const { style } = (await req.json().catch(() => ({}))) as { style?: string };
+    const body = await req.json().catch(() => ({}));
+    const style: string | undefined = body?.style;
 
     if (!HF_TOKEN) {
       return NextResponse.json({ error: 'Missing HUGGINGFACE_API_TOKEN' }, { status: 500 });
     }
 
     const prompt = buildPrompt(style);
-    const res = await callHF(prompt);
-    const contentType = res.headers.get('content-type') || '';
 
-    if (!res.ok) {
-      let details: any = '';
-      try { details = contentType.includes('json') ? await res.json() : await res.text(); } catch {}
-      let friendly = 'Hugging Face API Error';
-      if (res.status === 401 || res.status === 403)
-        friendly = 'Unauthorized: token غير صالح أو خاصك توافق على شروط الموديل.';
-      else if (res.status === 404)
-        friendly = 'Model not available on public Inference API.';
-      else if (res.status === 429)
-        friendly = 'Rate limit reached. جرّب بعد لحظات.';
-      else if (res.status === 503)
-        friendly = 'Model is loading… حاول ثانية بعد ثوانٍ.';
-      return NextResponse.json({ error: friendly, details }, { status: res.status });
+    // عميل رسمي كيخدم مع Inference Providers / Router
+    const hf = new HfInference(HF_TOKEN);
+
+    // retry بسيط إلا كان الموديل كيتحمّل
+    let blob: Blob | null = null;
+    let lastErr: any = null;
+
+    for (let i = 0; i < 3; i++) {
+      try {
+        // ملاحظة: هاد المتود كتقبل model + provider حسب الوثائق
+        // وكترد Blob (raw image bytes)
+        // كنطلب حجم 512x512 و few steps باش تكون سريعة
+        blob = await hf.textToImage({
+          inputs: prompt,
+          model: MODEL_ID,
+          provider: PROVIDER,
+          parameters: {
+            width: 512,
+            height: 512,
+            num_inference_steps: 8,
+            guidance_scale: 2.0,
+            negative_prompt:
+              'text, watermark, low quality, blurry, artifacts, frame, noisy, deformed'
+          }
+        });
+        break;
+      } catch (e: any) {
+        lastErr = e;
+        // إذا كان الموديل كيتحمّل أو rate limit، نصبر شوية ونعاود
+        await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+      }
     }
 
-    let imgBuf: Buffer;
-    if (contentType.includes('application/json')) {
-      const j = await res.json();
-      const b64 = j?.[0]?.image_base64 || j?.image_base64;
-      if (!b64) return NextResponse.json({ error: 'Invalid HF JSON output' }, { status: 500 });
-      imgBuf = Buffer.from(b64, 'base64');
-    } else {
-      imgBuf = Buffer.from(await res.arrayBuffer());
+    if (!blob) {
+      // نحاول نعطي رسالة واضحة من الخطأ
+      const msg =
+        lastErr?.message ||
+        lastErr?.response?.statusText ||
+        'Hugging Face Inference error';
+      const status = lastErr?.response?.status || 502;
+      return NextResponse.json({ error: msg }, { status });
     }
 
-    const pixel = await pixelate(imgBuf, 512, 8);
-    const dataUrl = `data:image/png;base64,${pixel.toString('base64')}`;
+    const arrBuf = Buffer.from(await blob.arrayBuffer());
+
+    // نطبّق pixelation باش الشكل يكون 8-bit واضح
+    const px = await pixelate(arrBuf, 512, 8);
+    const dataUrl = `data:image/png;base64,${px.toString('base64')}`;
+
     return NextResponse.json({ generated_image_url: dataUrl });
   } catch (e: any) {
-    console.error('HF generate error:', e);
+    console.error('HF route error:', e);
     return NextResponse.json({ error: e?.message || 'server_error' }, { status: 500 });
   }
 }
