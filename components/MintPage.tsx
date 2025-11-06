@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useEffect, useState } from 'react';
 import { parseAbi, encodeFunctionData, toHex } from 'viem';
 import { sdk } from '@farcaster/miniapp-sdk';
@@ -25,7 +26,7 @@ export default function MintPage() {
   const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // أولوية لعنوان wagmi، وإلا نأخذ العنوان من Mini App context
+  // اختر العنوان النشيط: wagmi أولاً ثم mini context
   useEffect(() => {
     if (wagmiAddress) {
       setActiveAddress(wagmiAddress);
@@ -75,7 +76,8 @@ export default function MintPage() {
         );
         if (farcaster) {
           await connect({ connector: farcaster });
-          const acc = (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
+          const acc =
+            (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
           if (acc) setActiveAddress(acc);
           setMessage('Mini wallet connected (auto)');
         }
@@ -86,7 +88,7 @@ export default function MintPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMini, connectors]);
 
-  // ⬇️ توليد صورة Pixel Art Raccoon باستعمال HF (text→image) + رسائل أخطاء واضحة
+  // توليد صورة Raccoon Pixel Art (Hugging Face route)
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('Generating raccoon pixel art…');
@@ -95,14 +97,19 @@ export default function MintPage() {
       const r = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // فنسخة HF كنستعملو style فقط (ماشي pfp_url)
         body: JSON.stringify({ style: 'premium collectible, polished, vibrant' }),
       });
       const j = await r.json();
       if (!r.ok) {
         setMessage(
           (j?.error || 'Generation failed') +
-            (j?.details ? ` — ${typeof j.details === 'string' ? j.details.slice(0, 180) : JSON.stringify(j.details).slice(0, 180)}` : '')
+            (j?.details
+              ? ` — ${
+                  typeof j.details === 'string'
+                    ? j.details.slice(0, 180)
+                    : JSON.stringify(j.details).slice(0, 180)
+                }`
+              : '')
         );
         setLoading(false);
         return;
@@ -116,7 +123,7 @@ export default function MintPage() {
     }
   };
 
-  // طلب توقيع mint من الـ backend (نفس الخدمة السابقة)
+  // طلب توقيع mint من الـ backend
   const requestSignedMint = async () => {
     const res = await fetch('/api/create-signed-mint', {
       method: 'POST',
@@ -130,13 +137,14 @@ export default function MintPage() {
     });
     const j = await res.json();
     if (j.error) throw new Error(j.error);
-    return j; // { mintRequest, signature, priceWei }
+    return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
   };
 
   const performMint = async () => {
     if (!activeAddress) return setMessage('Connect wallet first');
     if (!generatedImage) return setMessage('Generate image first');
-    setMinting(true); setMessage(null);
+    setMinting(true);
+    setMessage(null);
     try {
       const { mintRequest, signature, priceWei } = await requestSignedMint();
       const data = encodeFunctionData({
@@ -166,15 +174,19 @@ export default function MintPage() {
       } else if ((window as any).ethereum) {
         const txHash = await (window as any).ethereum.request({
           method: 'eth_sendTransaction',
-          params: [{
-            from: activeAddress,
-            to: CONTRACT_ADDRESS,
-            data,
-            value: toHex(BigInt(priceWei || '0')),
-          }],
+          params: [
+            {
+              from: activeAddress,
+              to: CONTRACT_ADDRESS,
+              data,
+              value: toHex(BigInt(priceWei || '0')),
+            },
+          ],
         });
         setMessage('Submitted: ' + txHash);
-      } else setMessage('No wallet provider');
+      } else {
+        setMessage('No wallet provider');
+      }
     } catch (e: any) {
       setMessage(e?.message || 'Mint failed');
     } finally {
@@ -197,7 +209,10 @@ export default function MintPage() {
                     : `${activeAddress.slice(0, 6)}...${activeAddress.slice(-4)}`}
                 </div>
                 <button
-                  onClick={() => { if (isMini) setActiveAddress(null); else disconnect(); }}
+                  onClick={() => {
+                    if (isMini) setActiveAddress(null);
+                    else disconnect();
+                  }}
                   className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
                 >
                   Disconnect
@@ -218,7 +233,10 @@ export default function MintPage() {
                         );
                         if (farcaster) {
                           await connect({ connector: farcaster });
-                          const acc = (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
+                          const acc =
+                            (await (sdk as any).actions?.wallet_getAddresses?.({
+                              chainId: CHAIN_ID,
+                            }))?.[0];
                           if (acc) setActiveAddress(acc);
                           setMessage('Mini wallet connected');
                         } else {
@@ -254,20 +272,19 @@ export default function MintPage() {
         <main className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <section className="col-span-2 space-y-4">
             <div className="bg-slate-900/30 rounded-lg p-4">
- <div className="w-full max-w-xl mx-auto aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
-  {generatedImage ? (
-    <img
-      src={generatedImage}
-      alt="Generated"
-      className="h-full w-full object-cover"
-      style={{ imageRendering: 'pixelated' }}
-    />
-  ) : (
-    <div className="text-slate-400">No image generated yet</div>
-  )}
-</div>
-
-
+              <div className="w-full max-w-xl mx-auto aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
+                {generatedImage ? (
+                  <img
+                    src={generatedImage}
+                    alt="Generated"
+                    className="h-full w-full object-cover"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                ) : (
+                  <div className="text-slate-400">No image generated yet</div>
+                )}
+              </div>
+            </div>
 
             <div className="bg-slate-900/20 p-4 rounded-lg flex gap-3">
               <button
@@ -286,7 +303,9 @@ export default function MintPage() {
               </button>
             </div>
 
-            {message && <div className="mt-3 text-sm text-amber-200 break-words">{message}</div>}
+            {message && (
+              <div className="mt-3 text-sm text-amber-200 break-words">{message}</div>
+            )}
           </section>
 
           <aside className="space-y-4">
@@ -299,13 +318,19 @@ export default function MintPage() {
                 />
               ) : null}
               <h3 className="font-bold">{farcasterProfile?.display_name || 'Profile'}</h3>
-              <div className="text-sm text-slate-300">@{farcasterProfile?.username || ''}</div>
+              <div className="text-sm text-slate-300">
+                @{farcasterProfile?.username || ''}
+              </div>
             </div>
 
             <div className="bg-slate-900/30 p-4 rounded-lg text-sm text-slate-300">
               <div className="font-semibold">Mint info</div>
-              <div className="mt-2">Price: <span className="font-medium">0.0001 ETH</span></div>
-              <div>Supply cap: <span className="font-medium">5000</span></div>
+              <div className="mt-2">
+                Price: <span className="font-medium">0.0001 ETH</span>
+              </div>
+              <div>
+                Supply cap: <span className="font-medium">5000</span>
+              </div>
             </div>
           </aside>
         </main>
