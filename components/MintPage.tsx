@@ -30,28 +30,40 @@ export default function MintPage() {
     if (wagmiAddress) {
       setActiveAddress(wagmiAddress);
     } else if (isMini) {
-      setActiveAddress(ctx?.user?.ethAddress ?? null);
+      setActiveAddress(ctx?.user?.ethAddress ?? ctx?.user?.address ?? null);
     } else {
       setActiveAddress(null);
     }
-  }, [wagmiAddress, isMini, ctx?.user?.ethAddress]);
+  }, [wagmiAddress, isMini, ctx?.user?.ethAddress, ctx?.user?.address]);
 
-  // جلب بروفايل Farcaster
+  // ✅ جلب بروفايل Farcaster باستعمال أي حقل متاح (fid أو id) + مزج قيم user مباشرة إذا API رجّع ناقص
   useEffect(() => {
-    if (ctx?.user?.fid) {
-      (async () => {
-        try {
-          const r = await fetch('/api/fetch-pfp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fid: ctx.user.fid }),
-          });
-          const j = await r.json();
-          setFarcasterProfile(j);
-        } catch (e) { console.error(e); }
-      })();
-    }
-  }, [ctx?.user?.fid]);
+    const fid = ctx?.user?.fid || ctx?.user?.id;
+    if (!fid) return;
+
+    (async () => {
+      try {
+        const r = await fetch('/api/fetch-pfp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fid }),
+        });
+        const j = await r.json();
+
+        setFarcasterProfile({
+          display_name:
+            j.display_name || j.name || ctx?.user?.displayName || ctx?.user?.name || '',
+          username:
+            j.username || ctx?.user?.username || '',
+          pfp_url:
+            j.pfp_url || ctx?.user?.pfpUrl || ctx?.user?.pfp || null,
+          fid,
+        });
+      } catch (e) {
+        console.error('Error fetching Farcaster profile:', e);
+      }
+    })();
+  }, [ctx?.user]);
 
   // Auto-connect داخل Warpcast باستعمال Farcaster connector ديال wagmi
   useEffect(() => {
@@ -60,6 +72,7 @@ export default function MintPage() {
         if (!isMini) return;
         if (activeAddress) return;
         await (sdk as any).actions?.ready?.();
+
         const farcaster = connectors.find(
           (c) =>
             c.id?.toLowerCase().includes('farcaster') ||
@@ -164,68 +177,67 @@ export default function MintPage() {
         <header className="flex items-center justify-between">
           <h1 className="text-2xl font-extrabold">Raccoon Pixel Art Mint</h1>
 
-        <div className="flex items-center gap-3">
-          {activeAddress ? (
-            <div className="flex items-center gap-3">
-              <div className="text-sm text-slate-300">
-                {farcasterProfile?.username
-                  ? `@${farcasterProfile.username}`
-                  : `${activeAddress.slice(0, 6)}...${activeAddress.slice(-4)}`}
-              </div>
-              <button
-                onClick={() => { if (isMini) setActiveAddress(null); else disconnect(); }}
-                className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
-              >
-                Disconnect
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              {isMini ? (
-                <button
-                  onClick={async () => {
-                    try {
-                      const anyActions: any = (sdk as any).actions;
-                      if (typeof anyActions?.ready === 'function') await anyActions.ready();
-                      const farcaster = connectors.find(
-                        (c) =>
-                          c.id?.toLowerCase().includes('farcaster') ||
-                          c.name?.toLowerCase().includes('farcaster')
-                      );
-                      if (farcaster) {
-                        await connect({ connector: farcaster });
-                        // حدّث العنوان فوراً ليتبدل الزر
-                        const acc = (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
-                        if (acc) setActiveAddress(acc);
-                        setMessage('Mini wallet connected');
-                      } else {
-                        setMessage('Farcaster connector not found — update deps');
-                      }
-                    } catch (e: any) {
-                      console.error(e);
-                      setMessage(e?.message || 'Mini wallet connect failed');
-                    }
-                  }}
-                  className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
-                >
-                  Connect (Mini)
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  {connectors.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => connect({ connector: c })}
-                      className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
-                    >
-                      {c.name}
-                    </button>
-                  ))}
+          <div className="flex items-center gap-3">
+            {activeAddress ? (
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-slate-300">
+                  {farcasterProfile?.username
+                    ? `@${farcasterProfile.username}`
+                    : `${activeAddress.slice(0, 6)}...${activeAddress.slice(-4)}`}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+                <button
+                  onClick={() => { if (isMini) setActiveAddress(null); else disconnect(); }}
+                  className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                {isMini ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const anyActions: any = (sdk as any).actions;
+                        if (typeof anyActions?.ready === 'function') await anyActions.ready();
+                        const farcaster = connectors.find(
+                          (c) =>
+                            c.id?.toLowerCase().includes('farcaster') ||
+                            c.name?.toLowerCase().includes('farcaster')
+                        );
+                        if (farcaster) {
+                          await connect({ connector: farcaster });
+                          const acc = (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
+                          if (acc) setActiveAddress(acc);
+                          setMessage('Mini wallet connected');
+                        } else {
+                          setMessage('Farcaster connector not found — update deps');
+                        }
+                      } catch (e: any) {
+                        console.error(e);
+                        setMessage(e?.message || 'Mini wallet connect failed');
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
+                  >
+                    Connect (Mini)
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    {connectors.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => connect({ connector: c })}
+                        className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </header>
 
         <main className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -261,18 +273,16 @@ export default function MintPage() {
           </section>
 
           <aside className="space-y-4">
-            <div className="bg-slate-900/30 p-4 rounded-lg">
-              <h3 className="font-bold">Profile</h3>
-              <div className="mt-2 text-sm text-slate-300">
-                {farcasterProfile ? (
-                  <>
-                    <div className="font-medium">{farcasterProfile.display_name}</div>
-                    <div className="text-xs">@{farcasterProfile.username}</div>
-                  </>
-                ) : (
-                  'No Farcaster profile loaded'
-                )}
-              </div>
+            <div className="bg-slate-900/30 p-4 rounded-lg text-center">
+              {farcasterProfile?.pfp_url ? (
+                <img
+                  src={farcasterProfile.pfp_url}
+                  alt="pfp"
+                  className="w-24 h-24 rounded-full mx-auto mb-2"
+                />
+              ) : null}
+              <h3 className="font-bold">{farcasterProfile?.display_name || 'Profile'}</h3>
+              <div className="text-sm text-slate-300">@{farcasterProfile?.username || ''}</div>
             </div>
 
             <div className="bg-slate-900/30 p-4 rounded-lg text-sm text-slate-300">
