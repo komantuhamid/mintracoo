@@ -16,24 +16,19 @@ export function useMiniEnv() {
         setIsMini(inside);
         if (!inside) return;
 
-        // ready/context (optional chaining in case method missing on some versions)
-        await (sdk.actions as any)?.ready?.();
+        // ensure ready before using wallet/context on some versions
+        await (sdk as any).actions?.ready?.();
+
         const c = await (sdk as any).context;
         setCtx(c);
 
-        // Subscribe to context changes with safe fallback
         const anySdk: any = sdk as any;
         const maybeUnsub = anySdk.on?.('contextChanged', handler);
 
         if (typeof maybeUnsub === 'function') {
-          // Some SDKs return an unsubscribe function from .on()
           cleanup = maybeUnsub as () => void;
         } else if (typeof anySdk.off === 'function') {
-          // Otherwise, keep a cleanup that calls .off(event, handler)
           cleanup = () => anySdk.off('contextChanged', handler);
-        } else {
-          // No off available — no-op cleanup
-          cleanup = undefined;
         }
       } catch (e) {
         console.error('MiniApp init failed', e);
