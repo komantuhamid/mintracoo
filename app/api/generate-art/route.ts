@@ -1,39 +1,44 @@
-import { NextResponse } from 'next/server';
-import sharp from 'sharp';
+import { NextResponse } from "next/server";
+import sharp from "sharp";
 
-const MODEL_ID = 'timbrooks/instruct-pix2pix'; // img2img
+const MODEL_ID = "stabilityai/sdxl-turbo";
 const API_URL = `https://api-inference.huggingface.co/models/${MODEL_ID}`;
-const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
+const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 async function fetchImageBuffer(url: string): Promise<Buffer> {
   const r = await fetch(url);
-  if (!r.ok) throw new Error(`failed to download pfp: ${r.status}`);
+  if (!r.ok) throw new Error(`Failed to download pfp: ${r.status}`);
   return Buffer.from(await r.arrayBuffer());
 }
 
 function buildPrompt(style?: string) {
-  const core =
-    'Transform this face into a pixel art raccoon avatar: headshot, 8-bit, crisp square pixels, dark eye-mask, rounded ears, limited color palette, clean outline, simple flat background, no text, no watermark, cute expression.';
-  return style ? `${core} Style hints: ${style}.` : core;
+  const basePrompt = `
+  Create a pixel art raccoon avatar with 8-bit style, cute expression, dark eye mask, rounded ears, 
+  simple background, crisp outlines, and limited color palette. 
+  The result should look like a collectible NFT portrait in pixel art style.
+  `;
+  return style ? `${basePrompt} Additional style: ${style}` : basePrompt;
 }
 
 async function pixelate(input: Buffer, targetMax = 512, blocks = 8) {
-  const meta = await sharp(input).metadata();
+  const img = sharp(input);
+  const meta = await img.metadata();
   const w = meta.width || 512;
   const h = meta.height || 512;
   const scale = Math.max(w, h) > targetMax ? targetMax / Math.max(w, h) : 1;
-  const newW = Math.max(1, Math.round(w * scale));
-  const newH = Math.max(1, Math.round(h * scale));
+  const newW = Math.round(w * scale);
+  const newH = Math.round(h * scale);
+
   const downW = Math.max(16, Math.floor(newW / blocks));
   const downH = Math.max(16, Math.floor(newH / blocks));
 
   const down = await sharp(input)
-    .resize(downW, downH, { fit: 'fill', kernel: sharp.kernel.nearest })
+    .resize(downW, downH, { fit: "fill", kernel: sharp.kernel.nearest })
     .toBuffer();
 
   const up = await sharp(down)
-    .resize(newW, newH, { fit: 'fill', kernel: sharp.kernel.nearest })
-    .toFormat('png')
+    .resize(newW, newH, { fit: "fill", kernel: sharp.kernel.nearest })
+    .toFormat("png")
     .toBuffer();
 
   return up;
@@ -47,56 +52,72 @@ export async function POST(req: Request) {
     };
 
     if (!HF_TOKEN) {
-      return NextResponse.json({ error: 'Missing HUGGINGFACE_API_TOKEN' }, { status: 500 });
+      return NextResponse.json({ error: "Missing HUGGINGFACE_API_TOKEN" }, { status: 500 });
     }
     if (!pfp_url) {
-      return NextResponse.json({ error: 'missing pfp_url' }, { status: 400 });
+      return NextResponse.json({ error: "Missing pfp_url" }, { status: 400 });
     }
 
-    const src = await fetchImageBuffer(pfp_url);
+    const pfpBuffer = await fetchImageBuffer(pfp_url);
     const prompt = buildPrompt(style);
 
-    // ALWAYS use multipart for img2img
-    const form = new FormData();
-    form.append('image', new Blob([src], { type: 'image/png' }), 'pfp.png');
-    form.append('prompt', prompt);
-    // بعض الموديلات كتفهم parameters
-    form.append('parameters', JSON.stringify({ guidance_scale: 5 }));
+    // Encode image as base64
+    const base64 = `data:image/png;base64,${pfpBuffer.toString("base64")}`;
 
-    const resp = await fetch(API_URL, {
-      method: 'POST',
+    // Send request to Hugging Face API
+    const res = await fetch(API_URL, {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${HF_TOKEN}`,
-        Accept: 'image/png', // نطلب صورة مباشرة
-        'X-Wait-For-Model': 'true',
+        "Content-Type": "application/json",
       },
-      body: form,
+      body: JSON.stringify({
+        inputs: base64,
+        parameters: {
+          prompt,
+          negative_prompt:
+            "text, watermark, low quality, blurry, ugly, duplicate, artifacts, frame, noise, deformed",
+          num_inference_steps: 20,
+          guidance_scale: 7,
+        },
+        options: { wait_for_model: true },
+      }),
     });
 
-    // لو رجع HTML/JSON، نوضح السبب عوض ما نعرض HTML
-    const ct = resp.headers.get('content-type') || '';
-    if (!resp.ok || !ct.includes('image')) {
-      const text = await resp.text();
-      // رسائل مفهومة للمستخدم
-      let friendly = 'Hugging Face error';
-      if (resp.status === 401 || resp.status === 403) {
-        friendly = 'Hugging Face: token غير صالح أو لازم تقبل شروط الموديل.';
-      } else if (resp.status === 404) {
-        friendly = 'الموديل غير متاح على Inference API.';
-      } else if (resp.status === 429) {
-        friendly = 'تم تجاوز الحد (rate limit). جرّب بعد لحظات.';
-      } else if (ct.includes('text/html')) {
-        friendly = 'الطلب مشى لصفحة الويب بدل الـ API (تأكد من الـ token والشروط).';
-      }
-      return NextResponse.json({ error: friendly, details: text }, { status: resp.status || 500 });
+    if (!res.ok) {
+      const text = await res.text();
+      return NextResponse.json(
+        { error: "Hugging Face API Error", details: text },
+        { status: res.status }
+      );
     }
 
-    const buf = Buffer.from(await resp.arrayBuffer());
+    // Try to read the output image
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      const j = await res.json();
+      if (j.error) throw new Error(j.error);
+      if (Array.isArray(j) && j[0]?.image_base64) {
+        const imgData = Buffer.from(j[0].image_base64, "base64");
+        const pix = await pixelate(imgData, 512, 8);
+        return NextResponse.json({
+          generated_image_url: `data:image/png;base64,${pix.toString("base64")}`,
+        });
+      }
+      return NextResponse.json({ error: "Invalid image data" }, { status: 500 });
+    }
+
+    // Binary fallback
+    const buf = Buffer.from(await res.arrayBuffer());
     const pixel = await pixelate(buf, 512, 8);
-    const dataUrl = `data:image/png;base64,${pixel.toString('base64')}`;
+    const dataUrl = `data:image/png;base64,${pixel.toString("base64")}`;
+
     return NextResponse.json({ generated_image_url: dataUrl });
   } catch (e: any) {
-    console.error('HF generate error:', e);
-    return NextResponse.json({ error: e?.message || 'server_error' }, { status: 500 });
+    console.error("HF generate error:", e);
+    return NextResponse.json(
+      { error: e?.message || "server_error" },
+      { status: 500 }
+    );
   }
 }
