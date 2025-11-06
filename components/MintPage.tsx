@@ -254,19 +254,19 @@ export default function MintPage() {
         <main className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <section className="col-span-2 space-y-4">
             <div className="bg-slate-900/30 rounded-lg p-4">
-  <div className="w-full max-w-xl mx-auto aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
-    {generatedImage ? (
-      <img
-        src={generatedImage}
-        alt="Generated"
-        className="h-full w-full object-cover"
-        style={{ imageRendering: 'pixelated' }}
-      />
-    ) : (
-      <div className="text-slate-400">No image generated yet</div>
-    )}
-  </div>
+ <div className="w-full max-w-xl mx-auto aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
+  {generatedImage ? (
+    <img
+      src={generatedImage}
+      alt="Generated"
+      className="h-full w-full object-cover"
+      style={{ imageRendering: 'pixelated' }}
+    />
+  ) : (
+    <div className="text-slate-400">No image generated yet</div>
+  )}
 </div>
+
 
 
             <div className="bg-slate-900/20 p-4 rounded-lg flex gap-3">
