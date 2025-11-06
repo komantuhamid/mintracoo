@@ -11,14 +11,16 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
 function buildPrompt(extra?: string) {
   const base = [
-    'pixel art raccoon avatar, 8-bit headshot',
-    'cute expression, dark eye-mask, rounded ears',
-    'crisp square pixels, clean outline',
-    'simple flat background, limited palette',
-    'centered portrait, no text, no watermark',
-  ].join(', ');
+    "highly detailed pixel art raccoon character portrait, 8-bit NFT avatar",
+    "cyberpunk neon background, gradient backdrop, stylish outfit, vivid colors",
+    "cool accessories like glasses, hats, cigars, or jewelry",
+    "sharp pixel edges, symmetrical face, center composition",
+    "lighting from front, detailed eyes, clean line art, HD pixel grid",
+    "in the style of top OpenSea NFT collections, trending crypto art"
+  ].join(", ");
   return extra ? `${base}, ${extra}` : base;
 }
+
 
 async function pixelate(input: Buffer, targetMax = 512, blocks = 8) {
   const meta = await sharp(input).metadata();
