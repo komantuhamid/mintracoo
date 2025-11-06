@@ -4,31 +4,30 @@ import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { HfInference } from "@huggingface/inference";
 
-// إعدادات عامة
+// مزود/موديل مناسبين للنّتائج القوية
 const MODEL_ID = "black-forest-labs/FLUX.1-Krea-dev";
 const PROVIDER: "fal-ai" | "hf-inference" = "fal-ai";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// بناء الـ prompt
+// Prompt قوي لستايل NFT pixel art مع negative prompts
 function buildPrompt(extra?: string) {
   const base = [
-    "highly detailed pixel art raccoon NFT avatar",
-    "8-bit style, symmetrical face, center composition",
-    "vibrant colorful background gradient, detailed outfit, stylish accessories (hat, glasses, crown, cigar)",
-    "clean pixel outline, crisp edges, perfect lighting",
-    "in the style of top NFT collections, trending OpenSea crypto pixel art",
+    "ultra crisp pixel art raccoon NFT avatar, 8-bit, cel-shaded",
+    "centered, symmetrical face, strong black outline, clean edges",
+    "vibrant gradient background, stylish outfit, accessories (hat, glasses, cigar, crown)",
+    "flat color blocks, minimal shading, no soft glow, no lens blur"
   ].join(", ");
 
   const negative = [
-    "text, watermark, logo, border, frame",
-    "blur, glow, soft, haze, bloom, overexposed, underexposed",
-    "human, hands, limbs, deformity, body, distorted",
+    "blurry, soft, glow, bloom, haze, painterly, photorealistic",
+    "gradient banding, noise, artifacts, jpeg artifacts",
+    "text, watermark, logo, frame, border, human, hands, extra limbs"
   ].join(", ");
 
   return extra ? `${base}, ${extra} ### NEGATIVE: ${negative}` : `${base} ### NEGATIVE: ${negative}`;
 }
 
-// قص مركزي مربّع
+// قصّ مركزي لمربّع
 async function centerSquare(input: Buffer) {
   const meta = await sharp(input).metadata();
   const w = meta.width || 1024;
@@ -44,8 +43,8 @@ async function centerSquare(input: Buffer) {
     .toBuffer();
 }
 
-// Pixelate مربّع 1024x1024 مع 32bit RGBA
-async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 16) {
+// Pixel-art نظيف: downsample nearest -> upsample nearest -> sharpen -> PNG-8 بلا dithering
+async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 12) {
   const squared = await centerSquare(input);
   const downW = Math.max(16, Math.floor(outSize / blocks));
 
@@ -55,8 +54,9 @@ async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 16) {
 
   const up = await sharp(down)
     .resize(outSize, outSize, { fit: "fill", kernel: sharp.kernel.nearest })
-    .ensureAlpha() // باش تكون 32bit RGBA
-    .png({ compressionLevel: 9, adaptiveFiltering: true })
+    .sharpen(1.2, 1.0, 0.5)                // حدّة خفيفة لزيادة وضوح الحواف
+    .ensureAlpha()                          // RGBA (32-bit)
+    .png({ palette: true, dither: 0, compressionLevel: 9, adaptiveFiltering: true }) // PNG-8 نظيف
     .toBuffer();
 
   return up;
@@ -68,10 +68,7 @@ export async function POST(req: Request) {
     const style: string | undefined = body?.style;
 
     if (!HF_TOKEN) {
-      return NextResponse.json(
-        { error: "Missing HUGGINGFACE_API_TOKEN" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Missing HUGGINGFACE_API_TOKEN" }, { status: 500 });
     }
 
     const prompt = buildPrompt(style);
@@ -80,8 +77,10 @@ export async function POST(req: Request) {
     let output: any = null;
     let lastErr: any = null;
 
+    // محاولات قليلة فحالة loading/rate-limit
     for (let i = 0; i < 3; i++) {
       try {
+        // بعض إصدارات typings ما كتدعم provider صراحةً → any
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         output = await (hf.textToImage as any)({
           inputs: prompt,
@@ -90,10 +89,10 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 15,
-            guidance_scale: 3.0,
+            num_inference_steps: 20,
+            guidance_scale: 4.5,
             negative_prompt:
-              "text, watermark, blur, soft, glow, bloom, haze, frame, border, noisy, artifacts, human, hands, limbs",
+              "text, watermark, blur, soft, glow, bloom, haze, frame, border, noisy, artifacts, human, hands, limbs, painterly, photorealistic, gradient banding",
           },
         });
         break;
@@ -104,15 +103,12 @@ export async function POST(req: Request) {
     }
 
     if (!output) {
-      const msg =
-        lastErr?.message ||
-        lastErr?.response?.statusText ||
-        "Hugging Face Inference error";
+      const msg = lastErr?.message || lastErr?.response?.statusText || "Hugging Face Inference error";
       const status = lastErr?.response?.status || 502;
       return NextResponse.json({ error: msg }, { status });
     }
 
-    // نحول الناتج لباينري
+    // تطبيع الخرج (Blob | dataURL | URL | { blob })
     let imgBuf: Buffer;
     if (typeof output === "string") {
       if (output.startsWith("data:image")) {
@@ -120,43 +116,29 @@ export async function POST(req: Request) {
         imgBuf = Buffer.from(b64, "base64");
       } else if (output.startsWith("http")) {
         const r = await fetch(output);
-        if (!r.ok)
-          return NextResponse.json(
-            { error: `Fetch image failed: ${r.status}` },
-            { status: 502 }
-          );
+        if (!r.ok) return NextResponse.json({ error: `Fetch image failed: ${r.status}` }, { status: 502 });
         imgBuf = Buffer.from(await r.arrayBuffer());
       } else {
-        return NextResponse.json(
-          { error: "Unexpected string output from provider" },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: "Unexpected string output from provider" }, { status: 500 });
       }
     } else if (typeof Blob !== "undefined" && output instanceof Blob) {
       imgBuf = Buffer.from(await output.arrayBuffer());
     } else {
-      const maybeBlob: Blob | undefined =
-        output?.blob || output?.image || output?.output;
+      const maybeBlob: Blob | undefined = output?.blob || output?.image || output?.output;
       if (maybeBlob && typeof maybeBlob.arrayBuffer === "function") {
         imgBuf = Buffer.from(await maybeBlob.arrayBuffer());
       } else {
-        return NextResponse.json(
-          { error: "Unknown provider output format" },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: "Unknown provider output format" }, { status: 500 });
       }
     }
 
-    // تحويل لـ pixel art NFT نهائي
-    const px = await pixelateSquare(imgBuf, 1024, 16);
+    // Pixel-art نهائي 1024×1024
+    const px = await pixelateSquare(imgBuf, 1024, 12);
     const dataUrl = `data:image/png;base64,${px.toString("base64")}`;
-
     return NextResponse.json({ generated_image_url: dataUrl });
+
   } catch (e: any) {
     console.error("HF route error:", e);
-    return NextResponse.json(
-      { error: e?.message || "server_error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
