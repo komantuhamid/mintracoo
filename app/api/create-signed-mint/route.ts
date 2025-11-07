@@ -10,61 +10,76 @@ export async function POST(req: Request) {
     if (!address) {
       return NextResponse.json({ error: "Missing address" }, { status: 400 });
     }
+    if (!imageUrl) {
+      return NextResponse.json({ error: "Missing imageUrl" }, { status: 400 });
+    }
 
     const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY!;
     const contractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT!;
-    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
+    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453); // 8453=Base, 84532=Base Sepolia
+    const rpcEnv = process.env.NEXT_PUBLIC_RPC_URL;
 
     if (!privateKey || !contractAddress) {
       return NextResponse.json(
-        { error: "Missing env vars for mint signing" },
+        { error: "Missing env vars: THIRDWEB_ADMIN_PRIVATE_KEY or NEXT_PUBLIC_NFT_CONTRACT" },
         { status: 500 }
       );
     }
 
-    // Initialize SDK
-    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, {
+    // ✔ تعريف شبكة بصيغة v4: rpc عبارة عن مصفوفة
+    const rpcDefault =
+      chainId === 84532 ? "https://sepolia.base.org" : "https://mainnet.base.org";
+
+    const chain = {
+      name: chainId === 84532 ? "base-sepolia" : "base",
       chainId,
-      rpc: process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.base.org",
-    });
+      rpc: [rpcEnv || rpcDefault],
+      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+      shortName: chainId === 84532 ? "basesep" : "base",
+      slug: chainId === 84532 ? "base-sepolia" : "base",
+      testnet: chainId === 84532,
+    };
+
+    // إنشاء SDK من private key والشبكة (v4)
+    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chain);
 
     const contract = await sdk.getContract(contractAddress);
 
-    // Price in ETH
+    // الثمن بالـ ETH (string) — thirdweb v4 كيتكفّل بالتحويل للـ wei
     const mintPrice = "0.0001";
     const currency = ethers.constants.AddressZero; // native ETH
 
-    // Build the payload
     const payload = {
       to: address,
       metadata: {
         name: "Raccoon Pixel Art",
-        description: "Raccoon NFT generated on-chain",
+        description: "Raccoon NFT generated via MiniApp",
         image: imageUrl,
       },
       price: mintPrice,
-      currency,
+      currency, // 0x0000... = ETH
       mintStartTime: new Date(),
-      mintEndTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365), // +1 year
+      mintEndTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365), // +1y
       primarySaleRecipient: address,
     };
 
-    // Sign mint request
+    // التوقيع (v4)
     const signedPayload = await contract.erc721.signature.generate(payload);
 
     return NextResponse.json(
       {
-        mintRequest: signedPayload.payload,
-        signature: signedPayload.signature,
+        mintRequest: signedPayload.payload, // struct
+        signature: signedPayload.signature, // 0x…
         contractAddress,
         chainId,
+        priceWei: ethers.utils.parseEther(mintPrice).toString(),
       },
       { status: 200 }
     );
   } catch (err: any) {
     console.error("Mint sign error:", err);
     return NextResponse.json(
-      { error: err.message || "Error creating mint request" },
+      { error: err?.message || "Error creating mint request" },
       { status: 500 }
     );
   }
