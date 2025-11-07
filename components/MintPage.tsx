@@ -1,19 +1,32 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { parseAbi, encodeFunctionData, toHex } from 'viem';
+import {
+  parseAbi,
+  encodeFunctionData,
+  toHex,
+  isAddress,          // ← نعتمد عليه بدل regex
+  parseEther,         // للـ wagmi fallback إذا احتجناه
+} from 'viem';
 import { sdk } from '@farcaster/miniapp-sdk';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import {
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+} from 'wagmi';
 import { useMiniEnv } from '@/hooks/useMiniEnv';
 
 type AnyActions = any;
 
-// ===== ENV (clean + validate) =====
+// ===== ENV =====
 const RAW_ADDR = (process.env.NEXT_PUBLIC_NFT_CONTRACT ?? '').trim();
-const CONTRACT_ADDRESS = RAW_ADDR as `0x${string}`;
-const isValidEnvAddress = /^0x[0-9a-fA-F]{40}$/.test(RAW_ADDR);
+const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453); // Base mainnet
 
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453); // Base mainnet by default
+// بدّلنا التحقّق إلى isAddress (أدقّ من regex)
+const ENV_ADDRESS_VALID = isAddress(RAW_ADDR);
+const CONTRACT_ADDRESS = (ENV_ADDRESS_VALID ? RAW_ADDR : '') as `0x${string}`;
 
 // ===== minimal ABI: mintWithSignature(ITokenERC721.MintRequest, bytes) =====
 const MINT_ABI = parseAbi([
@@ -24,6 +37,11 @@ export default function MintPage() {
   const { address: wagmiAddress, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+
+  // wagmi fallback tx (للمتصفح العادي)
+  const { data: txHash, sendTransactionAsync } = useSendTransaction();
+  const { isLoading: txPending } = useWaitForTransactionReceipt({ hash: txHash });
+
   const { isMini, ctx } = useMiniEnv();
 
   const [activeAddress, setActiveAddress] = useState<string | null>(null);
@@ -33,7 +51,7 @@ export default function MintPage() {
   const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // pick active address: wagmi first, then mini context
+  // pick active address: wagmi أولاً ثم mini context
   useEffect(() => {
     if (wagmiAddress) {
       setActiveAddress(wagmiAddress);
@@ -49,7 +67,7 @@ export default function MintPage() {
     [activeAddress],
   );
 
-  // fetch farcaster profile
+  // Farcaster profile
   useEffect(() => {
     const fid = ctx?.user?.fid || ctx?.user?.id;
     if (!fid) return;
@@ -74,7 +92,7 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // auto-connect inside mini app if farcaster connector exists
+  // Auto-connect داخل الميني
   useEffect(() => {
     (async () => {
       try {
@@ -84,7 +102,7 @@ export default function MintPage() {
         const farcaster = connectors.find(
           (c) =>
             c.id?.toLowerCase().includes('farcaster') ||
-            c.name?.toLowerCase().includes('farcaster')
+            c.name?.toLowerCase().includes('farcaster'),
         );
         if (farcaster) {
           await connect({ connector: farcaster });
@@ -100,7 +118,7 @@ export default function MintPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMini, connectors]);
 
-  // generate raccoon pixel art via /api/generate-art
+  // توليد صورة (route ديالك جاهز)
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('Generating raccoon pixel art…');
@@ -121,7 +139,7 @@ export default function MintPage() {
                     ? j.details.slice(0, 180)
                     : JSON.stringify(j.details).slice(0, 180)
                 }`
-              : '')
+              : ''),
         );
         setLoading(false);
         return;
@@ -135,7 +153,7 @@ export default function MintPage() {
     }
   };
 
-  // backend signed mint
+  // طلب توقيع mint من الباك
   const requestSignedMint = async () => {
     const res = await fetch('/api/create-signed-mint', {
       method: 'POST',
@@ -153,7 +171,7 @@ export default function MintPage() {
   };
 
   const performMint = async () => {
-    if (!isValidEnvAddress) {
+    if (!ENV_ADDRESS_VALID) {
       return setMessage(
         `Invalid contract address in env: ${
           RAW_ADDR ? RAW_ADDR.slice(0, 6) + '…' + RAW_ADDR.slice(-4) : 'empty'
@@ -175,6 +193,7 @@ export default function MintPage() {
         args: [mintRequest, signature],
       });
 
+      // value غير إلا كان السعر > 0
       const hexValue =
         priceWei && priceWei !== '0' ? toHex(BigInt(String(priceWei))) : undefined;
 
@@ -187,7 +206,16 @@ export default function MintPage() {
       } else if (isMini && actions?.wallet_sendTransaction) {
         await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...call });
         setMessage('Transaction submitted via Mini App wallet');
+      } else if (isConnected && sendTransactionAsync) {
+        // Fallback عبر wagmi
+        await sendTransactionAsync({
+          to: CONTRACT_ADDRESS,
+          data: call.data as `0x${string}`,
+          ...(hexValue ? { value: parseEther((Number(priceWei) / 1e18).toString()) } : {}),
+        });
+        setMessage('Transaction submitted (wagmi)');
       } else if ((window as any).ethereum) {
+        // Fallback عام
         const txHash = await (window as any).ethereum.request({
           method: 'eth_sendTransaction',
           params: [{ from: activeAddress, ...call }],
@@ -238,7 +266,7 @@ export default function MintPage() {
                         const farcaster = connectors.find(
                           (c) =>
                             c.id?.toLowerCase().includes('farcaster') ||
-                            c.name?.toLowerCase().includes('farcaster')
+                            c.name?.toLowerCase().includes('farcaster'),
                         );
                         if (farcaster) {
                           await connect({ connector: farcaster });
@@ -306,7 +334,7 @@ export default function MintPage() {
                 disabled={minting || !activeAddress || !generatedImage}
                 className="px-4 py-3 bg-emerald-600 rounded-lg font-semibold disabled:opacity-50"
               >
-                {minting ? 'Minting…' : 'Mint 0.0001 ETH'}
+                {minting || txPending ? 'Minting…' : 'Mint 0.0001 ETH'}
               </button>
             </div>
 
