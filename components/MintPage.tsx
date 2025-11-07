@@ -31,8 +31,8 @@ const MINT_ABI = parseAbi([
 ]);
 
 export default function MintPage() {
-  // wagmi
-  const { address: wagmiAddress, isConnected } = useAccount();
+  // wagmi (لخارج الميني فقط)
+  const { address: wagmiAddress } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
@@ -52,12 +52,16 @@ export default function MintPage() {
     [activeAddress]
   );
 
-  // pick active address (wagmi > mini context)
+  // pick active address
   useEffect(() => {
-    if (wagmiAddress) setActiveAddress(wagmiAddress);
-    else if (isMini) setActiveAddress(ctx?.user?.ethAddress ?? ctx?.user?.address ?? null);
-    else setActiveAddress(null);
-  }, [wagmiAddress, isMini, ctx?.user?.ethAddress, ctx?.user?.address]);
+    if (isMini) {
+      setActiveAddress(ctx?.user?.ethAddress ?? ctx?.user?.address ?? null);
+    } else if (wagmiAddress) {
+      setActiveAddress(wagmiAddress);
+    } else {
+      setActiveAddress(null);
+    }
+  }, [isMini, ctx?.user?.ethAddress, ctx?.user?.address, wagmiAddress]);
 
   // -------- Farcaster profile --------
   useEffect(() => {
@@ -83,25 +87,16 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // -------- Connect helpers --------
-  const farcasterConnector = useMemo(
-    () =>
-      connectors.find((c) => (c.id || c.name || '').toLowerCase().includes('farcaster')) ||
-      null,
-    [connectors]
-  );
-
+  // -------- Connect buttons --------
   const connectMiniViaSDK = async () => {
     try {
       setMessage('Connecting mini wallet…');
       const actions: any = (sdk as any).actions;
       await actions?.ready?.();
 
-      // 1) حاول تجيب العناوين مباشرة
       let addrs: string[] =
         (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
 
-      // 2) إلا ماكانوش، جرّب connect ثم requestAddresses
       if (!addrs.length && actions?.wallet_connect) {
         await actions.wallet_connect({ chainId: CHAIN_ID });
         addrs =
@@ -124,43 +119,34 @@ export default function MintPage() {
     }
   };
 
-  const connectSmart = async () => {
+  const connectBrowser = async () => {
     try {
-      setMessage('Connecting…');
-      if (isMini && farcasterConnector) {
-        // جرّب Farcaster connector أولاً
-        await (sdk as any).actions?.ready?.();
-        await connect({ connector: farcasterConnector });
-        // خذ العنوان من SDK إذا wagmi ما عطاهش مباشرة
-        const acc =
-          (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
-        if (acc) setActiveAddress(acc);
-        setMessage('Mini wallet connected');
-        return;
-      }
-
-      if (isMini && !farcasterConnector) {
-        // فحال ماكانش connector ديال Farcaster فالباكج، استعمل SDK مباشرة
-        await connectMiniViaSDK();
-        return;
-      }
-
-      // خارج الميني: استعمل أول connector (MetaMask غالباً)
-      await connect({ connector: connectors[0] });
-      setMessage('Browser wallet connected');
+      const eth = (window as any).ethereum;
+      if (!eth?.request) return setMessage('No EVM wallet in browser');
+      const accs: string[] = await eth.request({ method: 'eth_requestAccounts' });
+      if (accs?.[0]) {
+        setActiveAddress(accs[0]);
+        setMessage('Browser wallet connected');
+      } else setMessage('No account selected');
     } catch (e: any) {
       setMessage(e?.message || String(e));
     }
   };
 
-  // Auto-connect once inside mini
+  // Auto-connect in mini once
   const tried = useRef(false);
   useEffect(() => {
     if (isMini && !activeAddress && !tried.current) {
       tried.current = true;
-      connectSmart();
+      connectMiniViaSDK();
     }
   }, [isMini, activeAddress]);
+
+  const disconnectAll = () => {
+    setActiveAddress(null);
+    disconnect();
+    setMessage('Disconnected');
+  };
 
   // -------- Generate art --------
   const generateRaccoon = async () => {
@@ -226,45 +212,53 @@ export default function MintPage() {
         args: [mintRequest, signature],
       });
 
-      // قيم value حسب المسار
-      const valueDec =
-        priceWei && priceWei !== '0' ? String(BigInt(priceWei)) : undefined; // Mini
+      // ALWAYS hex for both paths to نتهنّاو
       const valueHex =
-        priceWei && priceWei !== '0' ? '0x' + BigInt(priceWei).toString(16) : undefined; // Browser
-
-      const callMini = {
-        to: CONTRACT_ADDRESS,
-        data,
-        ...(valueDec ? { value: valueDec } : {}),
-      };
-      const callBrowser = {
-        to: CONTRACT_ADDRESS,
-        data,
-        ...(valueHex ? { value: valueHex } : {}),
-      };
+        priceWei && priceWei !== '0' ? ('0x' + BigInt(priceWei).toString(16)) : undefined;
 
       const actions: any = (sdk as any).actions;
 
-      // Mini first
-      if (isMini && actions?.wallet_sendCalls) {
-        await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [callMini] });
-        setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
-        setMinting(false);
-        return;
-      }
-      if (isMini && actions?.wallet_sendTransaction) {
-        await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...callMini });
-        setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+      if (isMini) {
+        // داخل Farcaster: استعمل SDK فقط — ماشي window.ethereum
+        if (actions?.wallet_sendCalls) {
+          await actions.wallet_sendCalls({
+            chainId: CHAIN_ID,
+            calls: [{ to: CONTRACT_ADDRESS, data, ...(valueHex ? { value: valueHex } : {}) }],
+          });
+          setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+          setMinting(false);
+          return;
+        }
+        if (actions?.wallet_sendTransaction) {
+          await actions.wallet_sendTransaction({
+            chainId: CHAIN_ID,
+            to: CONTRACT_ADDRESS,
+            data,
+            ...(valueHex ? { value: valueHex } : {}),
+          });
+          setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+          setMinting(false);
+          return;
+        }
+        // لا fallback لwindow.ethereum داخل الميني باش مانشدوش e.on is not a function
+        setMessage('Mini wallet API not available in this client.');
         setMinting(false);
         return;
       }
 
-      // Browser fallback
+      // Browser fallback فقط خارج الميني
       const eth = (window as any).ethereum;
       if (eth?.request) {
         const txHash: string = await eth.request({
           method: 'eth_sendTransaction',
-          params: [{ from: activeAddress, ...callBrowser }],
+          params: [
+            {
+              from: activeAddress,
+              to: CONTRACT_ADDRESS,
+              data,
+              ...(valueHex ? { value: valueHex } : {}),
+            },
+          ],
         });
         setMessage(`Tx submitted: ${txHash.slice(0, 10)}… waiting confirmation…`);
 
@@ -304,16 +298,6 @@ export default function MintPage() {
     }
   };
 
-  const handleDisconnect = () => {
-    if (isMini) {
-      setActiveAddress(null);
-      setMessage('Disconnected');
-    } else {
-      disconnect();
-      setMessage('Disconnected');
-    }
-  };
-
   // -------- UI --------
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-black text-white p-6">
@@ -327,7 +311,7 @@ export default function MintPage() {
                 {profile?.username ? `@${profile.username}` : shortAddr}
               </span>
               <button
-                onClick={handleDisconnect}
+                onClick={disconnectAll}
                 className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
               >
                 Disconnect
@@ -335,12 +319,21 @@ export default function MintPage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              <button
-                onClick={connectSmart}
-                className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
-              >
-                Connect
-              </button>
+              {isMini ? (
+                <button
+                  onClick={connectMiniViaSDK}
+                  className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
+                >
+                  Connect (Mini)
+                </button>
+              ) : (
+                <button
+                  onClick={connectBrowser}
+                  className="px-4 py-2 bg-slate-600 rounded hover:bg-slate-500"
+                >
+                  Connect (Browser)
+                </button>
+              )}
             </div>
           )}
         </header>
