@@ -1,14 +1,21 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { parseAbi, encodeFunctionData, toHex, isAddress } from 'viem';
+import { parseAbi, encodeFunctionData, toHex } from 'viem';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useMiniEnv } from '@/hooks/useMiniEnv';
-import { CHAIN_ID, CONTRACT_ADDRESS } from '@/lib/chains';
 
 type AnyActions = any;
 
+// ===== ENV (clean + validate) =====
+const RAW_ADDR = (process.env.NEXT_PUBLIC_NFT_CONTRACT ?? '').trim();
+const CONTRACT_ADDRESS = RAW_ADDR as `0x${string}`;
+const isValidEnvAddress = /^0x[0-9a-fA-F]{40}$/.test(RAW_ADDR);
+
+const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453); // Base mainnet by default
+
+// ===== minimal ABI: mintWithSignature(ITokenERC721.MintRequest, bytes) =====
 const MINT_ABI = parseAbi([
   'function mintWithSignature((address,address,uint256,address,string,uint256,address,uint128,uint128,bytes32), bytes) payable returns (uint256)',
 ]);
@@ -26,7 +33,7 @@ export default function MintPage() {
   const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // اختر العنوان النشيط: wagmi أولاً ثم mini context
+  // pick active address: wagmi first, then mini context
   useEffect(() => {
     if (wagmiAddress) {
       setActiveAddress(wagmiAddress);
@@ -42,7 +49,7 @@ export default function MintPage() {
     [activeAddress],
   );
 
-  // جلب بروفايل Farcaster
+  // fetch farcaster profile
   useEffect(() => {
     const fid = ctx?.user?.fid || ctx?.user?.id;
     if (!fid) return;
@@ -67,7 +74,7 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // Auto-connect داخل Warpcast عبر connector ديال Farcaster (إن وجد)
+  // auto-connect inside mini app if farcaster connector exists
   useEffect(() => {
     (async () => {
       try {
@@ -93,7 +100,7 @@ export default function MintPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMini, connectors]);
 
-  // توليد صورة Raccoon Pixel Art (Hugging Face route)
+  // generate raccoon pixel art via /api/generate-art
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('Generating raccoon pixel art…');
@@ -128,14 +135,14 @@ export default function MintPage() {
     }
   };
 
-  // طلب توقيع mint من الـ backend (مفاتيح صحيحة: address + imageUrl)
+  // backend signed mint
   const requestSignedMint = async () => {
     const res = await fetch('/api/create-signed-mint', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        address: activeAddress,                 // ← كان "to"
-        imageUrl: generatedImage,               // ← كان "image_url"
+        address: activeAddress,
+        imageUrl: generatedImage,
         username: farcasterProfile?.username,
         fid: farcasterProfile?.fid,
       }),
@@ -146,11 +153,15 @@ export default function MintPage() {
   };
 
   const performMint = async () => {
+    if (!isValidEnvAddress) {
+      return setMessage(
+        `Invalid contract address in env: ${
+          RAW_ADDR ? RAW_ADDR.slice(0, 6) + '…' + RAW_ADDR.slice(-4) : 'empty'
+        }`,
+      );
+    }
     if (!activeAddress) return setMessage('Connect wallet first');
     if (!generatedImage) return setMessage('Generate image first');
-    if (!CONTRACT_ADDRESS || !isAddress(CONTRACT_ADDRESS)) {
-      return setMessage('Invalid contract address in env.');
-    }
 
     setMinting(true);
     setMessage(null);
@@ -169,7 +180,6 @@ export default function MintPage() {
 
       const call = { to: CONTRACT_ADDRESS, data, ...(hexValue ? { value: hexValue } : {}) };
 
-      // داخل Mini App
       const actions: AnyActions = (sdk as any).actions;
       if (isMini && actions?.wallet_sendCalls) {
         await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [call] });
@@ -178,7 +188,6 @@ export default function MintPage() {
         await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...call });
         setMessage('Transaction submitted via Mini App wallet');
       } else if ((window as any).ethereum) {
-        // متصفح عادي
         const txHash = await (window as any).ethereum.request({
           method: 'eth_sendTransaction',
           params: [{ from: activeAddress, ...call }],
@@ -206,7 +215,7 @@ export default function MintPage() {
                 <div className="text-sm text-slate-300">
                   {farcasterProfile?.username
                     ? `@${farcasterProfile.username}`
-                    : shortAddr}
+                    : `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`}
                 </div>
                 <button
                   onClick={() => {
