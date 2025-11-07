@@ -5,8 +5,8 @@ import {
   parseAbi,
   encodeFunctionData,
   toHex,
-  isAddress,          // ← نعتمد عليه بدل regex
-  parseEther,         // للـ wagmi fallback إذا احتجناه
+  isAddress,
+  parseEther,
 } from 'viem';
 import { sdk } from '@farcaster/miniapp-sdk';
 import {
@@ -20,15 +20,29 @@ import { useMiniEnv } from '@/hooks/useMiniEnv';
 
 type AnyActions = any;
 
-// ===== ENV =====
-const RAW_ADDR = (process.env.NEXT_PUBLIC_NFT_CONTRACT ?? '').trim();
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453); // Base mainnet
+// ====== Clean and Validate ENV ======
+function normalizeAddress(input: string) {
+  const cleaned = input
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
+  const with0x = cleaned.startsWith('0x') ? cleaned : `0x${cleaned}`;
+  return with0x;
+}
 
-// بدّلنا التحقّق إلى isAddress (أدقّ من regex)
-const ENV_ADDRESS_VALID = isAddress(RAW_ADDR);
-const CONTRACT_ADDRESS = (ENV_ADDRESS_VALID ? RAW_ADDR : '') as `0x${string}`;
+const RAW_ENV = process.env.NEXT_PUBLIC_NFT_CONTRACT ?? '';
+const NORMALIZED_ADDR = normalizeAddress(RAW_ENV);
 
-// ===== minimal ABI: mintWithSignature(ITokenERC721.MintRequest, bytes) =====
+const ENV_ADDRESS_VALID =
+  NORMALIZED_ADDR.length === 42 &&
+  /^0x[0-9a-fA-F]{40}$/.test(NORMALIZED_ADDR) &&
+  isAddress(NORMALIZED_ADDR);
+
+const CONTRACT_ADDRESS = (ENV_ADDRESS_VALID ? NORMALIZED_ADDR : '') as `0x${string}`;
+const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
+
+// ===== minimal ABI =====
 const MINT_ABI = parseAbi([
   'function mintWithSignature((address,address,uint256,address,string,uint256,address,uint128,uint128,bytes32), bytes) payable returns (uint256)',
 ]);
@@ -38,7 +52,6 @@ export default function MintPage() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
-  // wagmi fallback tx (للمتصفح العادي)
   const { data: txHash, sendTransactionAsync } = useSendTransaction();
   const { isLoading: txPending } = useWaitForTransactionReceipt({ hash: txHash });
 
@@ -51,7 +64,7 @@ export default function MintPage() {
   const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // pick active address: wagmi أولاً ثم mini context
+  // Pick wallet
   useEffect(() => {
     if (wagmiAddress) {
       setActiveAddress(wagmiAddress);
@@ -64,7 +77,7 @@ export default function MintPage() {
 
   const shortAddr = useMemo(
     () => (activeAddress ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}` : ''),
-    [activeAddress],
+    [activeAddress]
   );
 
   // Farcaster profile
@@ -92,68 +105,51 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // Auto-connect داخل الميني
+  // Auto-connect mini
   useEffect(() => {
     (async () => {
       try {
-        if (!isMini) return;
-        if (activeAddress) return;
+        if (!isMini || activeAddress) return;
         await (sdk as any).actions?.ready?.();
         const farcaster = connectors.find(
           (c) =>
             c.id?.toLowerCase().includes('farcaster') ||
-            c.name?.toLowerCase().includes('farcaster'),
+            c.name?.toLowerCase().includes('farcaster')
         );
         if (farcaster) {
           await connect({ connector: farcaster });
           const acc =
             (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
           if (acc) setActiveAddress(acc);
-          setMessage('Mini wallet connected (auto)');
+          setMessage('Mini wallet connected');
         }
       } catch (e) {
-        console.log('Auto-connect (mini) failed:', e);
+        console.log('Mini auto connect failed', e);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMini, connectors]);
+  }, [isMini, connectors, activeAddress]);
 
-  // توليد صورة (route ديالك جاهز)
+  // Generate art
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('Generating raccoon pixel art…');
-    setGeneratedImage(null);
     try {
-      const r = await fetch('/api/generate-art', {
+      const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ style: 'premium collectible, polished, vibrant' }),
+        body: JSON.stringify({ style: 'premium collectible raccoon pixel portrait' }),
       });
-      const j = await r.json();
-      if (!r.ok) {
-        setMessage(
-          (j?.error || 'Generation failed') +
-            (j?.details
-              ? ` — ${
-                  typeof j.details === 'string'
-                    ? j.details.slice(0, 180)
-                    : JSON.stringify(j.details).slice(0, 180)
-                }`
-              : ''),
-        );
-        setLoading(false);
-        return;
-      }
-      setGeneratedImage(j.generated_image_url || j.imageUrl || j.url);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+      setGeneratedImage(data.generated_image_url || data.imageUrl || data.url);
       setMessage('Done! You can mint now.');
     } catch (e: any) {
-      setMessage(e?.message || 'Generation failed');
+      setMessage(e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // طلب توقيع mint من الباك
   const requestSignedMint = async () => {
     const res = await fetch('/api/create-signed-mint', {
       method: 'POST',
@@ -174,8 +170,8 @@ export default function MintPage() {
     if (!ENV_ADDRESS_VALID) {
       return setMessage(
         `Invalid contract address in env: ${
-          RAW_ADDR ? RAW_ADDR.slice(0, 6) + '…' + RAW_ADDR.slice(-4) : 'empty'
-        }`,
+          NORMALIZED_ADDR ? NORMALIZED_ADDR.slice(0, 6) + '…' + NORMALIZED_ADDR.slice(-4) : 'empty'
+        } (len=${NORMALIZED_ADDR.length})`
       );
     }
     if (!activeAddress) return setMessage('Connect wallet first');
@@ -193,7 +189,6 @@ export default function MintPage() {
         args: [mintRequest, signature],
       });
 
-      // value غير إلا كان السعر > 0
       const hexValue =
         priceWei && priceWei !== '0' ? toHex(BigInt(String(priceWei))) : undefined;
 
@@ -202,27 +197,23 @@ export default function MintPage() {
       const actions: AnyActions = (sdk as any).actions;
       if (isMini && actions?.wallet_sendCalls) {
         await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [call] });
-        setMessage('Transaction submitted via Mini App wallet');
+        setMessage('Transaction sent via Mini App wallet');
       } else if (isMini && actions?.wallet_sendTransaction) {
         await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...call });
-        setMessage('Transaction submitted via Mini App wallet');
+        setMessage('Transaction sent via Mini App wallet');
       } else if (isConnected && sendTransactionAsync) {
-        // Fallback عبر wagmi
         await sendTransactionAsync({
           to: CONTRACT_ADDRESS,
           data: call.data as `0x${string}`,
           ...(hexValue ? { value: parseEther((Number(priceWei) / 1e18).toString()) } : {}),
         });
         setMessage('Transaction submitted (wagmi)');
-      } else if ((window as any).ethereum) {
-        // Fallback عام
-        const txHash = await (window as any).ethereum.request({
+      } else {
+        const txHash = await (window as any).ethereum?.request({
           method: 'eth_sendTransaction',
           params: [{ from: activeAddress, ...call }],
         });
         setMessage('Submitted: ' + txHash);
-      } else {
-        setMessage('No wallet provider found');
       }
     } catch (e: any) {
       setMessage(e?.message || 'Mint failed');
@@ -236,78 +227,34 @@ export default function MintPage() {
       <div className="max-w-3xl mx-auto bg-slate-800/40 rounded-2xl p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h1 className="text-2xl font-extrabold">Raccoon Pixel Art Mint</h1>
-
-          <div className="flex items-center gap-3">
-            {activeAddress ? (
-              <div className="flex items-center gap-3">
-                <div className="text-sm text-slate-300">
-                  {farcasterProfile?.username
-                    ? `@${farcasterProfile.username}`
-                    : `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`}
-                </div>
-                <button
-                  onClick={() => {
-                    if (isMini) setActiveAddress(null);
-                    else disconnect();
-                  }}
-                  className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
-                >
-                  Disconnect
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                {isMini ? (
-                  <button
-                    onClick={async () => {
-                      try {
-                        const anyActions: any = (sdk as any).actions;
-                        if (typeof anyActions?.ready === 'function') await anyActions.ready();
-                        const farcaster = connectors.find(
-                          (c) =>
-                            c.id?.toLowerCase().includes('farcaster') ||
-                            c.name?.toLowerCase().includes('farcaster'),
-                        );
-                        if (farcaster) {
-                          await connect({ connector: farcaster });
-                          const acc =
-                            (await anyActions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
-                          if (acc) setActiveAddress(acc);
-                          setMessage('Mini wallet connected');
-                        } else {
-                          setMessage('Farcaster connector not found — update deps');
-                        }
-                      } catch (e: any) {
-                        console.error(e);
-                        setMessage(e?.message || 'Mini wallet connect failed');
-                      }
-                    }}
-                    className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
-                  >
-                    Connect (Mini)
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    {connectors.map((c) => (
-                      <button
-                        key={c.id}
-                        onClick={() => connect({ connector: c })}
-                        className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          {activeAddress ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-300">
+                {farcasterProfile?.username
+                  ? `@${farcasterProfile.username}`
+                  : shortAddr}
+              </span>
+              <button
+                onClick={() => (isMini ? setActiveAddress(null) : disconnect())}
+                className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => connect({ connector: connectors[0] })}
+              className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
+            >
+              Connect
+            </button>
+          )}
         </header>
 
         <main className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <section className="col-span-2 space-y-4">
             <div className="bg-slate-900/30 rounded-lg p-4">
-              <div className="w-full max-w-xl mx-auto aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
+              <div className="w-full aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
                 {generatedImage ? (
                   <img
                     src={generatedImage}
@@ -338,20 +285,18 @@ export default function MintPage() {
               </button>
             </div>
 
-            {message && (
-              <div className="mt-3 text-sm text-amber-200 break-words">{message}</div>
-            )}
+            {message && <div className="mt-3 text-sm text-amber-200">{message}</div>}
           </section>
 
           <aside className="space-y-4">
             <div className="bg-slate-900/30 p-4 rounded-lg text-center">
-              {farcasterProfile?.pfp_url ? (
+              {farcasterProfile?.pfp_url && (
                 <img
                   src={farcasterProfile.pfp_url}
                   alt="pfp"
                   className="w-24 h-24 rounded-full mx-auto mb-2"
                 />
-              ) : null}
+              )}
               <h3 className="font-bold">{farcasterProfile?.display_name || 'Profile'}</h3>
               <div className="text-sm text-slate-300">
                 @{farcasterProfile?.username || ''}
@@ -360,12 +305,8 @@ export default function MintPage() {
 
             <div className="bg-slate-900/30 p-4 rounded-lg text-sm text-slate-300">
               <div className="font-semibold">Mint info</div>
-              <div className="mt-2">
-                Price: <span className="font-medium">0.0001 ETH</span>
-              </div>
-              <div>
-                Supply cap: <span className="font-medium">5000</span>
-              </div>
+              <div className="mt-2">Price: 0.0001 ETH</div>
+              <div>Supply cap: 5000</div>
             </div>
           </aside>
         </main>
