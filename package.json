@@ -19,7 +19,7 @@
     "@thirdweb-dev/sdk": "^5.0.0",
     "next": "14.x",
     "react": "18.x",
-    "react-dom": "18.x"
+    "react-dom": "18.x",
     "lucide-react": "^0.460.0",
     "next": "15.3.4",
     "postcss": "8.4.47",
