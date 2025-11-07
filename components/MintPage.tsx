@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { parseAbi, encodeFunctionData, isAddress } from 'viem';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useMiniEnv } from '@/hooks/useMiniEnv';
 
-// ------- helpers -------
+// ---------- helpers ----------
 function normalizeAddress(input: string) {
   const cleaned = (input || '')
     .trim()
@@ -45,7 +45,7 @@ export default function MintPage() {
     [address]
   );
 
-  // auto-read farcaster profile
+  // ----- Farcaster profile -----
   useEffect(() => {
     const fid = ctx?.user?.fid || ctx?.user?.id;
     if (!fid) return;
@@ -69,22 +69,50 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // ------- connect buttons (no wagmi) -------
+  // ----- Mini connect (no wagmi) -----
   const connectMini = async () => {
     try {
-      await (sdk as any).actions?.ready?.();
-      const addrs =
-        (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) ||
-        [];
+      setMsg('Connecting mini wallet…');
+      const actions: any = (sdk as any).actions;
+      await actions?.ready?.();
+
+      let addrs: string[] =
+        (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
+
+      if (!addrs.length && actions?.wallet_connect) {
+        await actions.wallet_connect({ chainId: CHAIN_ID });
+        addrs =
+          (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
+      }
+      if (!addrs.length && actions?.wallet_requestAddresses) {
+        await actions.wallet_requestAddresses({ chainId: CHAIN_ID });
+        addrs =
+          (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
+      }
+
       if (addrs[0]) {
         setAddress(addrs[0]);
         setMsg('Mini wallet connected');
-      } else setMsg('No mini wallet address returned');
+      } else {
+        setMsg('No mini wallet address returned');
+      }
     } catch (e: any) {
+      console.log('mini connect error', e);
       setMsg(e?.message || String(e));
     }
   };
 
+  // Auto-connect inside Farcaster once
+  const triedAuto = useRef(false);
+  useEffect(() => {
+    if (isMini && !address && !triedAuto.current) {
+      triedAuto.current = true;
+      // نجرب مباشرة ملي تفتح الميني آب
+      connectMini();
+    }
+  }, [isMini, address]);
+
+  // ----- Browser connect (MetaMask/EIP-1193) -----
   const connectBrowser = async () => {
     try {
       const eth = (window as any).ethereum;
@@ -104,7 +132,7 @@ export default function MintPage() {
     setMsg('Disconnected');
   };
 
-  // ------- art generation -------
+  // ----- Generate art -----
   const generate = async () => {
     setLoading(true);
     setMsg('Generating raccoon pixel art…');
@@ -127,7 +155,7 @@ export default function MintPage() {
     }
   };
 
-  // ------- backend signed payload -------
+  // ----- Signed payload from server -----
   const getSignedMint = async () => {
     const r = await fetch('/api/create-signed-mint', {
       method: 'POST',
@@ -144,7 +172,7 @@ export default function MintPage() {
     return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
   };
 
-  // ------- mint: mini or browser (no wagmi, no .on) -------
+  // ----- Mint (Mini or Browser) -----
   const mint = async () => {
     if (!VALID) {
       return setMsg(
@@ -168,16 +196,15 @@ export default function MintPage() {
         args: [mintRequest, signature],
       });
 
-      // Mini needs decimal (wei) string; browser needs hex.
-      const valueDec = priceWei && priceWei !== '0' ? String(BigInt(priceWei)) : undefined;
-      const valueHex = priceWei && priceWei !== '0' ? '0x' + BigInt(priceWei).toString(16) : undefined;
+      const valueDec = priceWei && priceWei !== '0' ? String(BigInt(priceWei)) : undefined; // Mini
+      const valueHex = priceWei && priceWei !== '0' ? '0x' + BigInt(priceWei).toString(16) : undefined; // Browser
 
       const miniCall = { to: CONTRACT, data, ...(valueDec ? { value: valueDec } : {}) };
       const browserCall = { to: CONTRACT, data, ...(valueHex ? { value: valueHex } : {}) };
 
       const actions: any = (sdk as any).actions;
 
-      // —— Mini App path
+      // Mini path
       if (isMini && actions?.wallet_sendCalls) {
         await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [miniCall] });
         setMsg('Transaction sent via Mini App wallet. Confirm in wallet.');
@@ -191,7 +218,7 @@ export default function MintPage() {
         return;
       }
 
-      // —— Browser path
+      // Browser path
       const eth = (window as any).ethereum;
       if (eth?.request) {
         const hash: string = await eth.request({
@@ -201,7 +228,7 @@ export default function MintPage() {
 
         setMsg(`Tx submitted: ${hash.slice(0, 10)}… Waiting confirmation…`);
 
-        // Optional polling
+        // Optional: poll receipt
         const poll = async () => {
           const res = await fetch(RPC_URL, {
             method: 'POST',
@@ -237,6 +264,7 @@ export default function MintPage() {
     }
   };
 
+  // ----- UI -----
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-black text-white p-6">
       <div className="max-w-3xl mx-auto bg-slate-800/40 rounded-2xl p-6 shadow-xl">
@@ -257,21 +285,20 @@ export default function MintPage() {
             </div>
           ) : (
             <div className="flex gap-2">
-              {isMini ? (
+              {isMini && (
                 <button
                   onClick={connectMini}
                   className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
                 >
                   Connect (Mini)
                 </button>
-              ) : (
-                <button
-                  onClick={connectBrowser}
-                  className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
-                >
-                  Connect
-                </button>
               )}
+              <button
+                onClick={connectBrowser}
+                className="px-4 py-2 bg-slate-600 rounded hover:bg-slate-500"
+              >
+                Connect (Browser)
+              </button>
             </div>
           )}
         </header>
