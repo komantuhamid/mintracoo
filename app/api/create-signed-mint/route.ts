@@ -1,81 +1,99 @@
 import { NextResponse } from 'next/server';
 import { ThirdwebSDK } from '@thirdweb-dev/sdk';
-import { ethers } from 'ethers';
+import type { NextRequest } from 'next/server';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-
-    // نقبل الأسماء الجديدة + القديمة باش مانطيّحوش "Missing address"
-    const address: string = body.address || body.wallet_address;
-    const imageUrl: string = body.imageUrl || body.image_url;
+    const {
+      address,
+      imageUrl,
+      fid,
+      username,
+    }: { address?: string; imageUrl?: string; fid?: number; username?: string } =
+      await req.json();
 
     if (!address) return NextResponse.json({ error: 'Missing address' }, { status: 400 });
     if (!imageUrl) return NextResponse.json({ error: 'Missing imageUrl' }, { status: 400 });
 
-    const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY!;
-    const contractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT!;
-    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453); // 8453 Base mainnet
-    const rpcEnv = process.env.NEXT_PUBLIC_RPC_URL;
+    const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY;
+    if (!privateKey) return NextResponse.json({ error: 'Missing THIRDWEB_ADMIN_PRIVATE_KEY' }, { status: 500 });
 
-    if (!privateKey || !contractAddress) {
-      return NextResponse.json(
-        { error: 'Missing env: THIRDWEB_ADMIN_PRIVATE_KEY or NEXT_PUBLIC_NFT_CONTRACT' },
-        { status: 500 },
-      );
-    }
+    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
+    const contractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT as `0x${string}`;
+    if (!contractAddress) return NextResponse.json({ error: 'Missing NEXT_PUBLIC_NFT_CONTRACT' }, { status: 500 });
 
-    // v4: rpc خاصها تكون string[]
-    const fallbackRpc = chainId === 84532 ? 'https://sepolia.base.org' : 'https://mainnet.base.org';
-    const chain = {
-      name: chainId === 84532 ? 'base-sepolia' : 'base',
+    const clientId =
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID ||
+      process.env.THIRDWEB_CLIENT_ID || // نقرأ أي اسم حطيتيه
+      '';
+    const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
+
+    // IMPORTANT: مرّر clientId أو secretKey باش thirdweb storage يزود x-client-id
+    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, {
       chainId,
-      rpc: [rpcEnv || fallbackRpc],
-      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-      shortName: chainId === 84532 ? 'basesep' : 'base',
-      slug: chainId === 84532 ? 'base-sepolia' : 'base',
-      testnet: chainId === 84532,
-    };
+      clientId: clientId || undefined,
+      secretKey: secretKey || undefined,
+      rpc: process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
+    });
 
-    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chain);
+    // 1) نزّل الصورة من URL ورفعها لـ IPFS عبر storage ديال thirdweb
+    const resImg = await fetch(imageUrl);
+    if (!resImg.ok) {
+      return NextResponse.json({ error: `Failed to fetch image: ${resImg.status}` }, { status: 400 });
+    }
+    const blob = await resImg.blob();
+    const file = new File([blob], `raccoon_${Date.now()}.png`, { type: blob.type || 'image/png' });
+
+    const storage = sdk.storage;
+    const imageCid = await storage.upload(file); // ← هنا كان كيطّيح بلا clientId
+    const imageIpfs = storage.resolveScheme(imageCid); // ipfs://... → https gateway
+
+    // 2) ارفع Metadata
+    const metadata = {
+      name: `Raccoon Pixel #${Math.floor(Math.random() * 999999)}`,
+      description: `Raccoon pixel art generated for @${username || ''} (fid:${fid || ''})`,
+      image: imageIpfs,
+      attributes: [{ trait_type: 'Generator', value: 'MiniApp' }],
+    };
+    const metaCid = await storage.upload(metadata);
+    const tokenURI = storage.resolveScheme(metaCid);
+
+    // 3) جهّز طلب توقيع mintWithSignature
     const contract = await sdk.getContract(contractAddress);
+    const priceWei = '100000000000000'; // 0.0001 ETH
+    const start = Math.floor(Date.now() / 1000) - 60;
+    const end = start + 60 * 60 * 24 * 365;
 
-    // الثمن (string) – thirdweb كيحوّلو داخليًا
-    const mintPriceEth = '0.0001';
-    const priceWei = ethers.utils.parseEther(mintPriceEth).toString();
-    const currency = ethers.constants.AddressZero; // native ETH
-
-    const payload = {
+    const mintRequest = {
       to: address,
-      metadata: {
-        name: 'Raccoon Pixel Art',
-        description: 'Raccoon NFT generated via MiniApp',
-        image: imageUrl,
-      },
-      price: mintPriceEth,
-      currency,
-      mintStartTime: new Date(),
-      mintEndTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365),
+      royaltyRecipient: address,
+      royaltyBps: 0,
       primarySaleRecipient: address,
+      uri: tokenURI,
+      price: priceWei,
+      currency: '0x0000000000000000000000000000000000000000',
+      validityStartTimestamp: start,
+      validityEndTimestamp: end,
+      uid: crypto.randomUUID
+        ? ('0x' + crypto.randomUUID().replace(/-/g, '').padEnd(64, '0')) as `0x${string}`
+        : ('0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('')) as `0x${string}`,
     };
 
-    const signed = await contract.erc721.signature.generate(payload);
+    // Thirdweb v4: sig.mintWithSignature
+    // إذا كنت كاتستعمل Contract من نوع signature mint (TokenERC721)
+    const { signature } = await (contract as any).signature.generate(mintRequest);
 
-    return NextResponse.json(
-      {
-        mintRequest: signed.payload, // struct
-        signature: signed.signature, // 0x…
-        contractAddress,
-        chainId,
-        priceWei,
-      },
-      { status: 200 },
-    );
-  } catch (err: any) {
-    console.error('Mint sign error:', err);
-    return NextResponse.json(
-      { error: err?.message || 'Error creating mint request' },
-      { status: 500 },
-    );
+    return NextResponse.json({
+      mintRequest,
+      signature,
+      priceWei,
+      image: imageIpfs,
+      metadata: tokenURI,
+    });
+  } catch (e: any) {
+    const msg = e?.message || 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
