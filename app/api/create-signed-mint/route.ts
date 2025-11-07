@@ -18,10 +18,11 @@ export async function POST(req: NextRequest) {
     if (!contractAddress)
       return NextResponse.json({ error: 'Missing NEXT_PUBLIC_NFT_CONTRACT' }, { status: 500 });
 
-    // ⬇️ مهم: خليه SERVER env (ماشي public)
+    // Thirdweb credentials (server envs)
     const clientId =
       process.env.THIRDWEB_CLIENT_ID ||
-      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID ||
+      '';
     const secretKey = process.env.THIRDWEB_SECRET_KEY || '';
 
     if (!clientId && !secretKey) {
@@ -31,17 +32,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 👇 هنا التغيير: rpc خاصو يكون string[]
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
+
     const sdk = ThirdwebSDK.fromPrivateKey(privateKey, {
       chainId,
-      rpc: process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
       clientId: clientId || undefined,
       secretKey: secretKey || undefined,
+      rpc: [rpcUrl], // <= بدلناها من string إلى array
     });
 
-    // ⬇️ نستخدم storage من نفس SDK (غادي يبعث x-client-id)
     const storage = sdk.storage;
 
-    // 1) حمّل الصورة ومن بعد ارفعها لـ IPFS
+    // 1) Download & upload image to IPFS
     const got = await fetch(imageUrl);
     if (!got.ok) {
       return NextResponse.json(
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
     const imageCid = await storage.upload(file);
     const imageIpfs = storage.resolveScheme(imageCid);
 
-    // 2) Metadata
+    // 2) Upload metadata
     const metadata = {
       name: `Raccoon Pixel #${Math.floor(Math.random() * 999999)}`,
       description: `Raccoon pixel art generated for @${username || ''} (fid:${fid || ''})`,
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
     const metaCid = await storage.upload(metadata);
     const tokenURI = storage.resolveScheme(metaCid);
 
-    // 3) وقّع طلب mintWithSignature
+    // 3) Generate signature mint request
     const contract = await sdk.getContract(contractAddress);
 
     const priceWei = '100000000000000'; // 0.0001 ETH
@@ -90,7 +93,6 @@ export async function POST(req: NextRequest) {
           .join('')) as `0x${string}`,
     };
 
-    // TokenERC721 signature mint
     const { signature } = await (contract as any).signature.generate(mintRequest);
 
     return NextResponse.json({
