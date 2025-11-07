@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { parseAbi, encodeFunctionData, toHex } from 'viem';
+import React, { useEffect, useMemo, useState } from 'react';
+import { parseAbi, encodeFunctionData, toHex, isAddress } from 'viem';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useMiniEnv } from '@/hooks/useMiniEnv';
@@ -14,7 +14,7 @@ const MINT_ABI = parseAbi([
 ]);
 
 export default function MintPage() {
-  const { address: wagmiAddress } = useAccount();
+  const { address: wagmiAddress, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { isMini, ctx } = useMiniEnv();
@@ -37,7 +37,12 @@ export default function MintPage() {
     }
   }, [wagmiAddress, isMini, ctx?.user?.ethAddress, ctx?.user?.address]);
 
-  // جلب بروفايل Farcaster إن توفر
+  const shortAddr = useMemo(
+    () => (activeAddress ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}` : ''),
+    [activeAddress],
+  );
+
+  // جلب بروفايل Farcaster
   useEffect(() => {
     const fid = ctx?.user?.fid || ctx?.user?.id;
     if (!fid) return;
@@ -62,7 +67,7 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // Auto-connect داخل Warpcast (Farcaster connector عبر wagmi)
+  // Auto-connect داخل Warpcast عبر connector ديال Farcaster (إن وجد)
   useEffect(() => {
     (async () => {
       try {
@@ -114,7 +119,7 @@ export default function MintPage() {
         setLoading(false);
         return;
       }
-      setGeneratedImage(j.generated_image_url);
+      setGeneratedImage(j.generated_image_url || j.imageUrl || j.url);
       setMessage('Done! You can mint now.');
     } catch (e: any) {
       setMessage(e?.message || 'Generation failed');
@@ -123,69 +128,64 @@ export default function MintPage() {
     }
   };
 
-  // طلب توقيع mint من الـ backend
+  // طلب توقيع mint من الـ backend (مفاتيح صحيحة: address + imageUrl)
   const requestSignedMint = async () => {
     const res = await fetch('/api/create-signed-mint', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        to: activeAddress,
-        image_url: generatedImage,
+        address: activeAddress,                 // ← كان "to"
+        imageUrl: generatedImage,               // ← كان "image_url"
         username: farcasterProfile?.username,
         fid: farcasterProfile?.fid,
       }),
     });
     const j = await res.json();
-    if (j.error) throw new Error(j.error);
+    if (!res.ok || j.error) throw new Error(j.error || 'Sign mint failed');
     return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
   };
 
   const performMint = async () => {
     if (!activeAddress) return setMessage('Connect wallet first');
     if (!generatedImage) return setMessage('Generate image first');
+    if (!CONTRACT_ADDRESS || !isAddress(CONTRACT_ADDRESS)) {
+      return setMessage('Invalid contract address in env.');
+    }
+
     setMinting(true);
     setMessage(null);
+
     try {
       const { mintRequest, signature, priceWei } = await requestSignedMint();
+
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mintWithSignature',
         args: [mintRequest, signature],
       });
 
-      if (isMini) {
-        const actions: AnyActions = (sdk as any).actions;
-        if (actions && typeof actions.wallet_sendCalls === 'function') {
-          await actions.wallet_sendCalls({
-            chainId: CHAIN_ID,
-            calls: [{ to: CONTRACT_ADDRESS, data, value: toHex(BigInt(priceWei || '0')) }],
-          });
-        } else if (actions && typeof actions.wallet_sendTransaction === 'function') {
-          await actions.wallet_sendTransaction({
-            chainId: CHAIN_ID,
-            to: CONTRACT_ADDRESS,
-            data,
-            value: toHex(BigInt(priceWei || '0')),
-          });
-        } else {
-          throw new Error('Mini App wallet send is not available in this SDK version');
-        }
+      const hexValue =
+        priceWei && priceWei !== '0' ? toHex(BigInt(String(priceWei))) : undefined;
+
+      const call = { to: CONTRACT_ADDRESS, data, ...(hexValue ? { value: hexValue } : {}) };
+
+      // داخل Mini App
+      const actions: AnyActions = (sdk as any).actions;
+      if (isMini && actions?.wallet_sendCalls) {
+        await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [call] });
+        setMessage('Transaction submitted via Mini App wallet');
+      } else if (isMini && actions?.wallet_sendTransaction) {
+        await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...call });
         setMessage('Transaction submitted via Mini App wallet');
       } else if ((window as any).ethereum) {
+        // متصفح عادي
         const txHash = await (window as any).ethereum.request({
           method: 'eth_sendTransaction',
-          params: [
-            {
-              from: activeAddress,
-              to: CONTRACT_ADDRESS,
-              data,
-              value: toHex(BigInt(priceWei || '0')),
-            },
-          ],
+          params: [{ from: activeAddress, ...call }],
         });
         setMessage('Submitted: ' + txHash);
       } else {
-        setMessage('No wallet provider');
+        setMessage('No wallet provider found');
       }
     } catch (e: any) {
       setMessage(e?.message || 'Mint failed');
@@ -206,7 +206,7 @@ export default function MintPage() {
                 <div className="text-sm text-slate-300">
                   {farcasterProfile?.username
                     ? `@${farcasterProfile.username}`
-                    : `${activeAddress.slice(0, 6)}...${activeAddress.slice(-4)}`}
+                    : shortAddr}
                 </div>
                 <button
                   onClick={() => {
@@ -234,9 +234,7 @@ export default function MintPage() {
                         if (farcaster) {
                           await connect({ connector: farcaster });
                           const acc =
-                            (await (sdk as any).actions?.wallet_getAddresses?.({
-                              chainId: CHAIN_ID,
-                            }))?.[0];
+                            (await anyActions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
                           if (acc) setActiveAddress(acc);
                           setMessage('Mini wallet connected');
                         } else {
