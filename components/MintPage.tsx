@@ -1,30 +1,27 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { parseAbi, encodeFunctionData, toHex, isAddress } from 'viem';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { parseAbi, encodeFunctionData, isAddress } from 'viem';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useMiniEnv } from '@/hooks/useMiniEnv';
 
-// ========= helpers =========
+// ---------- helpers ----------
 function normalizeAddress(input: string) {
-  const cleaned = input
+  const cleaned = (input || '')
     .trim()
     .replace(/^['"]|['"]$/g, '')
     .replace(/\s+/g, '')
     .replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
-  const with0x = cleaned.startsWith('0x') ? cleaned : `0x${cleaned}`;
-  return with0x;
+  return cleaned.startsWith('0x') ? cleaned : `0x${cleaned}`;
 }
 
 const RAW_ENV = process.env.NEXT_PUBLIC_NFT_CONTRACT ?? '';
-const NORMALIZED_ADDR = normalizeAddress(RAW_ENV);
-const ENV_ADDRESS_VALID =
-  NORMALIZED_ADDR.length === 42 &&
-  /^0x[0-9a-fA-F]{40}$/.test(NORMALIZED_ADDR) &&
-  isAddress(NORMALIZED_ADDR);
+const NORMAL = normalizeAddress(RAW_ENV);
+const VALID =
+  NORMAL.length === 42 && /^0x[0-9a-fA-F]{40}$/.test(NORMAL) && isAddress(NORMAL);
 
-const CONTRACT_ADDRESS = (ENV_ADDRESS_VALID ? NORMALIZED_ADDR : '') as `0x${string}`;
+const CONTRACT_ADDRESS = (VALID ? NORMAL : '') as `0x${string}`;
 const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 
@@ -34,10 +31,12 @@ const MINT_ABI = parseAbi([
 ]);
 
 export default function MintPage() {
-  // wallet state
+  // wagmi
   const { address: wagmiAddress, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+
+  // mini env
   const { isMini, ctx } = useMiniEnv();
 
   // ui state
@@ -48,19 +47,19 @@ export default function MintPage() {
   const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // pick active address
+  const shortAddr = useMemo(
+    () => (activeAddress ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}` : ''),
+    [activeAddress]
+  );
+
+  // pick active address (wagmi > mini context)
   useEffect(() => {
     if (wagmiAddress) setActiveAddress(wagmiAddress);
     else if (isMini) setActiveAddress(ctx?.user?.ethAddress ?? ctx?.user?.address ?? null);
     else setActiveAddress(null);
   }, [wagmiAddress, isMini, ctx?.user?.ethAddress, ctx?.user?.address]);
 
-  const shortAddr = useMemo(
-    () => (activeAddress ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}` : ''),
-    [activeAddress],
-  );
-
-  // fetch farcaster profile
+  // -------- Farcaster profile --------
   useEffect(() => {
     const fid = ctx?.user?.fid || ctx?.user?.id;
     if (!fid) return;
@@ -84,29 +83,86 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // auto connect inside mini (اختياري)
-  useEffect(() => {
-    (async () => {
-      try {
-        if (!isMini || activeAddress) return;
-        await (sdk as any).actions?.ready?.();
-        const farcaster = connectors.find((c) =>
-          (c.id || c.name || '').toLowerCase().includes('farcaster'),
-        );
-        if (farcaster) {
-          await connect({ connector: farcaster });
-          const acc =
-            (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
-          if (acc) setActiveAddress(acc);
-          setMessage('Mini wallet connected');
-        }
-      } catch (e) {
-        console.log('mini auto connect fail', e);
-      }
-    })();
-  }, [isMini, connectors, activeAddress]);
+  // -------- Connect helpers --------
+  const farcasterConnector = useMemo(
+    () =>
+      connectors.find((c) => (c.id || c.name || '').toLowerCase().includes('farcaster')) ||
+      null,
+    [connectors]
+  );
 
-  // generate art
+  const connectMiniViaSDK = async () => {
+    try {
+      setMessage('Connecting mini wallet…');
+      const actions: any = (sdk as any).actions;
+      await actions?.ready?.();
+
+      // 1) حاول تجيب العناوين مباشرة
+      let addrs: string[] =
+        (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
+
+      // 2) إلا ماكانوش، جرّب connect ثم requestAddresses
+      if (!addrs.length && actions?.wallet_connect) {
+        await actions.wallet_connect({ chainId: CHAIN_ID });
+        addrs =
+          (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
+      }
+      if (!addrs.length && actions?.wallet_requestAddresses) {
+        await actions.wallet_requestAddresses({ chainId: CHAIN_ID });
+        addrs =
+          (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
+      }
+
+      if (addrs[0]) {
+        setActiveAddress(addrs[0]);
+        setMessage('Mini wallet connected');
+      } else {
+        setMessage('No mini wallet address returned');
+      }
+    } catch (e: any) {
+      setMessage(e?.message || String(e));
+    }
+  };
+
+  const connectSmart = async () => {
+    try {
+      setMessage('Connecting…');
+      if (isMini && farcasterConnector) {
+        // جرّب Farcaster connector أولاً
+        await (sdk as any).actions?.ready?.();
+        await connect({ connector: farcasterConnector });
+        // خذ العنوان من SDK إذا wagmi ما عطاهش مباشرة
+        const acc =
+          (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
+        if (acc) setActiveAddress(acc);
+        setMessage('Mini wallet connected');
+        return;
+      }
+
+      if (isMini && !farcasterConnector) {
+        // فحال ماكانش connector ديال Farcaster فالباكج، استعمل SDK مباشرة
+        await connectMiniViaSDK();
+        return;
+      }
+
+      // خارج الميني: استعمل أول connector (MetaMask غالباً)
+      await connect({ connector: connectors[0] });
+      setMessage('Browser wallet connected');
+    } catch (e: any) {
+      setMessage(e?.message || String(e));
+    }
+  };
+
+  // Auto-connect once inside mini
+  const tried = useRef(false);
+  useEffect(() => {
+    if (isMini && !activeAddress && !tried.current) {
+      tried.current = true;
+      connectSmart();
+    }
+  }, [isMini, activeAddress]);
+
+  // -------- Generate art --------
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('Generating raccoon pixel art…');
@@ -114,7 +170,9 @@ export default function MintPage() {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ style: 'premium collectible raccoon pixel portrait 1024x1024' }),
+        body: JSON.stringify({
+          style: 'premium collectible raccoon pixel portrait 1024x1024',
+        }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Generation failed');
@@ -127,7 +185,7 @@ export default function MintPage() {
     }
   };
 
-  // call our API to get signed payload
+  // -------- Signed mint payload (server) --------
   const requestSignedMint = async () => {
     const r = await fetch('/api/create-signed-mint', {
       method: 'POST',
@@ -144,127 +202,146 @@ export default function MintPage() {
     return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
   };
 
-  // mint logic (MiniApp OR Browser)
-const performMint = async () => {
-  if (!ENV_ADDRESS_VALID) {
-    return setMessage(
-      `Invalid contract address in env: ${
-        NORMALIZED_ADDR ? NORMALIZED_ADDR.slice(0, 6) + '…' + NORMALIZED_ADDR.slice(-4) : 'empty'
-      } (len=${NORMALIZED_ADDR.length})`,
-    );
-  }
-  if (!activeAddress) return setMessage('Connect wallet first');
-  if (!generatedImage) return setMessage('Generate image first');
-
-  setMinting(true);
-  setMessage('');
-
-  try {
-    const { mintRequest, signature, priceWei } = await requestSignedMint();
-
-    // calldata
-    const data = encodeFunctionData({
-      abi: MINT_ABI,
-      functionName: 'mintWithSignature',
-      args: [mintRequest, signature],
-    });
-
-    // 👇 قيم مختلفة لكل مسار
-    const valueDecimal =
-      priceWei && priceWei !== '0' ? String(BigInt(priceWei)) : undefined; // لواجهات الـ Mini
-    const valueHex =
-      priceWei && priceWei !== '0' ? '0x' + BigInt(priceWei).toString(16) : undefined; // لـ window.ethereum
-
-    const callMini = { to: CONTRACT_ADDRESS, data, ...(valueDecimal ? { value: valueDecimal } : {}) };
-    const callBrowser = { to: CONTRACT_ADDRESS, data, ...(valueHex ? { value: valueHex } : {}) };
-
-    // ——— MiniApp path ———
-    const actions: any = (sdk as any).actions;
-    if (isMini && actions?.wallet_sendCalls) {
-      await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [callMini] });
-      setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
-      setMinting(false);
-      return;
+  // -------- Mint --------
+  const performMint = async () => {
+    if (!VALID) {
+      return setMessage(
+        `Invalid contract address in env: ${
+          NORMAL ? NORMAL.slice(0, 6) + '…' + NORMAL.slice(-4) : 'empty'
+        } (len=${NORMAL.length})`
+      );
     }
-    if (isMini && actions?.wallet_sendTransaction) {
-      await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...callMini });
-      setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
-      setMinting(false);
-      return;
-    }
+    if (!activeAddress) return setMessage('Connect wallet first');
+    if (!generatedImage) return setMessage('Generate image first');
 
-    // ——— Browser path (MetaMask / EIP-1193) ———
-    if ((window as any).ethereum?.request) {
-      const txHash: string = await (window as any).ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: activeAddress, ...callBrowser }],
+    setMinting(true);
+    setMessage('');
+
+    try {
+      const { mintRequest, signature, priceWei } = await requestSignedMint();
+
+      const data = encodeFunctionData({
+        abi: MINT_ABI,
+        functionName: 'mintWithSignature',
+        args: [mintRequest, signature],
       });
 
-      setMessage(`Tx submitted: ${txHash.slice(0, 10)}… Waiting confirmation…`);
+      // قيم value حسب المسار
+      const valueDec =
+        priceWei && priceWei !== '0' ? String(BigInt(priceWei)) : undefined; // Mini
+      const valueHex =
+        priceWei && priceWei !== '0' ? '0x' + BigInt(priceWei).toString(16) : undefined; // Browser
 
-      // polling اختياري على receipt
-      const poll = async () => {
-        const res = await fetch(RPC_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'eth_getTransactionReceipt',
-            params: [txHash],
-          }),
-        });
-        const jr = await res.json();
-        return jr?.result || null;
+      const callMini = {
+        to: CONTRACT_ADDRESS,
+        data,
+        ...(valueDec ? { value: valueDec } : {}),
       };
-      for (let i = 0; i < 30; i++) {
-        const receipt = await poll();
-        if (receipt) {
-          setMessage('Mint confirmed ✅');
-          break;
-        }
-        await new Promise((s) => setTimeout(s, 2000));
+      const callBrowser = {
+        to: CONTRACT_ADDRESS,
+        data,
+        ...(valueHex ? { value: valueHex } : {}),
+      };
+
+      const actions: any = (sdk as any).actions;
+
+      // Mini first
+      if (isMini && actions?.wallet_sendCalls) {
+        await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [callMini] });
+        setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+        setMinting(false);
+        return;
+      }
+      if (isMini && actions?.wallet_sendTransaction) {
+        await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...callMini });
+        setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+        setMinting(false);
+        return;
       }
 
+      // Browser fallback
+      const eth = (window as any).ethereum;
+      if (eth?.request) {
+        const txHash: string = await eth.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: activeAddress, ...callBrowser }],
+        });
+        setMessage(`Tx submitted: ${txHash.slice(0, 10)}… waiting confirmation…`);
+
+        // (اختياري) poll receipt
+        const poll = async () => {
+          const res = await fetch(RPC_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'eth_getTransactionReceipt',
+              params: [txHash],
+            }),
+          });
+          const jr = await res.json();
+          return jr?.result || null;
+        };
+        for (let i = 0; i < 30; i++) {
+          const rcpt = await poll();
+          if (rcpt) {
+            setMessage('Mint confirmed ✅');
+            break;
+          }
+          await new Promise((s) => setTimeout(s, 2000));
+        }
+        setMinting(false);
+        return;
+      }
+
+      setMessage('No wallet available.');
+    } catch (e: any) {
+      console.error(e);
+      setMessage(e?.message || String(e) || 'Mint failed');
+    } finally {
       setMinting(false);
-      return;
     }
+  };
 
-    setMessage('No wallet available.');
-  } catch (e: any) {
-    console.error(e);
-    // نعرضو الرسالة الحرفية باش إذا نقصات نعرفو المصدر
-    setMessage(e?.message || String(e) || 'Mint failed');
-  } finally {
-    setMinting(false);
-  }
-};
+  const handleDisconnect = () => {
+    if (isMini) {
+      setActiveAddress(null);
+      setMessage('Disconnected');
+    } else {
+      disconnect();
+      setMessage('Disconnected');
+    }
+  };
 
-
+  // -------- UI --------
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-black text-white p-6">
       <div className="max-w-3xl mx-auto bg-slate-800/40 rounded-2xl p-6 shadow-xl">
         <header className="flex items-center justify-between">
           <h1 className="text-2xl font-extrabold">Raccoon Pixel Art Mint</h1>
+
           {activeAddress ? (
             <div className="flex items-center gap-3">
               <span className="text-sm text-slate-300">
                 {profile?.username ? `@${profile.username}` : shortAddr}
               </span>
               <button
-                onClick={() => (isMini ? setActiveAddress(null) : disconnect())}
+                onClick={handleDisconnect}
                 className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
               >
                 Disconnect
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => connect({ connector: connectors[0] })}
-              className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
-            >
-              Connect
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={connectSmart}
+                className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
+              >
+                Connect
+              </button>
+            </div>
           )}
         </header>
 
@@ -302,7 +379,7 @@ const performMint = async () => {
               </button>
             </div>
 
-            {message && <div className="mt-3 text-sm text-amber-200">{message}</div>}
+            {message && <div className="mt-3 text-sm text-amber-200 break-words">{message}</div>}
           </section>
 
           <aside className="space-y-4">
