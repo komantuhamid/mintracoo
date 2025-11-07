@@ -145,92 +145,101 @@ export default function MintPage() {
   };
 
   // mint logic (MiniApp OR Browser)
-  const performMint = async () => {
-    if (!ENV_ADDRESS_VALID) {
-      return setMessage(
-        `Invalid contract address in env: ${
-          NORMALIZED_ADDR ? NORMALIZED_ADDR.slice(0, 6) + '…' + NORMALIZED_ADDR.slice(-4) : 'empty'
-        } (len=${NORMALIZED_ADDR.length})`,
-      );
+const performMint = async () => {
+  if (!ENV_ADDRESS_VALID) {
+    return setMessage(
+      `Invalid contract address in env: ${
+        NORMALIZED_ADDR ? NORMALIZED_ADDR.slice(0, 6) + '…' + NORMALIZED_ADDR.slice(-4) : 'empty'
+      } (len=${NORMALIZED_ADDR.length})`,
+    );
+  }
+  if (!activeAddress) return setMessage('Connect wallet first');
+  if (!generatedImage) return setMessage('Generate image first');
+
+  setMinting(true);
+  setMessage('');
+
+  try {
+    const { mintRequest, signature, priceWei } = await requestSignedMint();
+
+    // calldata
+    const data = encodeFunctionData({
+      abi: MINT_ABI,
+      functionName: 'mintWithSignature',
+      args: [mintRequest, signature],
+    });
+
+    // 👇 قيم مختلفة لكل مسار
+    const valueDecimal =
+      priceWei && priceWei !== '0' ? String(BigInt(priceWei)) : undefined; // لواجهات الـ Mini
+    const valueHex =
+      priceWei && priceWei !== '0' ? '0x' + BigInt(priceWei).toString(16) : undefined; // لـ window.ethereum
+
+    const callMini = { to: CONTRACT_ADDRESS, data, ...(valueDecimal ? { value: valueDecimal } : {}) };
+    const callBrowser = { to: CONTRACT_ADDRESS, data, ...(valueHex ? { value: valueHex } : {}) };
+
+    // ——— MiniApp path ———
+    const actions: any = (sdk as any).actions;
+    if (isMini && actions?.wallet_sendCalls) {
+      await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [callMini] });
+      setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+      setMinting(false);
+      return;
     }
-    if (!activeAddress) return setMessage('Connect wallet first');
-    if (!generatedImage) return setMessage('Generate image first');
+    if (isMini && actions?.wallet_sendTransaction) {
+      await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...callMini });
+      setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+      setMinting(false);
+      return;
+    }
 
-    setMinting(true);
-    setMessage('');
-
-    try {
-      const { mintRequest, signature, priceWei } = await requestSignedMint();
-
-      const data = encodeFunctionData({
-        abi: MINT_ABI,
-        functionName: 'mintWithSignature',
-        args: [mintRequest, signature],
+    // ——— Browser path (MetaMask / EIP-1193) ———
+    if ((window as any).ethereum?.request) {
+      const txHash: string = await (window as any).ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: activeAddress, ...callBrowser }],
       });
 
-      const valueHex = priceWei && priceWei !== '0' ? toHex(BigInt(priceWei)) : undefined;
-      const call = { to: CONTRACT_ADDRESS, data, ...(valueHex ? { value: valueHex } : {}) };
+      setMessage(`Tx submitted: ${txHash.slice(0, 10)}… Waiting confirmation…`);
 
-      // ——— MiniApp path ———
-      const actions: any = (sdk as any).actions;
-      if (isMini && actions?.wallet_sendCalls) {
-        await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [call] });
-        setMessage('Transaction sent via Mini App wallet. Check your wallet to confirm.');
-        setMinting(false);
-        return;
-      }
-      if (isMini && actions?.wallet_sendTransaction) {
-        await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...call });
-        setMessage('Transaction sent via Mini App wallet. Check your wallet to confirm.');
-        setMinting(false);
-        return;
-      }
-
-      // ——— Browser path (MetaMask / EIP-1193) ———
-      if ((window as any).ethereum?.request) {
-        const txHash: string = await (window as any).ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{ from: activeAddress, ...call }],
+      // polling اختياري على receipt
+      const poll = async () => {
+        const res = await fetch(RPC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'eth_getTransactionReceipt',
+            params: [txHash],
+          }),
         });
-
-        setMessage(`Tx submitted: ${txHash.slice(0, 10)}… Waiting confirmation…`);
-
-        // optional polling
-        const poll = async () => {
-          const res = await fetch(RPC_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              id: 1,
-              method: 'eth_getTransactionReceipt',
-              params: [txHash],
-            }),
-          });
-          const jr = await res.json();
-          return jr?.result || null;
-        };
-        for (let i = 0; i < 30; i++) {
-          const receipt = await poll();
-          if (receipt) {
-            setMessage('Mint confirmed ✅');
-            break;
-          }
-          await new Promise((s) => setTimeout(s, 2000));
+        const jr = await res.json();
+        return jr?.result || null;
+      };
+      for (let i = 0; i < 30; i++) {
+        const receipt = await poll();
+        if (receipt) {
+          setMessage('Mint confirmed ✅');
+          break;
         }
-
-        setMinting(false);
-        return;
+        await new Promise((s) => setTimeout(s, 2000));
       }
 
-      setMessage('No wallet available.');
-    } catch (e: any) {
-      console.error(e);
-      setMessage(e?.message || 'Mint failed');
-    } finally {
       setMinting(false);
+      return;
     }
-  };
+
+    setMessage('No wallet available.');
+  } catch (e: any) {
+    console.error(e);
+    // نعرضو الرسالة الحرفية باش إذا نقصات نعرفو المصدر
+    setMessage(e?.message || String(e) || 'Mint failed');
+  } finally {
+    setMinting(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-black text-white p-6">
