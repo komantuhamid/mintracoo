@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY!;
     const contractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT!;
-    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453); // 8453=Base, 84532=Base Sepolia
+    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453); // 8453 Base mainnet, 84532 Base Sepolia
     const rpcEnv = process.env.NEXT_PUBLIC_RPC_URL;
 
     if (!privateKey || !contractAddress) {
@@ -26,14 +26,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✔ تعريف شبكة بصيغة v4: rpc عبارة عن مصفوفة
-    const rpcDefault =
-      chainId === 84532 ? "https://sepolia.base.org" : "https://mainnet.base.org";
-
+    // ✔ تعريف الشبكة بصيغة v4: rpc لازم تكون string[]
+    const fallbackRpc = chainId === 84532 ? "https://sepolia.base.org" : "https://mainnet.base.org";
     const chain = {
       name: chainId === 84532 ? "base-sepolia" : "base",
       chainId,
-      rpc: [rpcEnv || rpcDefault],
+      rpc: [rpcEnv || fallbackRpc], // ← مصفوفة
       nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
       shortName: chainId === 84532 ? "basesep" : "base",
       slug: chainId === 84532 ? "base-sepolia" : "base",
@@ -45,7 +43,7 @@ export async function POST(req: Request) {
 
     const contract = await sdk.getContract(contractAddress);
 
-    // الثمن بالـ ETH (string) — thirdweb v4 كيتكفّل بالتحويل للـ wei
+    // الثمن بالـ ETH كـ string (v4 يتكفّل بالتحويل)
     const mintPrice = "0.0001";
     const currency = ethers.constants.AddressZero; // native ETH
 
@@ -57,9 +55,9 @@ export async function POST(req: Request) {
         image: imageUrl,
       },
       price: mintPrice,
-      currency, // 0x0000... = ETH
+      currency,
       mintStartTime: new Date(),
-      mintEndTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365), // +1y
+      mintEndTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365), // +1 سنة
       primarySaleRecipient: address,
     };
 
@@ -68,8 +66,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       {
-        mintRequest: signedPayload.payload, // struct
-        signature: signedPayload.signature, // 0x…
+        mintRequest: signedPayload.payload,
+        signature: signedPayload.signature,
         contractAddress,
         chainId,
         priceWei: ethers.utils.parseEther(mintPrice).toString(),
