@@ -24,7 +24,7 @@ const CONTRACT_ADDRESS = (VALID ? NORMAL : '') as `0x${string}`;
 const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 
-// minimal ABI for mintWithSignature
+// minimal ABI
 const MINT_ABI = parseAbi([
   'function mintWithSignature((address,address,uint256,address,string,uint256,address,uint128,uint128,bytes32), bytes) payable returns (uint256)',
 ]);
@@ -32,7 +32,6 @@ const MINT_ABI = parseAbi([
 export default function MintPage() {
   // wagmi (outside mini app only)
   const { address: wagmiAddress } = useAccount();
-  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
   // mini env
@@ -51,18 +50,20 @@ export default function MintPage() {
     [activeAddress]
   );
 
-  // pick active address
+  // ✅ AUTO-CONNECT: Pick active address (works in both mini app and web)
   useEffect(() => {
     if (isMini) {
+      // INSIDE FARCASTER: Get from context - this auto-connects! ✅
       setActiveAddress(ctx?.user?.ethAddress ?? ctx?.user?.address ?? null);
     } else if (wagmiAddress) {
+      // OUTSIDE (web): Use Wagmi address
       setActiveAddress(wagmiAddress);
     } else {
       setActiveAddress(null);
     }
   }, [isMini, ctx?.user?.ethAddress, ctx?.user?.address, wagmiAddress]);
 
-  // -------- Farcaster profile --------
+  // Fetch Farcaster profile
   useEffect(() => {
     const fid = ctx?.user?.fid || ctx?.user?.id;
     if (!fid) return;
@@ -87,112 +88,13 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // Connect mini app wallet via SDK
-  const connectMiniViaSDK = async () => {
-    try {
-      setMessage('Connecting mini wallet…');
-
-      // Ensure SDK is ready
-      await (sdk as any).actions?.ready?.();
-
-      // Try to get from context first
-      const c = await (sdk as any).context;
-      const fromCtx: string | undefined =
-        c?.user?.ethAddress || c?.user?.address || c?.user?.walletAddress;
-
-      if (fromCtx) {
-        setActiveAddress(fromCtx);
-        setMessage('Mini wallet connected (from context)');
-        return;
-      }
-
-      const A: any = (sdk as any).actions;
-
-      // Helper: convert any shape to EVM addresses
-      const pickEth = (res: any): string[] => {
-        if (!res) return [];
-        if (Array.isArray(res)) return res;
-        if (Array.isArray(res?.addresses)) return res.addresses;
-        if (Array.isArray(res?.ethereum)) return res.ethereum;
-        if (Array.isArray(res?.evm)) return res.evm;
-        if (typeof res?.address === 'string') return [res.address];
-        return [];
-      };
-
-      // Request addresses with different parameter formats
-      try {
-        await A.wallet_requestAddresses?.({ type: 'evm' });
-      } catch {}
-      try {
-        await A.wallet_requestAddresses?.({ chainId: CHAIN_ID });
-      } catch {}
-      try {
-        await A.wallet_connect?.({ chainId: CHAIN_ID });
-      } catch {}
-
-      // Get addresses
-      let addrs: string[] = [];
-      try {
-        addrs = pickEth(await A.wallet_getAddresses?.());
-      } catch {}
-
-      if (!addrs.length) {
-        try {
-          addrs = pickEth(await A.wallet_getAddresses?.({ type: 'evm' }));
-        } catch {}
-      }
-
-      if (!addrs.length) {
-        try {
-          addrs = pickEth(await A.wallet_getAddresses?.({ chainId: CHAIN_ID }));
-        } catch {}
-      }
-
-      if (addrs[0]) {
-        setActiveAddress(addrs[0]);
-        setMessage('Mini wallet connected');
-        return;
-      }
-
-      setMessage('No mini wallet address found. Enable Warpcast Wallet in Warpcast Settings.');
-    } catch (e: any) {
-      console.error(e);
-      setMessage(e?.message || String(e));
-    }
-  };
-
-  // Auto-connect in mini app
-  useEffect(() => {
-    let done = false;
-
-    (async () => {
-      if (!isMini || activeAddress) return;
-
-      try {
-        await (sdk as any).actions?.ready?.();
-        const c = await (sdk as any).context;
-        const fromCtx: string | undefined =
-          c?.user?.ethAddress || c?.user?.address || c?.user?.walletAddress;
-
-        if (fromCtx) {
-          setActiveAddress(fromCtx);
-          setMessage('Mini wallet connected (auto)');
-          done = true;
-          return;
-        }
-      } catch {}
-
-      if (!done) connectMiniViaSDK();
-    })();
-  }, [isMini, activeAddress]);
-
   const disconnectAll = () => {
     setActiveAddress(null);
     disconnect();
     setMessage('Disconnected');
   };
 
-  // -------- Generate art --------
+  // Generate art
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('Generating raccoon pixel art…');
@@ -217,7 +119,7 @@ export default function MintPage() {
     }
   };
 
-  // -------- Request signed mint payload from server --------
+  // Request signed mint payload
   const requestSignedMint = async () => {
     const r = await fetch('/api/create-signed-mint', {
       method: 'POST',
@@ -235,7 +137,7 @@ export default function MintPage() {
     return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
   };
 
-  // -------- Perform mint --------
+  // Perform mint
   const performMint = async () => {
     if (!VALID) {
       return setMessage(
@@ -245,7 +147,7 @@ export default function MintPage() {
       );
     }
 
-    if (!activeAddress) return setMessage('Connect wallet first');
+    if (!activeAddress) return setMessage('Wallet not connected');
     if (!generatedImage) return setMessage('Generate image first');
 
     setMinting(true);
@@ -266,7 +168,7 @@ export default function MintPage() {
       const actions: any = (sdk as any).actions;
 
       if (isMini) {
-        // Inside Farcaster Mini App
+        // INSIDE Farcaster Mini App
         if (actions?.wallet_sendCalls) {
           await actions.wallet_sendCalls({
             chainId: CHAIN_ID,
@@ -295,12 +197,12 @@ export default function MintPage() {
           return;
         }
 
-        setMessage('Mini wallet API not available in this client.');
+        setMessage('Mini wallet API not available. Try again in Warpcast.');
         setMinting(false);
         return;
       }
 
-      // Browser fallback (outside mini app)
+      // OUTSIDE: Browser fallback
       const eth = (window as any).ethereum;
       if (eth?.request) {
         const txHash: string = await eth.request({
@@ -315,7 +217,7 @@ export default function MintPage() {
           ],
         });
 
-        setMessage(`Tx submitted: ${txHash.slice(0, 10)}… waiting for confirmation…`);
+        setMessage(`Tx submitted: ${txHash.slice(0, 10)}… waiting confirmation…`);
 
         // Poll for receipt
         const poll = async () => {
@@ -356,7 +258,7 @@ export default function MintPage() {
     }
   };
 
-  // -------- UI --------
+  // ---------- UI ----------
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6 flex items-center justify-center">
       <div className="max-w-md w-full bg-slate-800 rounded-lg shadow-2xl p-8 border border-slate-700">
@@ -406,12 +308,9 @@ export default function MintPage() {
               Disconnect
             </button>
           ) : (
-            <button
-              onClick={connectMiniViaSDK}
-              className="mt-2 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold text-sm transition"
-            >
-              Connect Wallet
-            </button>
+            <p className="mt-2 text-sm text-yellow-400">
+              Open in Warpcast to auto-connect wallet
+            </p>
           )}
         </div>
 
