@@ -87,60 +87,86 @@ export default function MintPage() {
     })();
   }, [ctx?.user]);
 
-  // -------- Connect buttons --------
-  const connectMiniViaSDK = async () => {
+// 1) عوّض connectMiniViaSDK بهاد النسخة:
+const connectMiniViaSDK = async () => {
+  try {
+    setMessage('Connecting mini wallet…');
+
+    // ضروري
+    await (sdk as any).actions?.ready?.();
+
+    // جرب نجيب من context بحال القديم
+    const c = await (sdk as any).context;
+    const fromCtx: string | undefined =
+      c?.user?.ethAddress || c?.user?.address || c?.user?.walletAddress;
+    if (fromCtx) {
+      setActiveAddress(fromCtx);
+      setMessage('Mini wallet connected (from context)');
+      return;
+    }
+
+    const A: any = (sdk as any).actions;
+
+    // helper: كنحوّل أي شكل لعناوين EVM
+    const pickEth = (res: any): string[] => {
+      if (!res) return [];
+      if (Array.isArray(res)) return res;                 // ['0x...']
+      if (Array.isArray(res?.addresses)) return res.addresses;
+      if (Array.isArray(res?.ethereum)) return res.ethereum;
+      if (Array.isArray(res?.evm)) return res.evm;
+      if (typeof res?.address === 'string') return [res.address];
+      return [];
+    };
+
+    // طلب صريح للعناوين – صيغ مختلفة (بعض الكلاينتات كتهمها 'type' أكثر من 'chainId')
+    try { await A.wallet_requestAddresses?.({ type: 'evm' }); } catch {}
+    try { await A.wallet_requestAddresses?.({ chainId: CHAIN_ID }); } catch {}
+    try { await A.wallet_connect?.({ chainId: CHAIN_ID }); } catch {}
+
+    // جب العناوين – جرّب بلا params وبـ params
+    let addrs: string[] = [];
+    try { addrs = pickEth(await A.wallet_getAddresses?.()); } catch {}
+    if (!addrs.length) {
+      try { addrs = pickEth(await A.wallet_getAddresses?.({ type: 'evm' })); } catch {}
+    }
+    if (!addrs.length) {
+      try { addrs = pickEth(await A.wallet_getAddresses?.({ chainId: CHAIN_ID })); } catch {}
+    }
+
+    if (addrs[0]) {
+      setActiveAddress(addrs[0]);
+      setMessage('Mini wallet connected');
+      return;
+    }
+
+    setMessage('No mini wallet address returned — open Warpcast Settings → Wallet and enable Warpcast Wallet, then try again.');
+  } catch (e: any) {
+    console.error(e);
+    setMessage(e?.message || String(e));
+  }
+};
+
+// 2) حدّث auto-connect باش يعتمد كذلك على context فورًا:
+useEffect(() => {
+  let done = false;
+  (async () => {
+    if (!isMini || activeAddress) return;
     try {
-      setMessage('Connecting mini wallet…');
-      const actions: any = (sdk as any).actions;
-      await actions?.ready?.();
-
-      let addrs: string[] =
-        (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
-
-      if (!addrs.length && actions?.wallet_connect) {
-        await actions.wallet_connect({ chainId: CHAIN_ID });
-        addrs =
-          (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
+      await (sdk as any).actions?.ready?.();
+      const c = await (sdk as any).context;
+      const fromCtx: string | undefined =
+        c?.user?.ethAddress || c?.user?.address || c?.user?.walletAddress;
+      if (fromCtx) {
+        setActiveAddress(fromCtx);
+        setMessage('Mini wallet connected (auto from context)');
+        done = true;
+        return;
       }
-      if (!addrs.length && actions?.wallet_requestAddresses) {
-        await actions.wallet_requestAddresses({ chainId: CHAIN_ID });
-        addrs =
-          (await actions?.wallet_getAddresses?.({ chainId: CHAIN_ID })) || [];
-      }
+    } catch {}
+    if (!done) connectMiniViaSDK();
+  })();
+}, [isMini, activeAddress]);
 
-      if (addrs[0]) {
-        setActiveAddress(addrs[0]);
-        setMessage('Mini wallet connected');
-      } else {
-        setMessage('No mini wallet address returned');
-      }
-    } catch (e: any) {
-      setMessage(e?.message || String(e));
-    }
-  };
-
-  const connectBrowser = async () => {
-    try {
-      const eth = (window as any).ethereum;
-      if (!eth?.request) return setMessage('No EVM wallet in browser');
-      const accs: string[] = await eth.request({ method: 'eth_requestAccounts' });
-      if (accs?.[0]) {
-        setActiveAddress(accs[0]);
-        setMessage('Browser wallet connected');
-      } else setMessage('No account selected');
-    } catch (e: any) {
-      setMessage(e?.message || String(e));
-    }
-  };
-
-  // Auto-connect in mini once
-  const tried = useRef(false);
-  useEffect(() => {
-    if (isMini && !activeAddress && !tried.current) {
-      tried.current = true;
-      connectMiniViaSDK();
-    }
-  }, [isMini, activeAddress]);
 
   const disconnectAll = () => {
     setActiveAddress(null);
