@@ -4,7 +4,7 @@ import { ThirdwebSDK } from '@thirdweb-dev/sdk';
 
 export const runtime = 'nodejs';
 
-// Helper: Convert dataURL to File
+// ✅ FIXED: Added <File> type
 async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
   const arr = dataUrl.split(',');
   const bstr = atob(arr[1]);
@@ -138,17 +138,14 @@ export async function POST(req: NextRequest) {
 
     // Prepare mint signature
     const priceWei = '100000000000000'; // 0.0001 ETH in wei
-    const maxSupply = 5000;
-    const royaltyBps = 500; // 5%
-    const royaltyRecipient = privateKey; // or set a specific address
 
     // Get contract ABI and prepare signature
     try {
       // Create minting struct
       const mintRequest = {
         to: address,
-        royaltyRecipient,
-        royaltyBps,
+        royaltyRecipient: address,
+        royaltyBps: 500,
         primarySaleRecipient: address,
         uri: metadataUri,
         quantity: 1,
@@ -165,12 +162,7 @@ export async function POST(req: NextRequest) {
         throw new Error('Failed to get signer');
       }
 
-      // Encode the mint request
-      // Note: This depends on your contract's specific signature scheme
-      // For Thirdweb's ERC721SignatureMint, you'll need to use their encoding
-      const signature = await signer.signMessage(
-        JSON.stringify(mintRequest)
-      );
+      const signature = await signer.signMessage(JSON.stringify(mintRequest));
 
       return NextResponse.json({
         success: true,
