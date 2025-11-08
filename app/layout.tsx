@@ -1,16 +1,20 @@
 import './globals.css';
-import { WagmiProviders } from '@/providers/wagmi';
-import { QueryProvider } from '@/providers/query';
+import { RootProvider } from '@/app/providers';
 
-export const metadata = { title: 'Raccoon Pixel Art Mint', description: 'Farcaster Mini App' };
+export const metadata = {
+  title: 'Raccoon Pixel Art Mint',
+  description: 'AI-generated pixel art NFT minting on Farcaster',
+};
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>
-        <QueryProvider>
-          <WagmiProviders>{children}</WagmiProviders>
-        </QueryProvider>
+        <RootProvider>{children}</RootProvider>
       </body>
     </html>
   );
