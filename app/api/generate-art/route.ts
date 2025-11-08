@@ -1,4 +1,3 @@
-// app/api/generate-art/route.ts (FIXED VERSION)
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
@@ -23,8 +22,8 @@ function buildPrompt(extra?: string) {
     "text, watermark, logo, frame, border, human, hands, extra limbs"
   ].join(", ");
 
-  return extra 
-    ? `${base}, ${extra} ### NEGATIVE: ${negative}` 
+  return extra
+    ? `${base}, ${extra} ### NEGATIVE: ${negative}`
     : `${base} ### NEGATIVE: ${negative}`;
 }
 
@@ -151,9 +150,9 @@ export async function POST(req: Request) {
     const px = await pixelateSquare(imgBuf, 1024, 12);
     const dataUrl = `data:image/png;base64,${px.toString("base64")}`;
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       generated_image_url: dataUrl,
-      success: true 
+      success: true
     });
   } catch (e: any) {
     console.error("HF route error:", e);
