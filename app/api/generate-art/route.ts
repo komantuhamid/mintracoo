@@ -1,15 +1,14 @@
+// app/api/generate-art/route.ts (FIXED VERSION)
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { HfInference } from "@huggingface/inference";
 
-// مزود/موديل مناسبين للنّتائج القوية
 const MODEL_ID = "black-forest-labs/FLUX.1-Krea-dev";
 const PROVIDER: "fal-ai" | "hf-inference" = "fal-ai";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// Prompt قوي لستايل NFT pixel art مع negative prompts
 function buildPrompt(extra?: string) {
   const base = [
     "ultra crisp pixel art raccoon NFT avatar, 8-bit, cel-shaded",
@@ -24,15 +23,17 @@ function buildPrompt(extra?: string) {
     "text, watermark, logo, frame, border, human, hands, extra limbs"
   ].join(", ");
 
-  return extra ? `${base}, ${extra} ### NEGATIVE: ${negative}` : `${base} ### NEGATIVE: ${negative}`;
+  return extra 
+    ? `${base}, ${extra} ### NEGATIVE: ${negative}` 
+    : `${base} ### NEGATIVE: ${negative}`;
 }
 
-// قصّ مركزي لمربّع
 async function centerSquare(input: Buffer) {
   const meta = await sharp(input).metadata();
   const w = meta.width || 1024;
   const h = meta.height || 1024;
   const s = Math.min(w, h);
+
   return sharp(input)
     .extract({
       left: Math.floor((w - s) / 2),
@@ -43,7 +44,6 @@ async function centerSquare(input: Buffer) {
     .toBuffer();
 }
 
-// Pixel-art نظيف: downsample nearest -> upsample nearest -> sharpen -> PNG-8 بلا dithering
 async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 12) {
   const squared = await centerSquare(input);
   const downW = Math.max(16, Math.floor(outSize / blocks));
@@ -54,9 +54,9 @@ async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 12) {
 
   const up = await sharp(down)
     .resize(outSize, outSize, { fit: "fill", kernel: sharp.kernel.nearest })
-    .sharpen(1.2, 1.0, 0.5)                // حدّة خفيفة لزيادة وضوح الحواف
-    .ensureAlpha()                          // RGBA (32-bit)
-    .png({ palette: true, dither: 0, compressionLevel: 9, adaptiveFiltering: true }) // PNG-8 نظيف
+    .sharpen(1.2, 1.0, 0.5)
+    .ensureAlpha()
+    .png({ palette: true, dither: 0, compressionLevel: 9, adaptiveFiltering: true })
     .toBuffer();
 
   return up;
@@ -68,7 +68,10 @@ export async function POST(req: Request) {
     const style: string | undefined = body?.style;
 
     if (!HF_TOKEN) {
-      return NextResponse.json({ error: "Missing HUGGINGFACE_API_TOKEN" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Missing HUGGINGFACE_API_TOKEN" },
+        { status: 500 }
+      );
     }
 
     const prompt = buildPrompt(style);
@@ -77,11 +80,9 @@ export async function POST(req: Request) {
     let output: any = null;
     let lastErr: any = null;
 
-    // محاولات قليلة فحالة loading/rate-limit
+    // 3 attempts with backoff
     for (let i = 0; i < 3; i++) {
       try {
-        // بعض إصدارات typings ما كتدعم provider صراحةً → any
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         output = await (hf.textToImage as any)({
           inputs: prompt,
           model: MODEL_ID,
@@ -98,45 +99,62 @@ export async function POST(req: Request) {
         break;
       } catch (e: any) {
         lastErr = e;
-        await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+        if (i < 2) {
+          await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+        }
       }
     }
 
     if (!output) {
-      const msg = lastErr?.message || lastErr?.response?.statusText || "Hugging Face Inference error";
+      const msg = lastErr?.message || "Hugging Face Inference error";
       const status = lastErr?.response?.status || 502;
       return NextResponse.json({ error: msg }, { status });
     }
 
-    // تطبيع الخرج (Blob | dataURL | URL | { blob })
+    // Normalize output
     let imgBuf: Buffer;
+
     if (typeof output === "string") {
       if (output.startsWith("data:image")) {
         const b64 = output.split(",")[1] || "";
         imgBuf = Buffer.from(b64, "base64");
       } else if (output.startsWith("http")) {
         const r = await fetch(output);
-        if (!r.ok) return NextResponse.json({ error: `Fetch image failed: ${r.status}` }, { status: 502 });
+        if (!r.ok) {
+          return NextResponse.json(
+            { error: `Fetch image failed: ${r.status}` },
+            { status: 502 }
+          );
+        }
         imgBuf = Buffer.from(await r.arrayBuffer());
       } else {
-        return NextResponse.json({ error: "Unexpected string output from provider" }, { status: 500 });
+        return NextResponse.json(
+          { error: "Unexpected string output" },
+          { status: 500 }
+        );
       }
-    } else if (typeof Blob !== "undefined" && output instanceof Blob) {
+    } else if (output instanceof Blob) {
       imgBuf = Buffer.from(await output.arrayBuffer());
     } else {
-      const maybeBlob: Blob | undefined = output?.blob || output?.image || output?.output;
-      if (maybeBlob && typeof maybeBlob.arrayBuffer === "function") {
+      const maybeBlob = output?.blob || output?.image || output?.output;
+      if (maybeBlob?.arrayBuffer) {
         imgBuf = Buffer.from(await maybeBlob.arrayBuffer());
       } else {
-        return NextResponse.json({ error: "Unknown provider output format" }, { status: 500 });
+        return NextResponse.json(
+          { error: "Unknown output format" },
+          { status: 500 }
+        );
       }
     }
 
-    // Pixel-art نهائي 1024×1024
+    // Pixelate
     const px = await pixelateSquare(imgBuf, 1024, 12);
     const dataUrl = `data:image/png;base64,${px.toString("base64")}`;
-    return NextResponse.json({ generated_image_url: dataUrl });
 
+    return NextResponse.json({ 
+      generated_image_url: dataUrl,
+      success: true 
+    });
   } catch (e: any) {
     console.error("HF route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
