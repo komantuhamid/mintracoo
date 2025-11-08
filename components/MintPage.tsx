@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { parseAbi, encodeFunctionData, isAddress } from 'viem';
-import { sdk } from '@farcaster/miniapp-sdk';
+import sdk from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useMiniEnv } from '@/hooks/useMiniEnv';
 
@@ -30,40 +30,84 @@ const MINT_ABI = parseAbi([
 ]);
 
 export default function MintPage() {
-  // wagmi (outside mini app only)
-  const { address: wagmiAddress } = useAccount();
+  // ===== WAGMI HOOKS =====
+  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount();
+  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
-  // mini env
+  // ===== MINI ENV =====
   const { isMini, ctx } = useMiniEnv();
 
-  // ui state
+  // ===== UI STATE =====
   const [activeAddress, setActiveAddress] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [isMiniApp, setIsMiniApp] = useState(false);
 
   const shortAddr = useMemo(
     () => (activeAddress ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}` : ''),
     [activeAddress]
   );
 
-  // ✅ AUTO-CONNECT: Pick active address (works in both mini app and web)
+  // ===== AUTO-CONNECT: Check if in mini app =====
   useEffect(() => {
-    if (isMini) {
-      // INSIDE FARCASTER: Get from context - this auto-connects! ✅
-      setActiveAddress(ctx?.user?.ethAddress ?? ctx?.user?.address ?? null);
-    } else if (wagmiAddress) {
-      // OUTSIDE (web): Use Wagmi address
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const inMini = await sdk.isInMiniApp();
+        if (isMounted) {
+          setIsMiniApp(inMini);
+        }
+      } catch (e) {
+        console.error('Mini app check failed:', e);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // ===== AUTO-CONNECT: Get address from context =====
+  useEffect(() => {
+    if (isMiniApp) {
+      // INSIDE FARCASTER: Get address from SDK context
+      const address = ctx?.user?.ethAddress ?? ctx?.user?.address ?? null;
+      if (address) {
+        setActiveAddress(address);
+        setMessage(null); // Clear "Open in Warpcast" message
+      }
+    } else if (wagmiConnected && wagmiAddress) {
+      // OUTSIDE: Use Wagmi address
       setActiveAddress(wagmiAddress);
     } else {
       setActiveAddress(null);
     }
-  }, [isMini, ctx?.user?.ethAddress, ctx?.user?.address, wagmiAddress]);
+  }, [isMiniApp, ctx?.user?.ethAddress, ctx?.user?.address, wagmiConnected, wagmiAddress]);
 
-  // Fetch Farcaster profile
+  // ===== AUTO-CONNECT: Try to connect Wagmi connector =====
+  useEffect(() => {
+    if (!isMiniApp && !wagmiConnected && connectors.length > 0) {
+      // Try to auto-connect with first available connector
+      const farcasterConnector = connectors.find(
+        (c) => c.name?.toLowerCase().includes('farcaster') || c.name?.toLowerCase().includes('mini')
+      );
+
+      if (farcasterConnector) {
+        try {
+          connect({ connector: farcasterConnector });
+        } catch (e) {
+          console.error('Auto-connect failed:', e);
+        }
+      }
+    }
+  }, [isMiniApp, wagmiConnected, connectors, connect]);
+
+  // ===== FETCH PROFILE =====
   useEffect(() => {
     const fid = ctx?.user?.fid || ctx?.user?.id;
     if (!fid) return;
@@ -94,7 +138,7 @@ export default function MintPage() {
     setMessage('Disconnected');
   };
 
-  // Generate art
+  // ===== GENERATE ART =====
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('Generating raccoon pixel art…');
@@ -119,7 +163,7 @@ export default function MintPage() {
     }
   };
 
-  // Request signed mint payload
+  // ===== REQUEST SIGNED MINT =====
   const requestSignedMint = async () => {
     const r = await fetch('/api/create-signed-mint', {
       method: 'POST',
@@ -137,7 +181,7 @@ export default function MintPage() {
     return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
   };
 
-  // Perform mint
+  // ===== PERFORM MINT =====
   const performMint = async () => {
     if (!VALID) {
       return setMessage(
@@ -167,8 +211,8 @@ export default function MintPage() {
 
       const actions: any = (sdk as any).actions;
 
-      if (isMini) {
-        // INSIDE Farcaster Mini App
+      if (isMiniApp) {
+        // INSIDE FARCASTER MINI APP
         if (actions?.wallet_sendCalls) {
           await actions.wallet_sendCalls({
             chainId: CHAIN_ID,
@@ -180,7 +224,7 @@ export default function MintPage() {
               },
             ],
           });
-          setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+          setMessage('✅ Transaction sent! Confirm in your wallet.');
           setMinting(false);
           return;
         }
@@ -192,17 +236,17 @@ export default function MintPage() {
             data,
             ...(valueHex ? { value: valueHex } : {}),
           });
-          setMessage('Transaction sent via Mini App wallet. Confirm in wallet.');
+          setMessage('✅ Transaction sent! Confirm in your wallet.');
           setMinting(false);
           return;
         }
 
-        setMessage('Mini wallet API not available. Try again in Warpcast.');
+        setMessage('❌ Mini wallet API not available');
         setMinting(false);
         return;
       }
 
-      // OUTSIDE: Browser fallback
+      // OUTSIDE MINI APP: Browser fallback
       const eth = (window as any).ethereum;
       if (eth?.request) {
         const txHash: string = await eth.request({
@@ -217,10 +261,10 @@ export default function MintPage() {
           ],
         });
 
-        setMessage(`Tx submitted: ${txHash.slice(0, 10)}… waiting confirmation…`);
+        setMessage(`⏳ Tx: ${txHash.slice(0, 10)}... waiting confirmation…`);
 
         // Poll for receipt
-        const poll = async () => {
+        for (let i = 0; i < 30; i++) {
           const res = await fetch(RPC_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -233,13 +277,8 @@ export default function MintPage() {
           });
 
           const jr = await res.json();
-          return jr?.result || null;
-        };
-
-        for (let i = 0; i < 30; i++) {
-          const rcpt = await poll();
-          if (rcpt) {
-            setMessage('Mint confirmed ✅');
+          if (jr?.result) {
+            setMessage('✅ Mint confirmed! NFT minted successfully!');
             break;
           }
           await new Promise((s) => setTimeout(s, 2000));
@@ -249,12 +288,30 @@ export default function MintPage() {
         return;
       }
 
-      setMessage('No wallet available.');
+      setMessage('❌ No wallet available');
     } catch (e: any) {
       console.error(e);
-      setMessage(e?.message || String(e) || 'Mint failed');
+      setMessage(`❌ ${e?.message || 'Mint failed'}`);
     } finally {
       setMinting(false);
+    }
+  };
+
+  // ===== MANUAL WALLET CONNECT =====
+  const handleManualConnect = () => {
+    if (connectors.length === 0) {
+      setMessage('No wallets available');
+      return;
+    }
+
+    const farcasterConnector = connectors.find(
+      (c) => c.name?.toLowerCase().includes('farcaster') || c.name?.toLowerCase().includes('mini')
+    );
+
+    if (farcasterConnector) {
+      connect({ connector: farcasterConnector });
+    } else {
+      connect({ connector: connectors[0] });
     }
   };
 
@@ -308,9 +365,19 @@ export default function MintPage() {
               Disconnect
             </button>
           ) : (
-            <p className="mt-2 text-sm text-yellow-400">
-              Open in Warpcast to auto-connect wallet
-            </p>
+            <div className="mt-2 space-y-2">
+              <button
+                onClick={handleManualConnect}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold text-sm transition"
+              >
+                Connect Wallet
+              </button>
+              {isMiniApp && (
+                <p className="text-xs text-yellow-400 text-center">
+                  💡 Make sure Warpcast Wallet is enabled
+                </p>
+              )}
+            </div>
           )}
         </div>
 
