@@ -76,35 +76,35 @@ export default function MintPage() {
 
   const generateRaccoon = async () => {
     setLoading(true);
-    setMessage('Generating...');
+    setMessage('🎨 Generating...');
     setMintedTokenId(null);
     
     try {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ style: 'pixel raccoon collectible nft' }),
+        body: JSON.stringify({ style: 'pixel raccoon collectible' }),
       });
 
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Failed');
 
       setGeneratedImage(j.generated_image_url || j.imageUrl);
-      setMessage('✅ Ready to mint!');
+      setMessage('✅ Ready!');
     } catch (e: any) {
-      setMessage(`❌ ${e?.message || 'Failed'}`);
+      setMessage(`❌ ${e?.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ BACKEND MINTING (Public - no permissions needed!)
+  // ✅ BACKEND DOES EVERYTHING (No RPC errors!)
   const performMint = async () => {
-    if (!address) return setMessage('❌ Connect wallet first');
+    if (!address) return setMessage('❌ Connect wallet');
     if (!generatedImage) return setMessage('❌ Generate image first');
 
     setMinting(true);
-    setMessage('🎨 Uploading to IPFS & Minting...');
+    setMessage('📤 Uploading & Minting...');
 
     try {
       const res = await fetch('/api/create-signed-mint', {
@@ -126,11 +126,9 @@ export default function MintPage() {
 
       setMintedTokenId(data.tokenId);
       setMessage(`🎉 Minted! Token #${data.tokenId}`);
-      
-      console.log('✅ Success:', data);
     } catch (e: any) {
-      console.error('Mint error:', e);
-      setMessage(`❌ ${e?.message || 'Minting failed'}`);
+      console.error('❌ Error:', e);
+      setMessage(`❌ ${e?.message || 'Failed'}`);
     } finally {
       setMinting(false);
     }
@@ -147,7 +145,7 @@ export default function MintPage() {
           {generatedImage ? (
             <img src={generatedImage} alt="Raccoon" className="w-full h-auto rounded" />
           ) : (
-            <span className="text-slate-400 text-sm">No image yet</span>
+            <span className="text-slate-400 text-sm">No image</span>
           )}
         </div>
 
@@ -166,7 +164,7 @@ export default function MintPage() {
           {isConnected && (
             <button
               onClick={() => disconnect()}
-              className="mt-2 w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold"
+              className="mt-2 w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
             >
               Disconnect
             </button>
@@ -192,7 +190,7 @@ export default function MintPage() {
         </div>
 
         {message && (
-          <div className="p-3 bg-slate-700 rounded border border-slate-600 text-slate-200 text-sm">
+          <div className="p-3 bg-slate-700 rounded border border-slate-600 text-slate-200 text-sm text-center">
             {message}
           </div>
         )}
