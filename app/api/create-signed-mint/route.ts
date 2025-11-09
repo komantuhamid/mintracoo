@@ -4,21 +4,6 @@ import { ThirdwebSDK } from '@thirdweb-dev/sdk';
 
 export const runtime = 'nodejs';
 
-// ✅ FIXED: Added <File> type
-async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
-  const arr = dataUrl.split(',');
-  const bstr = atob(arr[1]);
-  const n = bstr.length;
-  const u8arr = new Uint8Array(n);
-
-  for (let i = 0; i < n; i++) {
-    u8arr[i] = bstr.charCodeAt(i);
-  }
-
-  const blob = new Blob([u8arr], { type: 'image/png' });
-  return new File([blob], filename, { type: 'image/png' });
-}
-
 export async function POST(req: NextRequest) {
   try {
     const { address, imageUrl, fid, username } = await req.json();
@@ -56,27 +41,26 @@ export async function POST(req: NextRequest) {
 
     if (!clientId && !secretKey) {
       return NextResponse.json(
-        { error: 'Missing Thirdweb credentials: set THIRDWEB_CLIENT_ID or THIRDWEB_SECRET_KEY' },
+        { error: 'Missing Thirdweb credentials' },
         { status: 500 }
       );
     }
 
     // Initialize Thirdweb SDK
-    const sdk = await ThirdwebSDK.fromPrivateKey(privateKey, chainId, {
+    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainId, {
       clientId,
       secretKey,
     });
 
-    const contract = await sdk.getContract(contractAddress);
-
-    // Convert image URL to File
-    let file: File;
+    // ✅ FIX: Convert dataURL to raw data, not File
+    let imageData: string | Buffer;
 
     if (imageUrl.startsWith('data:')) {
-      // dataURL -> File
-      file = await dataUrlToFile(imageUrl, `raccoon_${Date.now()}.png`);
+      // Extract base64 data
+      const base64Data = imageUrl.split(',')[1];
+      imageData = base64Data; // Keep as base64 string
     } else if (imageUrl.startsWith('http')) {
-      // HTTP URL -> Blob -> File
+      // Fetch HTTP image
       const response = await fetch(imageUrl);
       if (!response.ok) {
         return NextResponse.json(
@@ -84,18 +68,22 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      const blob = await response.blob();
-      file = new File([blob], `raccoon_${Date.now()}.png`, { type: 'image/png' });
+      const arrayBuffer = await response.arrayBuffer();
+      imageData = Buffer.from(arrayBuffer);
     } else {
       return NextResponse.json({ error: 'Invalid imageUrl' }, { status: 400 });
     }
 
-    // Upload to IPFS via Thirdweb storage
+    // Upload to IPFS
     let imageUri: string;
     try {
       const storage = sdk.storage;
-      const uploadHash = await storage.upload(file);
-      imageUri = storage.resolveScheme(uploadHash);
+      
+      // ✅ FIX: Upload raw data directly
+      const uploadResult = await storage.upload(imageData);
+      imageUri = storage.resolveScheme(uploadResult);
+      
+      console.log('Image uploaded to IPFS:', imageUri);
     } catch (e: any) {
       console.error('IPFS upload error:', e);
       return NextResponse.json(
@@ -121,13 +109,10 @@ export async function POST(req: NextRequest) {
     let metadataUri: string;
     try {
       const storage = sdk.storage;
-      const metadataJson = JSON.stringify(metadata);
-      const metadataBlob = new Blob([metadataJson], { type: 'application/json' });
-      const metadataFile = new File([metadataBlob], 'metadata.json', {
-        type: 'application/json',
-      });
-      const metadataHash = await storage.upload(metadataFile);
-      metadataUri = storage.resolveScheme(metadataHash);
+      const uploadResult = await storage.upload(metadata);
+      metadataUri = storage.resolveScheme(uploadResult);
+      
+      console.log('Metadata uploaded to IPFS:', metadataUri);
     } catch (e: any) {
       console.error('Metadata upload error:', e);
       return NextResponse.json(
@@ -136,49 +121,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Prepare mint signature
-    const priceWei = '100000000000000'; // 0.0001 ETH in wei
+    // Return mint data (your contract handles the actual minting)
+    const priceWei = '100000000000000'; // 0.0001 ETH
 
-    // Get contract ABI and prepare signature
-    try {
-      // Create minting struct
-      const mintRequest = {
-        to: address,
-        royaltyRecipient: address,
-        royaltyBps: 500,
-        primarySaleRecipient: address,
-        uri: metadataUri,
-        quantity: 1,
-        pricePerToken: priceWei,
-        currency: '0x0000000000000000000000000000000000000000', // ETH
-        validityStartTimestamp: Math.floor(Date.now() / 1000),
-        validityEndTimestamp: Math.floor(Date.now() / 1000) + 86400 * 7, // 7 days
-        uid: '0x0000000000000000000000000000000000000000000000000000000000000000',
-      };
-
-      // Generate signature using Thirdweb's built-in signing
-      const signer = sdk.getSigner();
-      if (!signer) {
-        throw new Error('Failed to get signer');
-      }
-
-      const signature = await signer.signMessage(JSON.stringify(mintRequest));
-
-      return NextResponse.json({
-        success: true,
-        mintRequest,
-        signature: signature as `0x${string}`,
-        priceWei,
-        metadataUri,
-        imageUri,
-      });
-    } catch (e: any) {
-      console.error('Signing error:', e);
-      return NextResponse.json(
-        { error: `Mint signing failed: ${e?.message}` },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json({
+      success: true,
+      metadataUri,
+      imageUri,
+      priceWei,
+      // For signature-based minting, you'd generate signature here
+      // But for direct minting, just return the URIs
+    });
   } catch (e: any) {
     console.error('Mint route error:', e);
     return NextResponse.json(
