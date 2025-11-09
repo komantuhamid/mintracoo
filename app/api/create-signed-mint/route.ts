@@ -1,12 +1,13 @@
+// app/api/create-signed-mint/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 import { ThirdwebStorage } from "@thirdweb-dev/storage";
+import { ThirdwebSDK, NATIVE_TOKEN_ADDRESS } from "@thirdweb-dev/sdk";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_NFT_CONTRACT!;
-const CHAIN = "base"; // Base chain id = 8453
+const CHAIN = "base"; // Base mainnet
 
 const storage = new ThirdwebStorage({
   secretKey: process.env.THIRDWEB_SECRET_KEY,
@@ -26,24 +27,28 @@ export async function POST(req: NextRequest) {
 
     if (!address) return NextResponse.json({ error: "Missing address" }, { status: 400 });
     if (!imageUrl) return NextResponse.json({ error: "Missing imageUrl" }, { status: 400 });
+    if (!CONTRACT_ADDRESS) return NextResponse.json({ error: "Missing NEXT_PUBLIC_NFT_CONTRACT" }, { status: 500 });
     if (!process.env.SIGNER_PRIVATE_KEY)
       return NextResponse.json({ error: "Missing SIGNER_PRIVATE_KEY" }, { status: 500 });
+    if (!process.env.THIRDWEB_SECRET_KEY && !process.env.THIRDWEB_CLIENT_ID)
+      return NextResponse.json({ error: "Missing THIRDWEB credentials" }, { status: 500 });
 
-    // 1️⃣ جلب الصورة من Hugging Face
+    // 1) حمّل الصورة من Hugging Face كـ Buffer
     const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) throw new Error("Failed to fetch generated image");
     const nodeBuffer = Buffer.from(await imgRes.arrayBuffer());
 
-    // 2️⃣ رفع الصورة لـ IPFS
-    const ipfsImageUri = await storage.upload(nodeBuffer, { uploadWithoutDirectory: true });
+    // 2) رفع الصورة لـ IPFS
+    const ipfsImageUri = await storage.upload(nodeBuffer, {
+      uploadWithoutDirectory: true,
+    });
 
-    // 3️⃣ بناء metadata
+    // 3) حضّر حقول الميتاداتا
     const name =
-      username && username.trim() ? `Raccoon • @${username}` : "Raccoon";
-    const description = `AI-generated pixel raccoon NFT for ${address}${
+      username && username.trim().length > 0 ? `Raccoon • @${username}` : "Raccoon";
+    const description = `AI-generated pixel art raccoon NFT for ${address}${
       fid ? ` (FID ${fid})` : ""
     }`;
-
     const attributes = [
       { trait_type: "Generator", value: "Hugging Face FLUX.1" },
       { trait_type: "Style", value: "Pixel Art" },
@@ -51,32 +56,44 @@ export async function POST(req: NextRequest) {
       ...(username ? [{ trait_type: "Creator", value: `@${username}` }] : []),
     ];
 
-    // 4️⃣ تهيئة SDK بالمفتاح الخاص لمحفظة السيرفر
+    // 4) SDK بمفتاح محفظة السيرفر (اللي عندها MINTER/CREATOR فالعقد)
     const sdk = ThirdwebSDK.fromPrivateKey(process.env.SIGNER_PRIVATE_KEY!, CHAIN, {
       secretKey: process.env.THIRDWEB_SECRET_KEY,
     });
     const contract = await sdk.getContract(CONTRACT_ADDRESS);
 
-    // 5️⃣ إنشاء توقيع mint
+    // 5) توليد توقيع mintWithSignature
+    // 👇 مهمة: currencyAddress = NATIVE_TOKEN_ADDRESS باش مايبقاش undefined
     const signed = await contract.erc721.signature.generate({
       to: address,
       price: 0,
-      metadata: { name, description, image: ipfsImageUri, attributes },
+      currencyAddress: NATIVE_TOKEN_ADDRESS,
+      metadata: {
+        name,
+        description,
+        image: ipfsImageUri, // ipfs://...
+        attributes,
+      },
     });
 
-    // 6️⃣ إعداد بيانات المعاملة للواجهة
+    // 6) تجهيز calldata للواجهة
     const to = await contract.getAddress();
     const data = contract.encoder.encode("mintWithSignature", [
       signed.payload,
       signed.signature as `0x${string}`,
     ]);
 
-    return NextResponse.json({ to, data, value: "0" });
+    // (اختياري) يمكن ترجع metadataUri من payload إذا بغيتي
+    // const metadataUri = signed.payload.uri;
+
+    return NextResponse.json({
+      to,
+      data,
+      value: "0",
+      // metadataUri,
+    });
   } catch (e: any) {
     console.error("create-signed-mint error:", e);
-    return NextResponse.json(
-      { error: e?.message || "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
   }
 }
