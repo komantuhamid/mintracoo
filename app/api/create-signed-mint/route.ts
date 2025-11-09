@@ -8,7 +8,6 @@ export async function POST(req: NextRequest) {
   try {
     const { address, imageUrl, fid, username } = await req.json();
 
-    // Validate inputs
     if (!address) {
       return NextResponse.json({ error: 'Missing address' }, { status: 400 });
     }
@@ -17,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing imageUrl' }, { status: 400 });
     }
 
-    // Validate env vars
+    // Get env vars
     const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY;
     if (!privateKey) {
       return NextResponse.json(
@@ -27,6 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
+    const contractAddress = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC';
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
@@ -37,13 +37,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Initialize Thirdweb SDK
+    // Initialize SDK with YOUR admin wallet (has MINTER role)
     const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainId, {
       clientId,
       secretKey,
     });
 
-    // Convert dataURL to raw data
+    // Convert image
     let imageData: string | Buffer;
 
     if (imageUrl.startsWith('data:')) {
@@ -63,13 +63,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid imageUrl' }, { status: 400 });
     }
 
-    // Upload to IPFS
+    // Upload image to IPFS
     let imageUri: string;
     try {
       const storage = sdk.storage;
       const uploadResult = await storage.upload(imageData);
       imageUri = storage.resolveScheme(uploadResult);
-      console.log('Image uploaded to IPFS:', imageUri);
+      console.log('✅ Image uploaded:', imageUri);
     } catch (e: any) {
       console.error('IPFS upload error:', e);
       return NextResponse.json(
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     // Create metadata
     const metadata = {
       name: `Raccoon #${Date.now()}`,
-      description: `AI-generated pixel art raccoon NFT. Generated for ${username || address}`,
+      description: `AI-generated pixel art raccoon NFT. Created for ${username || address}`,
       image: imageUri,
       attributes: [
         { trait_type: 'Generator', value: 'Hugging Face FLUX.1' },
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       const storage = sdk.storage;
       const uploadResult = await storage.upload(metadata);
       metadataUri = storage.resolveScheme(uploadResult);
-      console.log('Metadata uploaded to IPFS:', metadataUri);
+      console.log('✅ Metadata uploaded:', metadataUri);
     } catch (e: any) {
       console.error('Metadata upload error:', e);
       return NextResponse.json(
@@ -106,14 +106,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Return metadata URI
-    return NextResponse.json({
-      success: true,
-      metadataUri,
-      imageUri,
-    });
+    // ✅ MINT NFT FROM BACKEND (Your wallet has permission!)
+    try {
+      const contract = await sdk.getContract(contractAddress);
+      
+      console.log('🎯 Minting to:', address);
+      console.log('🎯 Metadata:', metadataUri);
+
+      // Call mintTo function
+      const tx = await contract.call('mintTo', [address, metadataUri]);
+      
+      console.log('🎉 Minted successfully!');
+      console.log('TX Hash:', tx.receipt.transactionHash);
+
+      // Extract token ID from events
+      let tokenId = 'unknown';
+      if (tx.receipt.events && tx.receipt.events.length > 0) {
+        const transferEvent = tx.receipt.events.find((e: any) => e.event === 'Transfer');
+        if (transferEvent && transferEvent.args && transferEvent.args.tokenId) {
+          tokenId = transferEvent.args.tokenId.toString();
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        metadataUri,
+        imageUri,
+        transactionHash: tx.receipt.transactionHash,
+        tokenId,
+      });
+    } catch (e: any) {
+      console.error('❌ Mint error:', e);
+      return NextResponse.json(
+        { error: `Minting failed: ${e?.message}` },
+        { status: 500 }
+      );
+    }
   } catch (e: any) {
-    console.error('Mint route error:', e);
+    console.error('❌ Route error:', e);
     return NextResponse.json(
       { error: e?.message || 'server_error' },
       { status: 500 }
