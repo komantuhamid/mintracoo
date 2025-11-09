@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server'; // ✅ CORRECT IMPORT
+import type { NextRequest } from 'next/server';
 import { ThirdwebSDK } from '@thirdweb-dev/sdk';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60; // Allow up to 60 seconds for minting
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,10 +29,17 @@ export async function POST(req: NextRequest) {
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
-    // ✅ Base chain with official RPC
+    // ✅ Multiple RPC endpoints (fallback if one fails)
+    const RPC_ENDPOINTS = [
+      'https://base.llamarpc.com',
+      'https://mainnet.base.org',
+      'https://base-mainnet.public.blastapi.io',
+      'https://base.blockpi.network/v1/rpc/public',
+    ];
+
     const baseChainConfig = {
       chainId: 8453,
-      rpc: ['https://mainnet.base.org'],
+      rpc: RPC_ENDPOINTS,
       nativeCurrency: {
         name: 'Ether',
         symbol: 'ETH',
@@ -40,6 +48,7 @@ export async function POST(req: NextRequest) {
       slug: 'base',
     };
 
+    console.log('Initializing SDK...');
     const sdk = ThirdwebSDK.fromPrivateKey(
       privateKey,
       baseChainConfig,
@@ -56,6 +65,7 @@ export async function POST(req: NextRequest) {
       const base64Data = imageUrl.split(',')[1];
       imageData = base64Data;
     } else if (imageUrl.startsWith('http')) {
+      console.log('Fetching image...');
       const response = await fetch(imageUrl);
       if (!response.ok) {
         return NextResponse.json(
@@ -69,15 +79,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid imageUrl' }, { status: 400 });
     }
 
-    // Upload image
+    // Upload image to IPFS
     let imageUri: string;
     try {
+      console.log('Uploading image to IPFS...');
       const storage = sdk.storage;
       const uploadResult = await storage.upload(imageData);
       imageUri = storage.resolveScheme(uploadResult);
       console.log('✅ Image uploaded:', imageUri);
     } catch (e: any) {
-      console.error('IPFS error:', e);
+      console.error('IPFS upload error:', e);
       return NextResponse.json(
         { error: `IPFS upload failed: ${e?.message}` },
         { status: 500 }
@@ -100,30 +111,63 @@ export async function POST(req: NextRequest) {
     // Upload metadata
     let metadataUri: string;
     try {
+      console.log('Uploading metadata to IPFS...');
       const storage = sdk.storage;
       const uploadResult = await storage.upload(metadata);
       metadataUri = storage.resolveScheme(uploadResult);
       console.log('✅ Metadata uploaded:', metadataUri);
     } catch (e: any) {
-      console.error('Metadata error:', e);
+      console.error('Metadata upload error:', e);
       return NextResponse.json(
         { error: `Metadata upload failed: ${e?.message}` },
         { status: 500 }
       );
     }
 
-    // MINT
+    // ✅ MINT with advanced retry logic
     try {
+      console.log('Getting contract...');
       const contract = await sdk.getContract(contractAddress);
       
       console.log('🎯 Minting to:', address);
       console.log('🎯 Metadata:', metadataUri);
 
-      const tx = await contract.call('mintTo', [address, metadataUri]);
+      // Retry with exponential backoff
+      let tx;
+      const maxAttempts = 5;
       
-      console.log('🎉 Minted!');
-      console.log('TX:', tx.receipt.transactionHash);
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          console.log(`Mint attempt ${attempt}/${maxAttempts}...`);
+          
+          tx = await contract.call('mintTo', [address, metadataUri], {
+            gasLimit: 500000, // Increase gas limit
+          });
+          
+          console.log('✅ Transaction sent!');
+          break;
+        } catch (err: any) {
+          console.error(`❌ Attempt ${attempt} failed:`, err.message);
+          
+          if (attempt === maxAttempts) {
+            throw new Error(`Failed after ${maxAttempts} attempts: ${err.message}`);
+          }
+          
+          // Exponential backoff: 2s, 4s, 8s, 16s
+          const delay = Math.min(2000 * Math.pow(2, attempt - 1), 16000);
+          console.log(`Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
 
+      if (!tx) {
+        throw new Error('Transaction failed');
+      }
+      
+      console.log('🎉 Minted successfully!');
+      console.log('TX Hash:', tx.receipt.transactionHash);
+
+      // Extract token ID
       let tokenId = 'unknown';
       if (tx.receipt.events && tx.receipt.events.length > 0) {
         const transferEvent = tx.receipt.events.find((e: any) => e.event === 'Transfer');
@@ -142,7 +186,7 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       console.error('❌ Mint error:', e);
       return NextResponse.json(
-        { error: `Minting failed: ${e?.message || 'Unknown'}` },
+        { error: `Minting failed: ${e?.message || 'Unknown error'}` },
         { status: 500 }
       );
     }
