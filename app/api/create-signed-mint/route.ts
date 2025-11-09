@@ -6,14 +6,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const storage = new ThirdwebStorage({
-  // استعمل secret key ديال السيرفر. إذا عندك CLIENT_ID فقط، بدّلها لكن الأفضل للسيرفر: SECRET_KEY
+  // يفضَّل SECRET_KEY فالسيرفر. غادي يخدم حتى إذا كان غير CLIENT_ID.
   secretKey: process.env.THIRDWEB_SECRET_KEY,
-  clientId: process.env.THIRDWEB_CLIENT_ID, // اختياري
+  clientId: process.env.THIRDWEB_CLIENT_ID,
 });
 
 type Body = {
   address: `0x${string}`;
-  imageUrl: string; // راجعة من /api/generate-art
+  imageUrl: string; // جاية من /api/generate-art
   username?: string;
   fid?: number | string;
 };
@@ -35,29 +35,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1) جيب الصورة اللي ولات من Hugging Face
+    // 1) حمّل الصورة من رابط Hugging Face
     const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) throw new Error('Failed to fetch generated image');
-    const imgArrayBuf = await imgRes.arrayBuffer();
 
-    // 2) رفع الصورة إلى IPFS عبر ThirdwebStorage
-    //    مهم: اسم الملف و mimetype باش المحافظ تتعرف على الصورة
-    const file = new File([imgArrayBuf], 'raccoon.png', { type: 'image/png' });
-    const ipfsImageUri = await storage.upload(file); // => ipfs://...
+    // ✅ استعمل Buffer ديال Node (ماشي File/Web stream) لتفادي e.on is not a function
+    const arrayBuf = await imgRes.arrayBuffer();
+    const nodeBuffer = Buffer.from(arrayBuf);
 
-    // 3) بني الميتاداتا (image = ipfs://... باش تبان ف thirdweb/wallets)
+    // 2) رفع الصورة إلى IPFS (يرجع ipfs://...)
+    const ipfsImageUri = await storage.upload(nodeBuffer, {
+      uploadWithoutDirectory: true,
+    });
+
+    // 3) بنِي metadata باستعمال ipfsImageUri
     const name =
       username && username.trim().length > 0
         ? `Raccoon • @${username}`
         : 'Raccoon';
-    const description = `AI-generated pixel art raccoon NFT. Generated for ${address}${
-      fid ? ` (FID ${fid})` : ''
-    }`;
 
     const metadata = {
       name,
-      description,
-      image: ipfsImageUri,
+      description: `AI-generated pixel art raccoon NFT. Generated for ${address}${
+        fid ? ` (FID ${fid})` : ''
+      }`,
+      image: ipfsImageUri, // مهم: ipfs://… باش الصورة تبان فالمحافظ/thirdweb
       attributes: [
         { trait_type: 'Generator', value: 'Hugging Face FLUX.1' },
         { trait_type: 'Style', value: 'Pixel Art' },
@@ -66,10 +68,12 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    // 4) رفع الميتاداتا نفسها إلى IPFS
-    const metadataUri = await storage.upload(metadata); // => ipfs://...
+    // 4) رفع metadata نفسها لـ IPFS (ipfs://...)
+    const metadataUri = await storage.upload(metadata, {
+      uploadWithoutDirectory: true,
+    });
 
-    // 5) رجّع URI للواجهة (هي غادي تدير mintTo(address, metadataUri))
+    // 5) رجّع metadataUri للواجهة (غادي تدير mintTo(address, metadataUri))
     return NextResponse.json({ metadataUri });
   } catch (e: any) {
     console.error('create-signed-mint error:', e);
