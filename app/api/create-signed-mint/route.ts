@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/request';
+import type { NextRequest } from 'next/server'; // ✅ CORRECT IMPORT
 import { ThirdwebSDK } from '@thirdweb-dev/sdk';
 
 export const runtime = 'nodejs';
@@ -28,10 +28,10 @@ export async function POST(req: NextRequest) {
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
-    // ✅ Custom Base config with RELIABLE RPC
+    // ✅ Base chain with official RPC
     const baseChainConfig = {
       chainId: 8453,
-      rpc: ['https://mainnet.base.org'], // Official Base RPC - FREE & RELIABLE!
+      rpc: ['https://mainnet.base.org'],
       nativeCurrency: {
         name: 'Ether',
         symbol: 'ETH',
@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
       slug: 'base',
     };
 
-    // Initialize SDK with custom RPC
     const sdk = ThirdwebSDK.fromPrivateKey(
       privateKey,
       baseChainConfig,
@@ -70,7 +69,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid imageUrl' }, { status: 400 });
     }
 
-    // Upload image to IPFS
+    // Upload image
     let imageUri: string;
     try {
       const storage = sdk.storage;
@@ -78,7 +77,7 @@ export async function POST(req: NextRequest) {
       imageUri = storage.resolveScheme(uploadResult);
       console.log('✅ Image uploaded:', imageUri);
     } catch (e: any) {
-      console.error('IPFS upload error:', e);
+      console.error('IPFS error:', e);
       return NextResponse.json(
         { error: `IPFS upload failed: ${e?.message}` },
         { status: 500 }
@@ -106,14 +105,14 @@ export async function POST(req: NextRequest) {
       metadataUri = storage.resolveScheme(uploadResult);
       console.log('✅ Metadata uploaded:', metadataUri);
     } catch (e: any) {
-      console.error('Metadata upload error:', e);
+      console.error('Metadata error:', e);
       return NextResponse.json(
         { error: `Metadata upload failed: ${e?.message}` },
         { status: 500 }
       );
     }
 
-    // ✅ MINT NFT
+    // MINT
     try {
       const contract = await sdk.getContract(contractAddress);
       
@@ -122,10 +121,9 @@ export async function POST(req: NextRequest) {
 
       const tx = await contract.call('mintTo', [address, metadataUri]);
       
-      console.log('🎉 Minted successfully!');
-      console.log('TX Hash:', tx.receipt.transactionHash);
+      console.log('🎉 Minted!');
+      console.log('TX:', tx.receipt.transactionHash);
 
-      // Extract token ID
       let tokenId = 'unknown';
       if (tx.receipt.events && tx.receipt.events.length > 0) {
         const transferEvent = tx.receipt.events.find((e: any) => e.event === 'Transfer');
@@ -144,7 +142,7 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       console.error('❌ Mint error:', e);
       return NextResponse.json(
-        { error: `Minting failed: ${e?.message || 'Unknown error'}` },
+        { error: `Minting failed: ${e?.message || 'Unknown'}` },
         { status: 500 }
       );
     }
