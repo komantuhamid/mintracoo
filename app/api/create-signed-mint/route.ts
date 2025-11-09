@@ -6,14 +6,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const storage = new ThirdwebStorage({
-  // يفضَّل SECRET_KEY فالسيرفر. غادي يخدم حتى إذا كان غير CLIENT_ID.
+  // يفضَّل SECRET_KEY فالسيرفر. CLIENT_ID اختياري فقط.
   secretKey: process.env.THIRDWEB_SECRET_KEY,
   clientId: process.env.THIRDWEB_CLIENT_ID,
 });
 
 type Body = {
   address: `0x${string}`;
-  imageUrl: string; // جاية من /api/generate-art
+  imageUrl: string; // راجعة من /api/generate-art
   username?: string;
   fid?: number | string;
 };
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1) حمّل الصورة من رابط Hugging Face
+    // 1) حمل الصورة من رابط Hugging Face
     const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) throw new Error('Failed to fetch generated image');
 
@@ -43,12 +43,12 @@ export async function POST(req: NextRequest) {
     const arrayBuf = await imgRes.arrayBuffer();
     const nodeBuffer = Buffer.from(arrayBuf);
 
-    // 2) رفع الصورة إلى IPFS (يرجع ipfs://...)
+    // 2) رفع الصورة لـ IPFS (ipfs://...)
     const ipfsImageUri = await storage.upload(nodeBuffer, {
       uploadWithoutDirectory: true,
     });
 
-    // 3) بنِي metadata باستعمال ipfsImageUri
+    // 3) metadata باستعمال ipfsImageUri
     const name =
       username && username.trim().length > 0
         ? `Raccoon • @${username}`
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       description: `AI-generated pixel art raccoon NFT. Generated for ${address}${
         fid ? ` (FID ${fid})` : ''
       }`,
-      image: ipfsImageUri, // مهم: ipfs://… باش الصورة تبان فالمحافظ/thirdweb
+      image: ipfsImageUri, // مهم: ipfs://… باش تظهر فالمحافظ/thirdweb
       attributes: [
         { trait_type: 'Generator', value: 'Hugging Face FLUX.1' },
         { trait_type: 'Style', value: 'Pixel Art' },
@@ -68,12 +68,12 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    // 4) رفع metadata نفسها لـ IPFS (ipfs://...)
+    // 4) رفع metadata نفسها لـ IPFS
     const metadataUri = await storage.upload(metadata, {
       uploadWithoutDirectory: true,
     });
 
-    // 5) رجّع metadataUri للواجهة (غادي تدير mintTo(address, metadataUri))
+    // 5) رجّع metadataUri للواجهة (هي غادي تدير mintTo(address, metadataUri))
     return NextResponse.json({ metadataUri });
   } catch (e: any) {
     console.error('create-signed-mint error:', e);
