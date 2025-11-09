@@ -1,19 +1,21 @@
-// app/api/create-signed-mint/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { ThirdwebStorage } from '@thirdweb-dev/storage';
+import { NextRequest, NextResponse } from "next/server";
+import { ThirdwebSDK } from "@thirdweb-dev/sdk";
+import { ThirdwebStorage } from "@thirdweb-dev/storage";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_NFT_CONTRACT!;
+const CHAIN = "base"; // Base chain id = 8453
 
 const storage = new ThirdwebStorage({
-  // يفضَّل SECRET_KEY فالسيرفر. CLIENT_ID اختياري فقط.
   secretKey: process.env.THIRDWEB_SECRET_KEY,
   clientId: process.env.THIRDWEB_CLIENT_ID,
 });
 
 type Body = {
   address: `0x${string}`;
-  imageUrl: string; // راجعة من /api/generate-art
+  imageUrl: string;
   username?: string;
   fid?: number | string;
 };
@@ -22,63 +24,58 @@ export async function POST(req: NextRequest) {
   try {
     const { address, imageUrl, username, fid } = (await req.json()) as Body;
 
-    if (!address) {
-      return NextResponse.json({ error: 'Missing address' }, { status: 400 });
-    }
-    if (!imageUrl) {
-      return NextResponse.json({ error: 'Missing imageUrl' }, { status: 400 });
-    }
-    if (!process.env.THIRDWEB_SECRET_KEY && !process.env.THIRDWEB_CLIENT_ID) {
-      return NextResponse.json(
-        { error: 'Missing THIRDWEB credentials' },
-        { status: 500 }
-      );
-    }
+    if (!address) return NextResponse.json({ error: "Missing address" }, { status: 400 });
+    if (!imageUrl) return NextResponse.json({ error: "Missing imageUrl" }, { status: 400 });
+    if (!process.env.SIGNER_PRIVATE_KEY)
+      return NextResponse.json({ error: "Missing SIGNER_PRIVATE_KEY" }, { status: 500 });
 
-    // 1) حمل الصورة من رابط Hugging Face
+    // 1️⃣ جلب الصورة من Hugging Face
     const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) throw new Error('Failed to fetch generated image');
+    if (!imgRes.ok) throw new Error("Failed to fetch generated image");
+    const nodeBuffer = Buffer.from(await imgRes.arrayBuffer());
 
-    // ✅ استعمل Buffer ديال Node (ماشي File/Web stream) لتفادي e.on is not a function
-    const arrayBuf = await imgRes.arrayBuffer();
-    const nodeBuffer = Buffer.from(arrayBuf);
+    // 2️⃣ رفع الصورة لـ IPFS
+    const ipfsImageUri = await storage.upload(nodeBuffer, { uploadWithoutDirectory: true });
 
-    // 2) رفع الصورة لـ IPFS (ipfs://...)
-    const ipfsImageUri = await storage.upload(nodeBuffer, {
-      uploadWithoutDirectory: true,
-    });
-
-    // 3) metadata باستعمال ipfsImageUri
+    // 3️⃣ بناء metadata
     const name =
-      username && username.trim().length > 0
-        ? `Raccoon • @${username}`
-        : 'Raccoon';
+      username && username.trim() ? `Raccoon • @${username}` : "Raccoon";
+    const description = `AI-generated pixel raccoon NFT for ${address}${
+      fid ? ` (FID ${fid})` : ""
+    }`;
 
-    const metadata = {
-      name,
-      description: `AI-generated pixel art raccoon NFT. Generated for ${address}${
-        fid ? ` (FID ${fid})` : ''
-      }`,
-      image: ipfsImageUri, // مهم: ipfs://… باش تظهر فالمحافظ/thirdweb
-      attributes: [
-        { trait_type: 'Generator', value: 'Hugging Face FLUX.1' },
-        { trait_type: 'Style', value: 'Pixel Art' },
-        ...(fid ? [{ trait_type: 'FID', value: String(fid) }] : []),
-        ...(username ? [{ trait_type: 'Creator', value: `@${username}` }] : []),
-      ],
-    };
+    const attributes = [
+      { trait_type: "Generator", value: "Hugging Face FLUX.1" },
+      { trait_type: "Style", value: "Pixel Art" },
+      ...(fid ? [{ trait_type: "FID", value: String(fid) }] : []),
+      ...(username ? [{ trait_type: "Creator", value: `@${username}` }] : []),
+    ];
 
-    // 4) رفع metadata نفسها لـ IPFS
-    const metadataUri = await storage.upload(metadata, {
-      uploadWithoutDirectory: true,
+    // 4️⃣ تهيئة SDK بالمفتاح الخاص لمحفظة السيرفر
+    const sdk = ThirdwebSDK.fromPrivateKey(process.env.SIGNER_PRIVATE_KEY!, CHAIN, {
+      secretKey: process.env.THIRDWEB_SECRET_KEY,
+    });
+    const contract = await sdk.getContract(CONTRACT_ADDRESS);
+
+    // 5️⃣ إنشاء توقيع mint
+    const signed = await contract.erc721.signature.generate({
+      to: address,
+      price: 0,
+      metadata: { name, description, image: ipfsImageUri, attributes },
     });
 
-    // 5) رجّع metadataUri للواجهة (هي غادي تدير mintTo(address, metadataUri))
-    return NextResponse.json({ metadataUri });
+    // 6️⃣ إعداد بيانات المعاملة للواجهة
+    const to = await contract.getAddress();
+    const data = contract.encoder.encode("mintWithSignature", [
+      signed.payload,
+      signed.signature as `0x${string}`,
+    ]);
+
+    return NextResponse.json({ to, data, value: "0" });
   } catch (e: any) {
-    console.error('create-signed-mint error:', e);
+    console.error("create-signed-mint error:", e);
     return NextResponse.json(
-      { error: e?.message || 'Server error' },
+      { error: e?.message || "Server error" },
       { status: 500 }
     );
   }
