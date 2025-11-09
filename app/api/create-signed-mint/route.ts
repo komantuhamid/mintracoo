@@ -1,121 +1,80 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { ThirdwebSDK } from '@thirdweb-dev/sdk';
+// app/api/create-signed-mint/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { ThirdwebStorage } from '@thirdweb-dev/storage';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const storage = new ThirdwebStorage({
+  // استعمل secret key ديال السيرفر. إذا عندك CLIENT_ID فقط، بدّلها لكن الأفضل للسيرفر: SECRET_KEY
+  secretKey: process.env.THIRDWEB_SECRET_KEY,
+  clientId: process.env.THIRDWEB_CLIENT_ID, // اختياري
+});
+
+type Body = {
+  address: `0x${string}`;
+  imageUrl: string; // راجعة من /api/generate-art
+  username?: string;
+  fid?: number | string;
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, imageUrl, fid, username } = await req.json();
+    const { address, imageUrl, username, fid } = (await req.json()) as Body;
 
-    // Validate inputs
     if (!address) {
       return NextResponse.json({ error: 'Missing address' }, { status: 400 });
     }
-
     if (!imageUrl) {
       return NextResponse.json({ error: 'Missing imageUrl' }, { status: 400 });
     }
-
-    // Validate env vars
-    const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY;
-    if (!privateKey) {
+    if (!process.env.THIRDWEB_SECRET_KEY && !process.env.THIRDWEB_CLIENT_ID) {
       return NextResponse.json(
-        { error: 'Missing THIRDWEB_ADMIN_PRIVATE_KEY' },
+        { error: 'Missing THIRDWEB credentials' },
         { status: 500 }
       );
     }
 
-    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
-    const clientId = process.env.THIRDWEB_CLIENT_ID;
-    const secretKey = process.env.THIRDWEB_SECRET_KEY;
+    // 1) جيب الصورة اللي ولات من Hugging Face
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) throw new Error('Failed to fetch generated image');
+    const imgArrayBuf = await imgRes.arrayBuffer();
 
-    if (!clientId && !secretKey) {
-      return NextResponse.json(
-        { error: 'Missing Thirdweb credentials' },
-        { status: 500 }
-      );
-    }
+    // 2) رفع الصورة إلى IPFS عبر ThirdwebStorage
+    //    مهم: اسم الملف و mimetype باش المحافظ تتعرف على الصورة
+    const file = new File([imgArrayBuf], 'raccoon.png', { type: 'image/png' });
+    const ipfsImageUri = await storage.upload(file); // => ipfs://...
 
-    // Initialize Thirdweb SDK
-    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainId, {
-      clientId,
-      secretKey,
-    });
+    // 3) بني الميتاداتا (image = ipfs://... باش تبان ف thirdweb/wallets)
+    const name =
+      username && username.trim().length > 0
+        ? `Raccoon • @${username}`
+        : 'Raccoon';
+    const description = `AI-generated pixel art raccoon NFT. Generated for ${address}${
+      fid ? ` (FID ${fid})` : ''
+    }`;
 
-    // Convert dataURL to raw data
-    let imageData: string | Buffer;
-
-    if (imageUrl.startsWith('data:')) {
-      const base64Data = imageUrl.split(',')[1];
-      imageData = base64Data;
-    } else if (imageUrl.startsWith('http')) {
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        return NextResponse.json(
-          { error: `Failed to fetch image: ${response.status}` },
-          { status: 400 }
-        );
-      }
-      const arrayBuffer = await response.arrayBuffer();
-      imageData = Buffer.from(arrayBuffer);
-    } else {
-      return NextResponse.json({ error: 'Invalid imageUrl' }, { status: 400 });
-    }
-
-    // Upload to IPFS
-    let imageUri: string;
-    try {
-      const storage = sdk.storage;
-      const uploadResult = await storage.upload(imageData);
-      imageUri = storage.resolveScheme(uploadResult);
-      console.log('Image uploaded to IPFS:', imageUri);
-    } catch (e: any) {
-      console.error('IPFS upload error:', e);
-      return NextResponse.json(
-        { error: `IPFS upload failed: ${e?.message}` },
-        { status: 500 }
-      );
-    }
-
-    // Create metadata
     const metadata = {
-      name: `Raccoon #${Date.now()}`,
-      description: `AI-generated pixel art raccoon NFT. Generated for ${username || address}`,
-      image: imageUri,
+      name,
+      description,
+      image: ipfsImageUri,
       attributes: [
         { trait_type: 'Generator', value: 'Hugging Face FLUX.1' },
         { trait_type: 'Style', value: 'Pixel Art' },
-        { trait_type: 'Creator', value: username || 'Anonymous' },
-        { trait_type: 'FID', value: String(fid || 0) },
+        ...(fid ? [{ trait_type: 'FID', value: String(fid) }] : []),
+        ...(username ? [{ trait_type: 'Creator', value: `@${username}` }] : []),
       ],
     };
 
-    // Upload metadata to IPFS
-    let metadataUri: string;
-    try {
-      const storage = sdk.storage;
-      const uploadResult = await storage.upload(metadata);
-      metadataUri = storage.resolveScheme(uploadResult);
-      console.log('Metadata uploaded to IPFS:', metadataUri);
-    } catch (e: any) {
-      console.error('Metadata upload error:', e);
-      return NextResponse.json(
-        { error: `Metadata upload failed: ${e?.message}` },
-        { status: 500 }
-      );
-    }
+    // 4) رفع الميتاداتا نفسها إلى IPFS
+    const metadataUri = await storage.upload(metadata); // => ipfs://...
 
-    // Return metadata URI
-    return NextResponse.json({
-      success: true,
-      metadataUri,
-      imageUri,
-    });
+    // 5) رجّع URI للواجهة (هي غادي تدير mintTo(address, metadataUri))
+    return NextResponse.json({ metadataUri });
   } catch (e: any) {
-    console.error('Mint route error:', e);
+    console.error('create-signed-mint error:', e);
     return NextResponse.json(
-      { error: e?.message || 'server_error' },
+      { error: e?.message || 'Server error' },
       { status: 500 }
     );
   }
