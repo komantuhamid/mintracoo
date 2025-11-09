@@ -31,7 +31,7 @@ const MINT_ABI = parseAbi([
 
 export default function MintPage() {
   // ===== WAGMI HOOKS =====
-  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
@@ -39,73 +39,66 @@ export default function MintPage() {
   const { isMini, ctx } = useMiniEnv();
 
   // ===== UI STATE =====
-  const [activeAddress, setActiveAddress] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isMiniApp, setIsMiniApp] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
 
   const shortAddr = useMemo(
-    () => (activeAddress ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}` : ''),
-    [activeAddress]
+    () => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : ''),
+    [address]
   );
 
-  // ===== AUTO-CONNECT: Check if in mini app =====
+  // ===== INITIALIZE APP =====
   useEffect(() => {
-    let isMounted = true;
-
-    (async () => {
+    const initApp = async () => {
       try {
-        const inMini = await sdk.isInMiniApp();
-        if (isMounted) {
-          setIsMiniApp(inMini);
-        }
-      } catch (e) {
-        console.error('Mini app check failed:', e);
+        console.log('Initializing app...');
+        // Initialize Farcaster SDK
+        await sdk.actions.ready();
+        console.log('SDK ready called successfully');
+        setIsAppReady(true);
+      } catch (error) {
+        console.error('Error initializing', error);
+        setIsAppReady(true); // Continue even if error
       }
-    })();
-
-    return () => {
-      isMounted = false;
     };
+
+    initApp();
   }, []);
 
-  // ===== AUTO-CONNECT: Get address from context =====
+  // ===== AUTO-CONNECT FARCASTER (EXACTLY LIKE YOUR GAME) =====
   useEffect(() => {
-    if (isMiniApp) {
-      // INSIDE FARCASTER: Get address from SDK context
-      const address = ctx?.user?.ethAddress ?? ctx?.user?.address ?? null;
-      if (address) {
-        setActiveAddress(address);
-        setMessage(null); // Clear "Open in Warpcast" message
-      }
-    } else if (wagmiConnected && wagmiAddress) {
-      // OUTSIDE: Use Wagmi address
-      setActiveAddress(wagmiAddress);
-    } else {
-      setActiveAddress(null);
-    }
-  }, [isMiniApp, ctx?.user?.ethAddress, ctx?.user?.address, wagmiConnected, wagmiAddress]);
+    const autoConnectFarcaster = async () => {
+      if (!isAppReady) return;
 
-  // ===== AUTO-CONNECT: Try to connect Wagmi connector =====
-  useEffect(() => {
-    if (!isMiniApp && !wagmiConnected && connectors.length > 0) {
-      // Try to auto-connect with first available connector
-      const farcasterConnector = connectors.find(
-        (c) => c.name?.toLowerCase().includes('farcaster') || c.name?.toLowerCase().includes('mini')
-      );
+      try {
+        const context = await sdk.context;
+        console.log('Farcaster context', context);
 
-      if (farcasterConnector) {
-        try {
-          connect({ connector: farcasterConnector });
-        } catch (e) {
-          console.error('Auto-connect failed:', e);
+        if (context?.user) {
+          console.log('Farcaster user detected', context.user);
+
+          // ✅ AUTO-CONNECT if not connected
+          if (!isConnected && connectors.length > 0) {
+            const farcasterConnector = connectors[0];
+            try {
+              await connect({ connector: farcasterConnector });
+              console.log('Auto-connected!');
+            } catch (err) {
+              console.log('Auto-connect error', err);
+            }
+          }
         }
+      } catch (error) {
+        console.log('Farcaster context error', error);
       }
-    }
-  }, [isMiniApp, wagmiConnected, connectors, connect]);
+    };
+
+    autoConnectFarcaster();
+  }, [connectors, isConnected, connect, isAppReady]);
 
   // ===== FETCH PROFILE =====
   useEffect(() => {
@@ -133,7 +126,6 @@ export default function MintPage() {
   }, [ctx?.user]);
 
   const disconnectAll = () => {
-    setActiveAddress(null);
     disconnect();
     setMessage('Disconnected');
   };
@@ -169,7 +161,7 @@ export default function MintPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        address: activeAddress,
+        address,
         imageUrl: generatedImage,
         username: profile?.username,
         fid: profile?.fid,
@@ -184,14 +176,10 @@ export default function MintPage() {
   // ===== PERFORM MINT =====
   const performMint = async () => {
     if (!VALID) {
-      return setMessage(
-        `Invalid contract address in env: ${
-          NORMAL ? NORMAL.slice(0, 6) + '…' + NORMAL.slice(-4) : 'empty'
-        } (len=${NORMAL.length})`
-      );
+      return setMessage(`Invalid contract address`);
     }
 
-    if (!activeAddress) return setMessage('Wallet not connected');
+    if (!address) return setMessage('Wallet not connected');
     if (!generatedImage) return setMessage('Generate image first');
 
     setMinting(true);
@@ -211,7 +199,7 @@ export default function MintPage() {
 
       const actions: any = (sdk as any).actions;
 
-      if (isMiniApp) {
+      if (isMini) {
         // INSIDE FARCASTER MINI APP
         if (actions?.wallet_sendCalls) {
           await actions.wallet_sendCalls({
@@ -253,7 +241,7 @@ export default function MintPage() {
           method: 'eth_sendTransaction',
           params: [
             {
-              from: activeAddress,
+              from: address,
               to: CONTRACT_ADDRESS,
               data,
               ...(valueHex ? { value: valueHex } : {}),
@@ -278,7 +266,7 @@ export default function MintPage() {
 
           const jr = await res.json();
           if (jr?.result) {
-            setMessage('✅ Mint confirmed! NFT minted successfully!');
+            setMessage('✅ Mint confirmed!');
             break;
           }
           await new Promise((s) => setTimeout(s, 2000));
@@ -294,24 +282,6 @@ export default function MintPage() {
       setMessage(`❌ ${e?.message || 'Mint failed'}`);
     } finally {
       setMinting(false);
-    }
-  };
-
-  // ===== MANUAL WALLET CONNECT =====
-  const handleManualConnect = () => {
-    if (connectors.length === 0) {
-      setMessage('No wallets available');
-      return;
-    }
-
-    const farcasterConnector = connectors.find(
-      (c) => c.name?.toLowerCase().includes('farcaster') || c.name?.toLowerCase().includes('mini')
-    );
-
-    if (farcasterConnector) {
-      connect({ connector: farcasterConnector });
-    } else {
-      connect({ connector: connectors[0] });
     }
   };
 
@@ -355,9 +325,9 @@ export default function MintPage() {
         {/* Wallet Status */}
         <div className="mb-6 p-4 bg-slate-700 rounded-lg border border-slate-600">
           <p className="text-slate-300 text-sm">
-            <strong>Wallet:</strong> {shortAddr || 'Not connected'}
+            <strong>Wallet:</strong> {shortAddr || 'Connecting...'}
           </p>
-          {activeAddress ? (
+          {isConnected && address ? (
             <button
               onClick={disconnectAll}
               className="mt-2 w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-semibold text-sm transition"
@@ -365,19 +335,9 @@ export default function MintPage() {
               Disconnect
             </button>
           ) : (
-            <div className="mt-2 space-y-2">
-              <button
-                onClick={handleManualConnect}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold text-sm transition"
-              >
-                Connect Wallet
-              </button>
-              {isMiniApp && (
-                <p className="text-xs text-yellow-400 text-center">
-                  💡 Make sure Warpcast Wallet is enabled
-                </p>
-              )}
-            </div>
+            <p className="mt-2 text-sm text-yellow-400">
+              {isAppReady ? '🔄 Auto-connecting...' : '⏳ Initializing...'}
+            </p>
           )}
         </div>
 
@@ -393,7 +353,7 @@ export default function MintPage() {
 
           <button
             onClick={performMint}
-            disabled={minting || !activeAddress || !generatedImage}
+            disabled={minting || !address || !generatedImage}
             className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white rounded font-semibold transition"
           >
             {minting ? 'Minting…' : '🎯 Mint 0.0001 ETH'}
