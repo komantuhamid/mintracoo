@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { parseAbi, encodeFunctionData, isAddress } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSendCalls } from 'wagmi'; // ✅ Added useSendCalls
 import { useMiniEnv } from '@/hooks/useMiniEnv';
 
 // ---------- helpers ----------
@@ -22,7 +22,6 @@ const VALID =
   NORMAL.length === 42 && /^0x[0-9a-fA-F]{40}$/.test(NORMAL) && isAddress(NORMAL);
 const CONTRACT_ADDRESS = (VALID ? NORMAL : '') as `0x${string}`;
 const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 
 // minimal ABI
 const MINT_ABI = parseAbi([
@@ -34,9 +33,10 @@ export default function MintPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { sendCalls } = useSendCalls(); // ✅ ADDED THIS
 
   // ===== MINI ENV =====
-  const { isMini, ctx } = useMiniEnv();
+  const { isMini } = useMiniEnv();
 
   // ===== UI STATE =====
   const [profile, setProfile] = useState<any>(null);
@@ -56,20 +56,18 @@ export default function MintPage() {
     const initApp = async () => {
       try {
         console.log('Initializing app...');
-        // Initialize Farcaster SDK
         await sdk.actions.ready();
         console.log('SDK ready called successfully');
         setIsAppReady(true);
       } catch (error) {
         console.error('Error initializing', error);
-        setIsAppReady(true); // Continue even if error
+        setIsAppReady(true);
       }
     };
-
     initApp();
   }, []);
 
-  // ===== AUTO-CONNECT FARCASTER (EXACTLY LIKE YOUR GAME) =====
+  // ===== AUTO-CONNECT =====
   useEffect(() => {
     const autoConnectFarcaster = async () => {
       if (!isAppReady) return;
@@ -81,7 +79,6 @@ export default function MintPage() {
         if (context?.user) {
           console.log('Farcaster user detected', context.user);
 
-          // ✅ AUTO-CONNECT if not connected
           if (!isConnected && connectors.length > 0) {
             const farcasterConnector = connectors[0];
             try {
@@ -102,11 +99,12 @@ export default function MintPage() {
 
   // ===== FETCH PROFILE =====
   useEffect(() => {
-    const fid = ctx?.user?.fid || ctx?.user?.id;
-    if (!fid) return;
-
     (async () => {
       try {
+        const context = await sdk.context;
+        const fid = context?.user?.fid;
+        if (!fid) return;
+
         const r = await fetch('/api/fetch-pfp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -114,16 +112,16 @@ export default function MintPage() {
         });
         const j = await r.json();
         setProfile({
-          display_name: j.display_name || ctx?.user?.displayName || '',
-          username: j.username || ctx?.user?.username || '',
-          pfp_url: j.pfp_url || ctx?.user?.pfpUrl || null,
+          display_name: j.display_name || '',
+          username: j.username || '',
+          pfp_url: j.pfp_url || null,
           fid,
         });
       } catch (e) {
         console.error('pfp error', e);
       }
     })();
-  }, [ctx?.user]);
+  }, []);
 
   const disconnectAll = () => {
     disconnect();
@@ -173,7 +171,7 @@ export default function MintPage() {
     return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
   };
 
-  // ===== PERFORM MINT =====
+  // ===== PERFORM MINT (FIXED - USE useSendCalls) =====
   const performMint = async () => {
     if (!VALID) {
       return setMessage(`Invalid contract address`);
@@ -183,7 +181,7 @@ export default function MintPage() {
     if (!generatedImage) return setMessage('Generate image first');
 
     setMinting(true);
-    setMessage('');
+    setMessage('Preparing transaction...');
 
     try {
       const { mintRequest, signature, priceWei } = await requestSignedMint();
@@ -194,91 +192,23 @@ export default function MintPage() {
         args: [mintRequest, signature],
       });
 
-      const valueHex =
-        priceWei && priceWei !== '0' ? ('0x' + BigInt(priceWei).toString(16)) : undefined;
+      // Convert to BigInt (not hex string)
+      const value = priceWei && priceWei !== '0' ? BigInt(priceWei) : undefined;
 
-      const actions: any = (sdk as any).actions;
-
-      if (isMini) {
-        // INSIDE FARCASTER MINI APP
-        if (actions?.wallet_sendCalls) {
-          await actions.wallet_sendCalls({
-            chainId: CHAIN_ID,
-            calls: [
-              {
-                to: CONTRACT_ADDRESS,
-                data,
-                ...(valueHex ? { value: valueHex } : {}),
-              },
-            ],
-          });
-          setMessage('✅ Transaction sent! Confirm in your wallet.');
-          setMinting(false);
-          return;
-        }
-
-        if (actions?.wallet_sendTransaction) {
-          await actions.wallet_sendTransaction({
-            chainId: CHAIN_ID,
+      // ✅ USE useSendCalls (OFFICIAL FARCASTER WAY)
+      await sendCalls({
+        calls: [
+          {
             to: CONTRACT_ADDRESS,
             data,
-            ...(valueHex ? { value: valueHex } : {}),
-          });
-          setMessage('✅ Transaction sent! Confirm in your wallet.');
-          setMinting(false);
-          return;
-        }
+            ...(value ? { value } : {}),
+          },
+        ],
+      });
 
-        setMessage('❌ Mini wallet API not available');
-        setMinting(false);
-        return;
-      }
-
-      // OUTSIDE MINI APP: Browser fallback
-      const eth = (window as any).ethereum;
-      if (eth?.request) {
-        const txHash: string = await eth.request({
-          method: 'eth_sendTransaction',
-          params: [
-            {
-              from: address,
-              to: CONTRACT_ADDRESS,
-              data,
-              ...(valueHex ? { value: valueHex } : {}),
-            },
-          ],
-        });
-
-        setMessage(`⏳ Tx: ${txHash.slice(0, 10)}... waiting confirmation…`);
-
-        // Poll for receipt
-        for (let i = 0; i < 30; i++) {
-          const res = await fetch(RPC_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              id: 1,
-              method: 'eth_getTransactionReceipt',
-              params: [txHash],
-            }),
-          });
-
-          const jr = await res.json();
-          if (jr?.result) {
-            setMessage('✅ Mint confirmed!');
-            break;
-          }
-          await new Promise((s) => setTimeout(s, 2000));
-        }
-
-        setMinting(false);
-        return;
-      }
-
-      setMessage('❌ No wallet available');
+      setMessage('✅ Transaction sent! Confirm in your wallet.');
     } catch (e: any) {
-      console.error(e);
+      console.error('Mint error:', e);
       setMessage(`❌ ${e?.message || 'Mint failed'}`);
     } finally {
       setMinting(false);
