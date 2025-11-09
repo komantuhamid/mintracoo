@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { parseAbi, encodeFunctionData, isAddress } from 'viem';
+import { parseAbi, encodeFunctionData } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
+// ✅ YOUR EXACT CONTRACT ADDRESS
 const CONTRACT_ADDRESS = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC' as `0x${string}`;
 
-// ✅ SIMPLE MINT ABI (matches your Thirdweb contract)
+// ✅ YOUR EXACT ABI (from Basescan)
 const MINT_ABI = parseAbi([
-  'function mintTo(address to, string memory uri) public',
+  'function mintTo(address _to, string _uri) returns (uint256)',
 ]);
 
 export default function MintPage() {
@@ -32,26 +33,24 @@ export default function MintPage() {
     [address]
   );
 
-  // Initialize SDK
   useEffect(() => {
-    const initApp = async () => {
+    const init = async () => {
       try {
         await sdk.actions.ready();
         setIsAppReady(true);
-      } catch (error) {
+      } catch (e) {
         setIsAppReady(true);
       }
     };
-    initApp();
+    init();
   }, []);
 
-  // Auto-connect
   useEffect(() => {
     const autoConnect = async () => {
-      if (!isAppReady) return;
+      if (!isAppReady || isConnected) return;
       try {
         const context = await sdk.context;
-        if (context?.user && !isConnected && connectors.length > 0) {
+        if (context?.user && connectors.length > 0) {
           await connect({ connector: connectors[0] });
         }
       } catch (e) {
@@ -59,9 +58,8 @@ export default function MintPage() {
       }
     };
     autoConnect();
-  }, [connectors, isConnected, connect, isAppReady]);
+  }, [isAppReady, isConnected, connectors, connect]);
 
-  // Fetch profile
   useEffect(() => {
     (async () => {
       try {
@@ -82,25 +80,23 @@ export default function MintPage() {
           fid,
         });
       } catch (e) {
-        console.error('Profile error:', e);
+        console.error(e);
       }
     })();
   }, []);
 
-  // Watch transaction
   useEffect(() => {
     if (isPending) {
-      setMessage('⏳ Confirm in your wallet...');
+      setMessage('⏳ Confirm in wallet...');
     } else if (txHash) {
-      setMessage(`✅ Sent! Hash: ${txHash.slice(0, 10)}...`);
+      setMessage(`✅ Sent! ${txHash.slice(0, 10)}...`);
     } else if (isConfirming) {
-      setMessage('⏳ Confirming on chain...');
+      setMessage('⏳ Confirming...');
     } else if (isConfirmed) {
-      setMessage('🎉 NFT Minted!');
+      setMessage('🎉 NFT Minted Successfully!');
     }
   }, [isPending, txHash, isConfirming, isConfirmed]);
 
-  // Generate art
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('Generating...');
@@ -108,7 +104,7 @@ export default function MintPage() {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ style: 'pixel raccoon nft' }),
+        body: JSON.stringify({ style: 'pixel raccoon' }),
       });
 
       const j = await res.json();
@@ -123,15 +119,13 @@ export default function MintPage() {
     }
   };
 
-  // ✅ SIMPLE MINT (No API call, direct contract interaction)
   const performMint = async () => {
-    if (!address) return setMessage('Connect wallet first');
+    if (!address) return setMessage('Connect wallet');
     if (!generatedImage) return setMessage('Generate image first');
 
     setMessage('Uploading to IPFS...');
 
     try {
-      // Upload to IPFS
       const uploadRes = await fetch('/api/create-signed-mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,25 +137,32 @@ export default function MintPage() {
         }),
       });
 
-      const { metadataUri, error } = await uploadRes.json();
-      if (error) throw new Error(error);
+      const uploadData = await uploadRes.json();
+      if (uploadData.error) throw new Error(uploadData.error);
 
-      // Encode mint call
+      const { metadataUri } = uploadData;
+
+      console.log('Minting to:', address);
+      console.log('Metadata URI:', metadataUri);
+
+      // ✅ Encode function call
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mintTo',
         args: [address, metadataUri],
       });
 
-      // Send transaction
+      console.log('Encoded data:', data);
+
+      // ✅ Send transaction (NO VALUE - contract is nonpayable)
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
-        value: BigInt('100000000000000'), // 0.0001 ETH
       });
 
     } catch (e: any) {
-      setMessage(`❌ ${e?.message || 'Mint failed'}`);
+      console.error('Mint error:', e);
+      setMessage(`❌ ${e?.message || 'Failed'}`);
     }
   };
 
@@ -176,7 +177,7 @@ export default function MintPage() {
           {generatedImage ? (
             <img src={generatedImage} alt="Raccoon" className="w-full rounded" />
           ) : (
-            <span className="text-slate-400">No image yet</span>
+            <span className="text-slate-400">No image</span>
           )}
         </div>
 
@@ -208,7 +209,7 @@ export default function MintPage() {
             disabled={loading}
             className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 text-white rounded font-semibold"
           >
-            {loading ? 'Generating...' : '🎨 Generate Raccoon'}
+            {loading ? 'Generating...' : '🎨 Generate'}
           </button>
 
           <button
@@ -216,7 +217,7 @@ export default function MintPage() {
             disabled={isPending || isConfirming || !address || !generatedImage}
             className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white rounded font-semibold"
           >
-            {isPending || isConfirming ? 'Minting...' : '🎯 Mint 0.0001 ETH'}
+            {isPending || isConfirming ? 'Minting...' : '🎯 Mint FREE'}
           </button>
         </div>
 
