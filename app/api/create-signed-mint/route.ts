@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { ThirdwebSDK } from '@thirdweb-dev/sdk';
+import { BaseSepoliaTestnet, Base } from '@thirdweb-dev/chains';
 
 export const runtime = 'nodejs';
 
@@ -24,16 +25,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const chainId = 8453; // Base
     const contractAddress = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC';
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
-    // Initialize SDK with admin wallet
-    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainId, {
-      clientId,
-      secretKey,
-    });
+    // ✅ Use Base chain with custom RPC
+    const baseChain = {
+      ...Base,
+      rpc: ['https://mainnet.base.org'], // Official Base RPC
+    };
+
+    // Initialize SDK
+    const sdk = ThirdwebSDK.fromPrivateKey(
+      privateKey,
+      baseChain,
+      {
+        clientId,
+        secretKey,
+        gasless: false,
+      }
+    );
 
     // Convert image
     let imageData: string | Buffer;
@@ -45,7 +56,7 @@ export async function POST(req: NextRequest) {
       const response = await fetch(imageUrl);
       if (!response.ok) {
         return NextResponse.json(
-          { error: `Failed to fetch image` },
+          { error: 'Failed to fetch image' },
           { status: 400 }
         );
       }
@@ -73,7 +84,7 @@ export async function POST(req: NextRequest) {
     // Create metadata
     const metadata = {
       name: `Raccoon #${Date.now()}`,
-      description: `AI-generated pixel art raccoon NFT. Created for ${username || address}`,
+      description: `AI-generated pixel art raccoon NFT for ${username || address}`,
       image: imageUri,
       attributes: [
         { trait_type: 'Generator', value: 'AI FLUX.1' },
@@ -83,7 +94,7 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    // Upload metadata to IPFS
+    // Upload metadata
     let metadataUri: string;
     try {
       const storage = sdk.storage;
@@ -98,16 +109,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ MINT NFT (Backend has MINTER role!)
+    // ✅ MINT NFT
     try {
       const contract = await sdk.getContract(contractAddress);
       
       console.log('🎯 Minting to:', address);
       console.log('🎯 Metadata:', metadataUri);
 
-      const tx = await contract.call('mintTo', [address, metadataUri]);
+      // Call mintTo with retry logic
+      let tx;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        try {
+          tx = await contract.call('mintTo', [address, metadataUri]);
+          break;
+        } catch (err: any) {
+          attempts++;
+          console.log(`Attempt ${attempts} failed:`, err.message);
+          
+          if (attempts === maxAttempts) {
+            throw err;
+          }
+          
+          // Wait 2 seconds before retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      if (!tx) {
+        throw new Error('Failed to mint after retries');
+      }
       
-      console.log('🎉 Minted!');
+      console.log('🎉 Minted successfully!');
       console.log('TX:', tx.receipt.transactionHash);
 
       // Get token ID
@@ -129,7 +164,7 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       console.error('❌ Mint error:', e);
       return NextResponse.json(
-        { error: `Minting failed: ${e?.message}` },
+        { error: `Minting failed: ${e?.message || 'Unknown error'}` },
         { status: 500 }
       );
     }
