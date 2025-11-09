@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const { address, imageUrl, fid, username } = await req.json();
 
+    // Validate inputs
     if (!address) {
       return NextResponse.json({ error: 'Missing address' }, { status: 400 });
     }
@@ -26,15 +27,6 @@ export async function POST(req: NextRequest) {
     }
 
     const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
-    const contractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT as string;
-
-    if (!contractAddress) {
-      return NextResponse.json(
-        { error: 'Missing NEXT_PUBLIC_NFT_CONTRACT' },
-        { status: 500 }
-      );
-    }
-
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
@@ -45,13 +37,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ Initialize Thirdweb SDK with YOUR admin wallet
+    // Initialize Thirdweb SDK
     const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainId, {
       clientId,
       secretKey,
     });
 
-    // Convert image
+    // Convert dataURL to raw data
     let imageData: string | Buffer;
 
     if (imageUrl.startsWith('data:')) {
@@ -77,7 +69,7 @@ export async function POST(req: NextRequest) {
       const storage = sdk.storage;
       const uploadResult = await storage.upload(imageData);
       imageUri = storage.resolveScheme(uploadResult);
-      console.log('Image uploaded:', imageUri);
+      console.log('Image uploaded to IPFS:', imageUri);
     } catch (e: any) {
       console.error('IPFS upload error:', e);
       return NextResponse.json(
@@ -89,7 +81,7 @@ export async function POST(req: NextRequest) {
     // Create metadata
     const metadata = {
       name: `Raccoon #${Date.now()}`,
-      description: `AI-generated pixel art raccoon NFT for ${username || address}`,
+      description: `AI-generated pixel art raccoon NFT. Generated for ${username || address}`,
       image: imageUri,
       attributes: [
         { trait_type: 'Generator', value: 'Hugging Face FLUX.1' },
@@ -99,13 +91,13 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    // Upload metadata
+    // Upload metadata to IPFS
     let metadataUri: string;
     try {
       const storage = sdk.storage;
       const uploadResult = await storage.upload(metadata);
       metadataUri = storage.resolveScheme(uploadResult);
-      console.log('Metadata uploaded:', metadataUri);
+      console.log('Metadata uploaded to IPFS:', metadataUri);
     } catch (e: any) {
       console.error('Metadata upload error:', e);
       return NextResponse.json(
@@ -114,31 +106,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ MINT FROM BACKEND (Your wallet has permission)
-    try {
-      const contract = await sdk.getContract(contractAddress);
-      
-      // Call mintTo function
-      const tx = await contract.call('mintTo', [address, metadataUri]);
-      
-      console.log('Minted successfully! TX:', tx);
-
-      return NextResponse.json({
-        success: true,
-        metadataUri,
-        imageUri,
-        transactionHash: tx.receipt.transactionHash,
-        tokenId: tx.receipt.events?.[0]?.args?.tokenId?.toString() || 'unknown',
-      });
-    } catch (e: any) {
-      console.error('Mint error:', e);
-      return NextResponse.json(
-        { error: `Minting failed: ${e?.message}` },
-        { status: 500 }
-      );
-    }
+    // Return metadata URI
+    return NextResponse.json({
+      success: true,
+      metadataUri,
+      imageUri,
+    });
   } catch (e: any) {
-    console.error('Route error:', e);
+    console.error('Mint route error:', e);
     return NextResponse.json(
       { error: e?.message || 'server_error' },
       { status: 500 }
