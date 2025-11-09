@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/request';
 import { ThirdwebSDK } from '@thirdweb-dev/sdk';
 
 export const runtime = 'nodejs';
@@ -28,10 +28,22 @@ export async function POST(req: NextRequest) {
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
-    // ✅ Use Base mainnet with official RPC (no extra package needed!)
+    // ✅ Custom Base config with RELIABLE RPC
+    const baseChainConfig = {
+      chainId: 8453,
+      rpc: ['https://mainnet.base.org'], // Official Base RPC - FREE & RELIABLE!
+      nativeCurrency: {
+        name: 'Ether',
+        symbol: 'ETH',
+        decimals: 18,
+      },
+      slug: 'base',
+    };
+
+    // Initialize SDK with custom RPC
     const sdk = ThirdwebSDK.fromPrivateKey(
       privateKey,
-      'base', // Just use the chain name!
+      baseChainConfig,
       {
         clientId,
         secretKey,
@@ -101,38 +113,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ MINT NFT with retry logic
+    // ✅ MINT NFT
     try {
       const contract = await sdk.getContract(contractAddress);
       
       console.log('🎯 Minting to:', address);
       console.log('🎯 Metadata:', metadataUri);
 
-      // Retry logic for RPC issues
-      let tx;
-      let attempts = 0;
-      const maxAttempts = 3;
-
-      while (attempts < maxAttempts) {
-        try {
-          tx = await contract.call('mintTo', [address, metadataUri]);
-          break;
-        } catch (err: any) {
-          attempts++;
-          console.log(`❌ Attempt ${attempts} failed:`, err.message);
-          
-          if (attempts === maxAttempts) {
-            throw err;
-          }
-          
-          // Wait 3 seconds before retry
-          await new Promise(resolve => setTimeout(resolve, 3000));
-        }
-      }
-
-      if (!tx) {
-        throw new Error('Failed to mint after retries');
-      }
+      const tx = await contract.call('mintTo', [address, metadataUri]);
       
       console.log('🎉 Minted successfully!');
       console.log('TX Hash:', tx.receipt.transactionHash);
