@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { parseAbi, encodeFunctionData, isAddress } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
-import { useAccount, useConnect, useDisconnect, useSendCalls } from 'wagmi'; // ✅ Added useSendCalls
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useMiniEnv } from '@/hooks/useMiniEnv';
 
 // ---------- helpers ----------
@@ -33,7 +33,6 @@ export default function MintPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-  const { sendCalls } = useSendCalls(); // ✅ ADDED THIS
 
   // ===== MINI ENV =====
   const { isMini } = useMiniEnv();
@@ -55,9 +54,7 @@ export default function MintPage() {
   useEffect(() => {
     const initApp = async () => {
       try {
-        console.log('Initializing app...');
         await sdk.actions.ready();
-        console.log('SDK ready called successfully');
         setIsAppReady(true);
       } catch (error) {
         console.error('Error initializing', error);
@@ -74,20 +71,8 @@ export default function MintPage() {
 
       try {
         const context = await sdk.context;
-        console.log('Farcaster context', context);
-
-        if (context?.user) {
-          console.log('Farcaster user detected', context.user);
-
-          if (!isConnected && connectors.length > 0) {
-            const farcasterConnector = connectors[0];
-            try {
-              await connect({ connector: farcasterConnector });
-              console.log('Auto-connected!');
-            } catch (err) {
-              console.log('Auto-connect error', err);
-            }
-          }
+        if (context?.user && !isConnected && connectors.length > 0) {
+          await connect({ connector: connectors[0] });
         }
       } catch (error) {
         console.log('Farcaster context error', error);
@@ -168,10 +153,10 @@ export default function MintPage() {
 
     const j = await r.json();
     if (!r.ok || j.error) throw new Error(j.error || 'Sign mint failed');
-    return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
+    return j;
   };
 
-  // ===== PERFORM MINT (FIXED - USE useSendCalls) =====
+  // ===== PERFORM MINT (USING SDK DIRECTLY) =====
   const performMint = async () => {
     if (!VALID) {
       return setMessage(`Invalid contract address`);
@@ -184,7 +169,8 @@ export default function MintPage() {
     setMessage('Preparing transaction...');
 
     try {
-      const { mintRequest, signature, priceWei } = await requestSignedMint();
+      const mintData = await requestSignedMint();
+      const { mintRequest, signature, priceWei } = mintData;
 
       const data = encodeFunctionData({
         abi: MINT_ABI,
@@ -192,21 +178,60 @@ export default function MintPage() {
         args: [mintRequest, signature],
       });
 
-      // Convert to BigInt (not hex string)
-      const value = priceWei && priceWei !== '0' ? BigInt(priceWei) : undefined;
+      // Convert to hex value
+      const valueHex = priceWei && priceWei !== '0' 
+        ? ('0x' + BigInt(priceWei).toString(16)) 
+        : undefined;
 
-      // ✅ USE useSendCalls (OFFICIAL FARCASTER WAY)
-      await sendCalls({
-        calls: [
-          {
-            to: CONTRACT_ADDRESS,
-            data,
-            ...(value ? { value } : {}),
-          },
-        ],
+      console.log('Sending transaction with:', { 
+        to: CONTRACT_ADDRESS, 
+        data, 
+        value: valueHex,
+        chainId: CHAIN_ID 
       });
 
-      setMessage('✅ Transaction sent! Confirm in your wallet.');
+      // ✅ USE SDK.ACTIONS DIRECTLY (Most Reliable)
+      try {
+        // Try wallet_sendCalls first (newer method)
+        if (sdk.actions?.wallet_sendCalls) {
+          await sdk.actions.wallet_sendCalls({
+            calls: [
+              {
+                chainId: `eip155:${CHAIN_ID}`,
+                to: CONTRACT_ADDRESS,
+                data,
+                ...(valueHex ? { value: valueHex } : {}),
+              },
+            ],
+          });
+          setMessage('✅ Transaction sent! Confirm in your wallet.');
+          setMinting(false);
+          return;
+        }
+      } catch (e) {
+        console.log('wallet_sendCalls failed, trying wallet_sendTransaction:', e);
+      }
+
+      // Fallback to wallet_sendTransaction
+      try {
+        if (sdk.actions?.wallet_sendTransaction) {
+          await sdk.actions.wallet_sendTransaction({
+            chainId: `eip155:${CHAIN_ID}`,
+            to: CONTRACT_ADDRESS,
+            data,
+            ...(valueHex ? { value: valueHex } : {}),
+          });
+          setMessage('✅ Transaction sent! Confirm in your wallet.');
+          setMinting(false);
+          return;
+        }
+      } catch (e) {
+        console.log('wallet_sendTransaction failed:', e);
+      }
+
+      // If we get here, SDK methods didn't work
+      setMessage('❌ Wallet API not available. Please try again.');
+      
     } catch (e: any) {
       console.error('Mint error:', e);
       setMessage(`❌ ${e?.message || 'Mint failed'}`);
