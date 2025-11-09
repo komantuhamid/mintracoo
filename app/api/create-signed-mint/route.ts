@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing imageUrl' }, { status: 400 });
     }
 
-    // Get env vars
     const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY;
     if (!privateKey) {
       return NextResponse.json(
@@ -25,19 +24,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
+    const chainId = 8453; // Base
     const contractAddress = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC';
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
-    if (!clientId && !secretKey) {
-      return NextResponse.json(
-        { error: 'Missing Thirdweb credentials' },
-        { status: 500 }
-      );
-    }
-
-    // Initialize SDK with YOUR admin wallet (has MINTER role)
+    // Initialize SDK with admin wallet
     const sdk = ThirdwebSDK.fromPrivateKey(privateKey, chainId, {
       clientId,
       secretKey,
@@ -53,7 +45,7 @@ export async function POST(req: NextRequest) {
       const response = await fetch(imageUrl);
       if (!response.ok) {
         return NextResponse.json(
-          { error: `Failed to fetch image: ${response.status}` },
+          { error: `Failed to fetch image` },
           { status: 400 }
         );
       }
@@ -84,7 +76,7 @@ export async function POST(req: NextRequest) {
       description: `AI-generated pixel art raccoon NFT. Created for ${username || address}`,
       image: imageUri,
       attributes: [
-        { trait_type: 'Generator', value: 'Hugging Face FLUX.1' },
+        { trait_type: 'Generator', value: 'AI FLUX.1' },
         { trait_type: 'Style', value: 'Pixel Art' },
         { trait_type: 'Creator', value: username || 'Anonymous' },
         { trait_type: 'FID', value: String(fid || 0) },
@@ -106,24 +98,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ MINT NFT FROM BACKEND (Your wallet has permission!)
+    // ✅ MINT NFT (Backend has MINTER role!)
     try {
       const contract = await sdk.getContract(contractAddress);
       
       console.log('🎯 Minting to:', address);
       console.log('🎯 Metadata:', metadataUri);
 
-      // Call mintTo function
       const tx = await contract.call('mintTo', [address, metadataUri]);
       
-      console.log('🎉 Minted successfully!');
-      console.log('TX Hash:', tx.receipt.transactionHash);
+      console.log('🎉 Minted!');
+      console.log('TX:', tx.receipt.transactionHash);
 
-      // Extract token ID from events
+      // Get token ID
       let tokenId = 'unknown';
       if (tx.receipt.events && tx.receipt.events.length > 0) {
         const transferEvent = tx.receipt.events.find((e: any) => e.event === 'Transfer');
-        if (transferEvent && transferEvent.args && transferEvent.args.tokenId) {
+        if (transferEvent?.args?.tokenId) {
           tokenId = transferEvent.args.tokenId.toString();
         }
       }
@@ -145,7 +136,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('❌ Route error:', e);
     return NextResponse.json(
-      { error: e?.message || 'server_error' },
+      { error: e?.message || 'Server error' },
       { status: 500 }
     );
   }
