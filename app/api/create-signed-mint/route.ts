@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { ThirdwebSDK } from '@thirdweb-dev/sdk';
-import { BaseSepoliaTestnet, Base } from '@thirdweb-dev/chains';
 
 export const runtime = 'nodejs';
 
@@ -29,20 +28,13 @@ export async function POST(req: NextRequest) {
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
-    // ✅ Use Base chain with custom RPC
-    const baseChain = {
-      ...Base,
-      rpc: ['https://mainnet.base.org'], // Official Base RPC
-    };
-
-    // Initialize SDK
+    // ✅ Use Base mainnet with official RPC (no extra package needed!)
     const sdk = ThirdwebSDK.fromPrivateKey(
       privateKey,
-      baseChain,
+      'base', // Just use the chain name!
       {
         clientId,
         secretKey,
-        gasless: false,
       }
     );
 
@@ -109,14 +101,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ MINT NFT
+    // ✅ MINT NFT with retry logic
     try {
       const contract = await sdk.getContract(contractAddress);
       
       console.log('🎯 Minting to:', address);
       console.log('🎯 Metadata:', metadataUri);
 
-      // Call mintTo with retry logic
+      // Retry logic for RPC issues
       let tx;
       let attempts = 0;
       const maxAttempts = 3;
@@ -127,14 +119,14 @@ export async function POST(req: NextRequest) {
           break;
         } catch (err: any) {
           attempts++;
-          console.log(`Attempt ${attempts} failed:`, err.message);
+          console.log(`❌ Attempt ${attempts} failed:`, err.message);
           
           if (attempts === maxAttempts) {
             throw err;
           }
           
-          // Wait 2 seconds before retry
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Wait 3 seconds before retry
+          await new Promise(resolve => setTimeout(resolve, 3000));
         }
       }
 
@@ -143,9 +135,9 @@ export async function POST(req: NextRequest) {
       }
       
       console.log('🎉 Minted successfully!');
-      console.log('TX:', tx.receipt.transactionHash);
+      console.log('TX Hash:', tx.receipt.transactionHash);
 
-      // Get token ID
+      // Extract token ID
       let tokenId = 'unknown';
       if (tx.receipt.events && tx.receipt.events.length > 0) {
         const transferEvent = tx.receipt.events.find((e: any) => e.event === 'Transfer');
