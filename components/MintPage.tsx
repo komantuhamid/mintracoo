@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { parseAbi, encodeFunctionData, isAddress } from 'viem';
+import { parseAbi, encodeFunctionData, isAddress, parseEther } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 import { useMiniEnv } from '@/hooks/useMiniEnv';
 
 // ---------- helpers ----------
@@ -29,10 +29,14 @@ const MINT_ABI = parseAbi([
 ]);
 
 export default function MintPage() {
-  // ===== WAGMI HOOKS =====
+  // ===== WAGMI HOOKS (LIKE YOUR GAME) =====
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { sendTransaction, isPending, isSuccess, data: txHash } = useSendTransaction(); // ✅ LIKE YOUR GAME
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
   // ===== MINI ENV =====
   const { isMini } = useMiniEnv();
@@ -41,7 +45,6 @@ export default function MintPage() {
   const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isAppReady, setIsAppReady] = useState(false);
 
@@ -108,6 +111,19 @@ export default function MintPage() {
     })();
   }, []);
 
+  // ===== WATCH FOR TRANSACTION STATUS =====
+  useEffect(() => {
+    if (isPending) {
+      setMessage('⏳ Waiting for wallet confirmation...');
+    } else if (isSuccess && txHash) {
+      setMessage(`✅ Transaction sent! Hash: ${txHash.slice(0, 10)}...`);
+    } else if (isConfirming) {
+      setMessage('⏳ Waiting for confirmation on chain...');
+    } else if (isConfirmed) {
+      setMessage('🎉 NFT Minted Successfully!');
+    }
+  }, [isPending, isSuccess, isConfirming, isConfirmed, txHash]);
+
   const disconnectAll = () => {
     disconnect();
     setMessage('Disconnected');
@@ -156,7 +172,7 @@ export default function MintPage() {
     return j;
   };
 
-  // ===== PERFORM MINT (USING SDK DIRECTLY) =====
+  // ===== PERFORM MINT (USING useSendTransaction LIKE YOUR GAME) =====
   const performMint = async () => {
     if (!VALID) {
       return setMessage(`Invalid contract address`);
@@ -165,8 +181,7 @@ export default function MintPage() {
     if (!address) return setMessage('Wallet not connected');
     if (!generatedImage) return setMessage('Generate image first');
 
-    setMinting(true);
-    setMessage('Preparing transaction...');
+    setMessage('Preparing mint transaction...');
 
     try {
       const mintData = await requestSignedMint();
@@ -178,65 +193,16 @@ export default function MintPage() {
         args: [mintRequest, signature],
       });
 
-      // Convert to hex value
-      const valueHex = priceWei && priceWei !== '0' 
-        ? ('0x' + BigInt(priceWei).toString(16)) 
-        : undefined;
-
-      console.log('Sending transaction with:', { 
-        to: CONTRACT_ADDRESS, 
-        data, 
-        value: valueHex,
-        chainId: CHAIN_ID 
+      // ✅ USE sendTransaction (LIKE YOUR GAME)
+      sendTransaction({
+        to: CONTRACT_ADDRESS,
+        data,
+        value: BigInt(priceWei || '100000000000000'), // 0.0001 ETH default
       });
 
-      // ✅ USE SDK.ACTIONS DIRECTLY (Most Reliable)
-      try {
-        // Try wallet_sendCalls first (newer method)
-        if (sdk.actions?.wallet_sendCalls) {
-          await sdk.actions.wallet_sendCalls({
-            calls: [
-              {
-                chainId: `eip155:${CHAIN_ID}`,
-                to: CONTRACT_ADDRESS,
-                data,
-                ...(valueHex ? { value: valueHex } : {}),
-              },
-            ],
-          });
-          setMessage('✅ Transaction sent! Confirm in your wallet.');
-          setMinting(false);
-          return;
-        }
-      } catch (e) {
-        console.log('wallet_sendCalls failed, trying wallet_sendTransaction:', e);
-      }
-
-      // Fallback to wallet_sendTransaction
-      try {
-        if (sdk.actions?.wallet_sendTransaction) {
-          await sdk.actions.wallet_sendTransaction({
-            chainId: `eip155:${CHAIN_ID}`,
-            to: CONTRACT_ADDRESS,
-            data,
-            ...(valueHex ? { value: valueHex } : {}),
-          });
-          setMessage('✅ Transaction sent! Confirm in your wallet.');
-          setMinting(false);
-          return;
-        }
-      } catch (e) {
-        console.log('wallet_sendTransaction failed:', e);
-      }
-
-      // If we get here, SDK methods didn't work
-      setMessage('❌ Wallet API not available. Please try again.');
-      
     } catch (e: any) {
       console.error('Mint error:', e);
       setMessage(`❌ ${e?.message || 'Mint failed'}`);
-    } finally {
-      setMinting(false);
     }
   };
 
@@ -308,10 +274,10 @@ export default function MintPage() {
 
           <button
             onClick={performMint}
-            disabled={minting || !address || !generatedImage}
+            disabled={isPending || isConfirming || !address || !generatedImage}
             className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white rounded font-semibold transition"
           >
-            {minting ? 'Minting…' : '🎯 Mint 0.0001 ETH'}
+            {isPending || isConfirming ? 'Minting…' : '🎯 Mint 0.0001 ETH'}
           </button>
         </div>
 
