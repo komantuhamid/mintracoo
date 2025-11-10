@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ThirdwebSDK } from '@thirdweb-dev/sdk';
+import { ThirdwebStorage } from '@thirdweb-dev/storage';
 import { ethers } from 'ethers';
 
 export const runtime = 'nodejs';
@@ -18,20 +18,23 @@ export async function POST(req: NextRequest) {
     }
 
     const contractAddress = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC';
-    const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
+    const clientId = process.env.THIRDWEB_CLIENT_ID;
 
-    // Initialize SDK
-    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, 'base', { clientId, secretKey });
+    // Initialize storage
+    const storage = new ThirdwebStorage({ secretKey, clientId });
 
-    // Fetch and upload image
+    console.log('📥 Fetching image...');
     const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) {
       return NextResponse.json({ error: 'Failed to fetch image' }, { status: 400 });
     }
     const imageData = Buffer.from(await imgRes.arrayBuffer());
-    const storage = sdk.storage;
+
+    // Upload image
+    console.log('📤 Uploading image...');
     const imageUri = await storage.upload(imageData);
+    console.log('✅ Image:', imageUri);
 
     // Create metadata
     const metadata = {
@@ -46,40 +49,68 @@ export async function POST(req: NextRequest) {
     };
 
     // Upload metadata
+    console.log('📤 Uploading metadata...');
     const metadataUri = await storage.upload(metadata);
-    console.log('✅ Metadata uploaded:', metadataUri);
+    console.log('✅ Metadata:', metadataUri);
 
-    // Get contract
-    const contract = await sdk.getContract(contractAddress);
-
-    // Create mint request
-    const mintRequest = {
-      to: address,
-      royaltyRecipient: address,
+    // ✅ Create mint request payload
+    const currentTime = Math.floor(Date.now() / 1000);
+    
+    const payload = {
+      to: address as `0x${string}`,
+      royaltyRecipient: address as `0x${string}`,
       royaltyBps: 0,
-      primarySaleRecipient: address,
+      primarySaleRecipient: address as `0x${string}`,
       uri: metadataUri,
-      price: ethers.utils.parseEther('0.0001').toString(), // ✅ 0.0001 ETH price
-      currency: ethers.constants.AddressZero, // Native token (ETH)
-      validityStartTimestamp: Math.floor(Date.now() / 1000),
-      validityEndTimestamp: Math.floor(Date.now() / 1000) + 3600, // Valid for 1 hour
-      uid: ethers.utils.id(Date.now().toString()),
+      price: ethers.utils.parseEther('0.0001').toString(),
+      currency: ethers.constants.AddressZero,
+      validityStartTimestamp: currentTime,
+      validityEndTimestamp: currentTime + 3600, // 1 hour
+      uid: ethers.utils.id(`${address}-${Date.now()}`),
     };
 
-    // Generate signature
-    const signedPayload = await contract.erc721.signature.generate(mintRequest);
+    console.log('📝 Payload created:', payload);
 
-    console.log('✅ Signature generated');
+    // ✅ Generate signature using EIP-712
+    const domain = {
+      name: 'TokenERC721',
+      version: '1',
+      chainId: 8453, // Base
+      verifyingContract: contractAddress,
+    };
+
+    const types = {
+      MintRequest: [
+        { name: 'to', type: 'address' },
+        { name: 'royaltyRecipient', type: 'address' },
+        { name: 'royaltyBps', type: 'uint256' },
+        { name: 'primarySaleRecipient', type: 'address' },
+        { name: 'uri', type: 'string' },
+        { name: 'price', type: 'uint256' },
+        { name: 'currency', type: 'address' },
+        { name: 'validityStartTimestamp', type: 'uint128' },
+        { name: 'validityEndTimestamp', type: 'uint128' },
+        { name: 'uid', type: 'bytes32' },
+      ],
+    };
+
+    const wallet = new ethers.Wallet(privateKey);
+    const signature = await wallet._signTypedData(domain, types, payload);
+
+    console.log('✅ Signature:', signature);
 
     return NextResponse.json({
       success: true,
-      payload: signedPayload.payload,
-      signature: signedPayload.signature,
+      payload,
+      signature,
       metadataUri,
       imageUri,
     });
   } catch (e: any) {
-    console.error('❌ Error:', e);
-    return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
+    console.error('❌ Backend error:', e);
+    return NextResponse.json(
+      { error: e?.message || 'Server error' },
+      { status: 500 }
+    );
   }
 }
