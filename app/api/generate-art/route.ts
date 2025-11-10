@@ -5,21 +5,46 @@ import sharp from "sharp";
 import { HfInference } from "@huggingface/inference";
 
 const MODEL_ID = "black-forest-labs/FLUX.1-dev";
-const PROVIDER = "replicate"; // 🔥 Changed to Replicate!
+const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
+// 🔥 Random background colors for variety
+const BG_COLORS = [
+  "mint green",
+  "pastel pink",
+  "light blue",
+  "lavender purple",
+  "pale yellow",
+  "peach orange",
+  "baby blue",
+  "soft turquoise",
+  "cream white",
+  "light coral"
+];
+
+function getRandomBg() {
+  return BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)];
+}
+
 function buildPrompt(extra?: string) {
+  const bgColor = getRandomBg();
+  
   const base = [
-    "ultra high quality pixel art raccoon NFT avatar, 8-bit style, cel-shaded",
-    "centered, symmetrical face, strong black outline, crisp clean edges",
-    "vibrant gradient background, stylish outfit, cool accessories (hat, glasses, cigar, crown, chain)",
-    "flat color blocks, sharp details, professional NFT quality, HD pixel art"
+    "PIXEL ART STYLE, 8-bit retro game sprite, clean pixel grid",
+    "raccoon character with sharp pixel edges, NO gradients, NO blur",
+    "crisp blocky pixels, flat color cells, retro game aesthetic",
+    `solid ${bgColor} pixelated background, uniform color blocks`,
+    "raccoon wearing stylish accessories: crown, hat, glasses, chain, cigar",
+    "strong black outlines, cel-shaded flat colors, NO soft shading",
+    "professional pixel art NFT, sharp edges, blocky style"
   ].join(", ");
 
   const negative = [
-    "blurry, soft, glow, bloom, haze, painterly, photorealistic, low quality",
-    "gradient banding, noise, jpeg artifacts, compression artifacts",
-    "text, watermark, logo, frame, border, human, hands, extra limbs, distorted"
+    "realistic, photorealistic, 3D render, smooth, soft, blurry, gradients",
+    "anti-aliasing, smooth edges, soft shadows, glow, bloom, haze",
+    "painterly, watercolor, oil painting, sketch, detailed shading",
+    "text, watermark, logo, frame, border, signature",
+    "human, hands, extra limbs, deformed, distorted, ugly"
   ].join(", ");
 
   return extra
@@ -43,24 +68,38 @@ async function centerSquare(input: Buffer) {
     .toBuffer();
 }
 
-async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 16) {
+// 🔥 AGGRESSIVE pixelation for clean pixel art
+async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 32) {
   const squared = await centerSquare(input);
-  const downW = Math.max(32, Math.floor(outSize / blocks));
+  
+  // Calculate pixel size (32 blocks = 32x32 pixel grid)
+  const pixelSize = Math.floor(outSize / blocks);
 
+  // Step 1: Downscale to create pixel blocks
   const down = await sharp(squared)
-    .resize(downW, downW, { fit: "fill", kernel: sharp.kernel.nearest })
+    .resize(blocks, blocks, { 
+      fit: "fill", 
+      kernel: sharp.kernel.nearest  // Hard edges, no smoothing
+    })
     .toBuffer();
 
+  // Step 2: Upscale back with hard edges (pixelated look)
   const up = await sharp(down)
-    .resize(outSize, outSize, { fit: "fill", kernel: sharp.kernel.nearest })
-    .sharpen(1.5, 1.2, 0.6)
-    .ensureAlpha()
+    .resize(outSize, outSize, { 
+      fit: "fill", 
+      kernel: sharp.kernel.nearest  // Keep pixel blocks sharp
+    })
+    .sharpen(2.0, 1.5, 0.8)  // 🔥 Extra sharpening for crisp edges
+    .modulate({
+      saturation: 1.2,  // 🔥 Boost colors slightly
+      brightness: 1.0
+    })
     .png({
-      palette: true,
-      dither: 0.5,
+      palette: true,      // Use indexed color palette (pixel art style)
+      dither: 0,          // NO dithering = clean pixel blocks
       compressionLevel: 9,
       quality: 100,
-      adaptiveFiltering: true
+      adaptiveFiltering: false  // Disable smoothing
     })
     .toBuffer();
 
@@ -80,6 +119,8 @@ export async function POST(req: Request) {
     }
 
     const prompt = buildPrompt(style);
+    console.log("🎨 Generating with prompt:", prompt.slice(0, 150) + "...");
+    
     const hf = new HfInference(HF_TOKEN);
 
     let output: any = null;
@@ -88,18 +129,17 @@ export async function POST(req: Request) {
     // 3 attempts with backoff
     for (let i = 0; i < 3; i++) {
       try {
-        // 🔥 Using Replicate provider through HF
         output = await (hf.textToImage as any)({
           inputs: prompt,
           model: MODEL_ID,
-          provider: PROVIDER, // ✅ Replicate provider
+          provider: PROVIDER,
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 28,
-            guidance_scale: 5.0,
+            num_inference_steps: 30,
+            guidance_scale: 7.5,  // 🔥 Higher = stronger pixel art style
             negative_prompt:
-              "text, watermark, blur, soft, glow, bloom, haze, frame, border, noisy, artifacts, human, hands, limbs, painterly, photorealistic, gradient banding, low quality, distorted",
+              "realistic, photorealistic, smooth, soft, blurry, gradients, anti-aliasing, 3D, detailed shading, glow, bloom, haze, text, watermark, frame, human, hands, distorted, ugly, low quality",
           },
         });
         break;
@@ -152,8 +192,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // Pixelate with higher quality
-    const px = await pixelateSquare(imgBuf, 1024, 16);
+    // 🔥 Apply aggressive pixelation (32x32 grid = clean pixels like 7.jpg)
+    const px = await pixelateSquare(imgBuf, 1024, 32);
     const dataUrl = `data:image/png;base64,${px.toString("base64")}`;
 
     return NextResponse.json({
