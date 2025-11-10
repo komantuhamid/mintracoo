@@ -5,12 +5,12 @@ import { parseAbi, encodeFunctionData, parseEther } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
-// ✅ YOUR NEW CONTRACT ADDRESS
+// ✅ YOUR CONTRACT ADDRESS
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
 
-// ✅ YOUR NEW ABI (mint(string) payable)
+// ✅ CORRECT ABI FOR YOUR NEW CONTRACT
 const MINT_ABI = parseAbi([
-  'function mint(string memory tokenURI_) payable returns (uint256)',
+  'function mint(string memory tokenURI_) payable',
 ]);
 
 export default function MintPage() {
@@ -87,18 +87,16 @@ export default function MintPage() {
   useEffect(() => {
     if (isPending) {
       setMessage('⏳ Confirm in wallet...');
-    } else if (txHash) {
-      setMessage(`✅ Sent! ${txHash.slice(0, 10)}...`);
     } else if (isConfirming) {
       setMessage('⏳ Confirming...');
     } else if (isConfirmed) {
       setMessage('🎉 NFT Minted Successfully!');
     }
-  }, [isPending, txHash, isConfirming, isConfirmed]);
+  }, [isPending, isConfirming, isConfirmed]);
 
   const generateRaccoon = async () => {
     setLoading(true);
-    setMessage('Generating...');
+    setMessage('🎨 Generating...');
     try {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
@@ -108,7 +106,7 @@ export default function MintPage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Failed');
       setGeneratedImage(j.generated_image_url || j.imageUrl);
-      setMessage('Ready to mint!');
+      setMessage('✅ Ready to mint!');
     } catch (e: any) {
       setMessage(`❌ ${e?.message}`);
     } finally {
@@ -117,11 +115,13 @@ export default function MintPage() {
   };
 
   const performMint = async () => {
-    if (!address) return setMessage('Connect wallet');
-    if (!generatedImage) return setMessage('Generate image first');
-    setMessage('Uploading to IPFS...');
+    if (!address) return setMessage('❌ Connect wallet');
+    if (!generatedImage) return setMessage('❌ Generate image first');
+    
+    setMessage('📝 Uploading to IPFS...');
 
     try {
+      // 1. Upload metadata to IPFS
       const uploadRes = await fetch('/api/create-signed-mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -137,27 +137,29 @@ export default function MintPage() {
       if (uploadData.error) throw new Error(uploadData.error);
 
       const { metadataUri } = uploadData;
+      console.log('✅ Metadata URI:', metadataUri);
 
-      console.log('Metadata URI:', metadataUri);
+      setMessage('🔐 Confirm in wallet...');
 
-      // ✅ Encode mint(string) call
+      // 2. Encode mint(string) call - CORRECT!
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
-        args: [metadataUri],
+        args: [metadataUri], // ← Only metadataUri, no address!
       });
 
-      console.log('Encoded data:', data);
+      console.log('✅ Encoded data:', data);
 
-      // ✅ Send transaction WITH 0.0001 ETH value
+      // 3. Send transaction with payment
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
-        value: parseEther('0.0001'), // ← IMPORTANT: Payment!
+        value: parseEther('0.0001'),
         gas: 300000n,
       });
+
     } catch (e: any) {
-      console.error('Mint error:', e);
+      console.error('❌ Mint error:', e);
       setMessage(`❌ ${e?.message || 'Failed'}`);
     }
   };
@@ -173,46 +175,45 @@ export default function MintPage() {
           {generatedImage ? (
             <img src={generatedImage} alt="Raccoon" className="w-full rounded-lg" />
           ) : (
-            <p className="text-gray-400">No image</p>
+            <p className="text-gray-400">No image generated</p>
           )}
         </div>
 
         {profile && (
-          <p className="text-gray-300 text-sm mb-2">User: {profile.username}</p>
+          <p className="text-gray-300 text-sm mb-2">
+            👤 {profile.username || 'User'}
+          </p>
         )}
 
-        <p className="text-gray-300 text-sm mb-2">
-          Wallet: {shortAddr || 'Connecting...'}
+        <p className="text-gray-300 text-sm mb-4">
+          💼 {shortAddr || 'Not connected'}
         </p>
-
-        {isConnected && (
-          <button
-            onClick={() => disconnect()}
-            className="mt-2 w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
-          >
-            Disconnect
-          </button>
-        )}
 
         <button
           onClick={generateRaccoon}
           disabled={loading || isPending || isConfirming}
-          className="w-full mt-4 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold"
+          className="w-full mt-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
         >
-          {loading ? 'Generating...' : '🎨 Generate'}
+          {loading ? '⏳ Generating...' : '🎨 Generate Raccoon'}
         </button>
 
         <button
           onClick={performMint}
           disabled={!address || !generatedImage || isPending || isConfirming}
-          className="w-full mt-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg font-semibold"
+          className="w-full mt-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
         >
-          {isPending || isConfirming ? 'Minting...' : '💰 Mint (0.0001 ETH)'}
+          {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
         </button>
 
         {message && (
           <div className="mt-4 p-3 bg-gray-700 rounded text-gray-200 text-sm text-center">
             {message}
+          </div>
+        )}
+
+        {txHash && (
+          <div className="mt-2 p-2 bg-gray-700 rounded text-xs text-gray-300 break-all">
+            TX: {txHash}
           </div>
         )}
       </div>
