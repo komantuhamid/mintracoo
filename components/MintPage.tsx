@@ -144,89 +144,89 @@ export default function MintPage() {
     }
   };
 
-const performMint = async () => {
-  if (!address) {
-    setMessage('❌ Please connect wallet');
-    return;
-  }
-  if (!generatedImage) {
-    setMessage('❌ Please generate raccoon first');
-    return;
-  }
-
-  setMessage('📝 Creating mint signature...');
-
-  try {
-    console.log('📤 Sending request to backend...');
-    const sigRes = await fetch('/api/create-mint-signature', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        address,
-        imageUrl: generatedImage,
-        username: profile?.username,
-        fid: profile?.fid,
-      }),
-    });
-
-    console.log('📥 Response status:', sigRes.status);
-
-    // Check if response is OK first
-    if (!sigRes.ok) {
-      console.log('❌ Response not OK:', sigRes.status, sigRes.statusText);
-      const errorData = await sigRes.json().catch(() => ({ error: 'Unknown error' }));
-      console.log('Error data:', errorData);
-      throw new Error(errorData?.error || `Backend error: ${sigRes.statusText}`);
+  // ✅ FIXED: Added 'async' keyword here!
+  const performMint = async () => {
+    if (!address) {
+      setMessage('❌ Please connect wallet');
+      return;
+    }
+    if (!generatedImage) {
+      setMessage('❌ Please generate raccoon first');
+      return;
     }
 
-    // Try to parse JSON
-    let sigData;
+    setMessage('📝 Creating mint signature...');
+
     try {
-      sigData = await sigRes.json();
-      console.log('✅ Response parsed:', sigData);
-    } catch (parseError) {
-      console.error('❌ Failed to parse response:', parseError);
-      throw new Error('Backend returned invalid JSON - check Vercel logs');
+      console.log('📤 Sending request to backend...');
+      const sigRes = await fetch('/api/create-mint-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address,
+          imageUrl: generatedImage,
+          username: profile?.username,
+          fid: profile?.fid,
+        }),
+      });
+
+      console.log('📥 Response status:', sigRes.status);
+
+      // Check if response is OK first
+      if (!sigRes.ok) {
+        console.log('❌ Response not OK:', sigRes.status, sigRes.statusText);
+        const errorData = await sigRes.json().catch(() => ({ error: 'Unknown error' }));
+        console.log('Error data:', errorData);
+        throw new Error(errorData?.error || `Backend error: ${sigRes.statusText}`);
+      }
+
+      // Try to parse JSON
+      let sigData;
+      try {
+        sigData = await sigRes.json();
+        console.log('✅ Response parsed:', sigData);
+      } catch (parseError) {
+        console.error('❌ Failed to parse response:', parseError);
+        throw new Error('Backend returned invalid JSON - check Vercel logs');
+      }
+
+      // Check for errors in the response
+      if (sigData.error) {
+        console.error('Backend error:', sigData);
+        throw new Error(sigData.error);
+      }
+
+      const { payload, signature } = sigData;
+      console.log('✅ Got payload and signature');
+
+      if (!payload || !signature) {
+        throw new Error('Missing payload or signature in response');
+      }
+
+      // Step 2: Encode and send transaction
+      setMessage('🔐 Please sign transaction in wallet...');
+
+      const data = encodeFunctionData({
+        abi: MINT_ABI,
+        functionName: 'mintWithSignature',
+        args: [payload, signature as `0x${string}`],
+      });
+
+      console.log('📤 Sending transaction...');
+
+      // Send transaction - this shows wallet popup!
+      sendTransaction({
+        to: CONTRACT_ADDRESS,
+        data,
+        value: parseEther(MINT_PRICE),
+        gas: 500000n,
+      });
+    } catch (e: any) {
+      console.error('❌ Error:', e);
+      const errorMsg = e?.message || 'Mint failed';
+      setMessage(`❌ ${errorMsg}`);
     }
-
-    // Check for errors in the response
-    if (sigData.error) {
-      console.error('Backend error:', sigData);
-      throw new Error(sigData.error);
-    }
-
-    const { payload, signature } = sigData;
-    console.log('✅ Got payload and signature');
-
-    if (!payload || !signature) {
-      throw new Error('Missing payload or signature in response');
-    }
-
-    // Step 2: Encode and send transaction
-    setMessage('🔐 Please sign transaction in wallet...');
-
-    const data = encodeFunctionData({
-      abi: MINT_ABI,
-      functionName: 'mintWithSignature',
-      args: [payload, signature as `0x${string}`],
-    });
-
-    console.log('📤 Sending transaction...');
-
-    // Send transaction - this shows wallet popup!
-    sendTransaction({
-      to: CONTRACT_ADDRESS,
-      data,
-      value: parseEther(MINT_PRICE),
-      gas: 500000n,
-    });
-  } catch (e: any) {
-    console.error('❌ Error:', e);
-    const errorMsg = e?.message || 'Mint failed';
-    setMessage(`❌ ${errorMsg}`);
-  }
-};
-
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6 flex items-center justify-center">
@@ -321,4 +321,3 @@ const performMint = async () => {
     </div>
   );
 }
-
