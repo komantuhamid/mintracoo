@@ -10,16 +10,16 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 function buildPrompt(extra?: string) {
   const base = [
-    "ultra crisp pixel art raccoon NFT avatar, 8-bit, cel-shaded",
-    "centered, symmetrical face, strong black outline, clean edges",
-    "vibrant gradient background, stylish outfit, accessories (hat, glasses, cigar, crown)",
-    "flat color blocks, minimal shading, no soft glow, no lens blur"
+    "ultra high quality pixel art raccoon NFT avatar, 8-bit style, cel-shaded",
+    "centered, symmetrical face, strong black outline, crisp clean edges",
+    "vibrant gradient background, stylish outfit, cool accessories (hat, glasses, cigar, crown, chain)",
+    "flat color blocks, sharp details, professional NFT quality, HD pixel art"
   ].join(", ");
 
   const negative = [
-    "blurry, soft, glow, bloom, haze, painterly, photorealistic",
-    "gradient banding, noise, artifacts, jpeg artifacts",
-    "text, watermark, logo, frame, border, human, hands, extra limbs"
+    "blurry, soft, glow, bloom, haze, painterly, photorealistic, low quality",
+    "gradient banding, noise, jpeg artifacts, compression artifacts",
+    "text, watermark, logo, frame, border, human, hands, extra limbs, distorted"
   ].join(", ");
 
   return extra
@@ -43,9 +43,12 @@ async function centerSquare(input: Buffer) {
     .toBuffer();
 }
 
-async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 12) {
+// 🔥 IMPROVED: Higher quality pixelation
+async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 16) {
   const squared = await centerSquare(input);
-  const downW = Math.max(16, Math.floor(outSize / blocks));
+  
+  // 🔥 Higher resolution base (more pixels = better quality)
+  const downW = Math.max(32, Math.floor(outSize / blocks));
 
   const down = await sharp(squared)
     .resize(downW, downW, { fit: "fill", kernel: sharp.kernel.nearest })
@@ -53,9 +56,15 @@ async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 12) {
 
   const up = await sharp(down)
     .resize(outSize, outSize, { fit: "fill", kernel: sharp.kernel.nearest })
-    .sharpen(1.2, 1.0, 0.5)
+    .sharpen(1.5, 1.2, 0.6) // 🔥 Stronger sharpening
     .ensureAlpha()
-    .png({ palette: true, dither: 0, compressionLevel: 9, adaptiveFiltering: true })
+    .png({ 
+      palette: true, 
+      dither: 0.5, // 🔥 Slight dithering for smoother gradients
+      compressionLevel: 9, 
+      quality: 100, // 🔥 Maximum quality
+      adaptiveFiltering: true 
+    })
     .toBuffer();
 
   return up;
@@ -89,10 +98,10 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 20,
-            guidance_scale: 4.5,
+            num_inference_steps: 28, // 🔥 More steps = better quality
+            guidance_scale: 5.0, // 🔥 Stronger prompt adherence
             negative_prompt:
-              "text, watermark, blur, soft, glow, bloom, haze, frame, border, noisy, artifacts, human, hands, limbs, painterly, photorealistic, gradient banding",
+              "text, watermark, blur, soft, glow, bloom, haze, frame, border, noisy, artifacts, human, hands, limbs, painterly, photorealistic, gradient banding, low quality, distorted",
           },
         });
         break;
@@ -112,7 +121,6 @@ export async function POST(req: Request) {
 
     // Normalize output
     let imgBuf: Buffer;
-
     if (typeof output === "string") {
       if (output.startsWith("data:image")) {
         const b64 = output.split(",")[1] || "";
@@ -146,14 +154,15 @@ export async function POST(req: Request) {
       }
     }
 
-    // Pixelate
-    const px = await pixelateSquare(imgBuf, 1024, 12);
+    // 🔥 Pixelate with higher quality settings
+    const px = await pixelateSquare(imgBuf, 1024, 16);
     const dataUrl = `data:image/png;base64,${px.toString("base64")}`;
 
     return NextResponse.json({
       generated_image_url: dataUrl,
       success: true
     });
+
   } catch (e: any) {
     console.error("HF route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
