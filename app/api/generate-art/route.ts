@@ -4,22 +4,14 @@ import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { HfInference } from "@huggingface/inference";
 
-const MODEL_ID = "black-forest-labs/FLUX.1-dev";
+const MODEL_ID = "black-forest-labs/FLUX.1-schnell"; // ✅ Faster, cleaner
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🔥 Random background colors for variety
 const BG_COLORS = [
-  "mint green",
-  "pastel pink",
-  "light blue",
-  "lavender purple",
-  "pale yellow",
-  "peach orange",
-  "baby blue",
-  "soft turquoise",
-  "cream white",
-  "light coral"
+  "mint green", "pastel pink", "light blue", "lavender purple",
+  "pale yellow", "peach orange", "baby blue", "soft turquoise",
+  "cream white", "light coral"
 ];
 
 function getRandomBg() {
@@ -30,26 +22,24 @@ function buildPrompt(extra?: string) {
   const bgColor = getRandomBg();
   
   const base = [
-    "PIXEL ART STYLE, 8-bit retro game sprite, clean pixel grid",
-    "raccoon character with sharp pixel edges, NO gradients, NO blur",
-    "crisp blocky pixels, flat color cells, retro game aesthetic",
-    `solid ${bgColor} pixelated background, uniform color blocks`,
-    "raccoon wearing stylish accessories: crown, hat, glasses, chain, cigar",
-    "strong black outlines, cel-shaded flat colors, NO soft shading",
-    "professional pixel art NFT, sharp edges, blocky style"
+    "RETRO 8-BIT PIXEL ART SPRITE, video game character style",
+    "SHARP PIXEL BLOCKS, NO BLUR, NO ANTI-ALIASING, hard edges only",
+    "raccoon character, simple flat color blocks, cel-shaded style",
+    `solid ${bgColor} background, NO gradients, flat pixel color`,
+    "crown OR hat OR glasses OR cigar, minimalist pixel accessories",
+    "THICK BLACK PIXEL OUTLINES, retro game aesthetic, blocky style",
+    "professional pixel art NFT, clean crisp edges, NO smoothing"
   ].join(", ");
 
   const negative = [
-    "realistic, photorealistic, 3D render, smooth, soft, blurry, gradients",
-    "anti-aliasing, smooth edges, soft shadows, glow, bloom, haze",
-    "painterly, watercolor, oil painting, sketch, detailed shading",
-    "text, watermark, logo, frame, border, signature",
-    "human, hands, extra limbs, deformed, distorted, ugly"
+    "blur, blurry, soft, smooth, anti-aliased, gradients, soft edges",
+    "realistic, photorealistic, 3D, detailed, painterly, airbrushed",
+    "glow, bloom, haze, fog, atmospheric, soft shadows, depth of field",
+    "text, watermark, logo, signature, frame, border",
+    "human, hands, extra limbs, deformed, distorted"
   ].join(", ");
 
-  return extra
-    ? `${base}, ${extra} ### NEGATIVE: ${negative}`
-    : `${base} ### NEGATIVE: ${negative}`;
+  return `${base} ### NEGATIVE: ${negative}`;
 }
 
 async function centerSquare(input: Buffer) {
@@ -68,42 +58,55 @@ async function centerSquare(input: Buffer) {
     .toBuffer();
 }
 
-// 🔥 AGGRESSIVE pixelation for clean pixel art
-async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 32) {
+// 🔥 ULTRA-SHARP PIXELATION - No blur at all!
+async function ultraPixelate(input: Buffer) {
   const squared = await centerSquare(input);
   
-  // Calculate pixel size (32 blocks = 32x32 pixel grid)
-  const pixelSize = Math.floor(outSize / blocks);
-
-  // Step 1: Downscale to create pixel blocks
-  const down = await sharp(squared)
-    .resize(blocks, blocks, { 
-      fit: "fill", 
-      kernel: sharp.kernel.nearest  // Hard edges, no smoothing
+  // 1. Convert to exact pixel grid (24x24 = bigger, clearer pixels)
+  const pixelGrid = 24; // Larger = more visible pixels
+  
+  const tiny = await sharp(squared)
+    .resize(pixelGrid, pixelGrid, {
+      fit: "fill",
+      kernel: sharp.kernel.nearest, // ZERO smoothing
     })
     .toBuffer();
 
-  // Step 2: Upscale back with hard edges (pixelated look)
-  const up = await sharp(down)
-    .resize(outSize, outSize, { 
-      fit: "fill", 
-      kernel: sharp.kernel.nearest  // Keep pixel blocks sharp
+  // 2. Scale up with ZERO interpolation (hard pixel blocks)
+  const big = await sharp(tiny)
+    .resize(1024, 1024, {
+      fit: "fill",
+      kernel: sharp.kernel.nearest, // Keep hard edges
     })
-    .sharpen(2.0, 1.5, 0.8)  // 🔥 Extra sharpening for crisp edges
+    .toBuffer();
+
+  // 3. Apply extreme contrast and sharpness
+  const final = await sharp(big)
+    .linear(1.3, -20) // 🔥 Increase contrast, darken edges
+    .sharpen({
+      sigma: 3.0,     // 🔥 Maximum edge sharpness
+      m1: 2.5,        // 🔥 Edge multiplier
+      m2: 1.0,
+      x1: 3,
+      y2: 15,
+      y3: 15
+    })
     .modulate({
-      saturation: 1.2,  // 🔥 Boost colors slightly
-      brightness: 1.0
+      saturation: 1.3,  // 🔥 Boost color saturation
+      brightness: 1.05
     })
+    .normalise()        // 🔥 Maximize contrast
     .png({
-      palette: true,      // Use indexed color palette (pixel art style)
-      dither: 0,          // NO dithering = clean pixel blocks
+      palette: true,    // Indexed colors (pixel art)
+      colors: 256,      // Limit color palette
+      dither: 0,        // NO dithering = flat blocks
       compressionLevel: 9,
       quality: 100,
-      adaptiveFiltering: false  // Disable smoothing
+      adaptiveFiltering: false
     })
     .toBuffer();
 
-  return up;
+  return final;
 }
 
 export async function POST(req: Request) {
@@ -119,14 +122,11 @@ export async function POST(req: Request) {
     }
 
     const prompt = buildPrompt(style);
-    console.log("🎨 Generating with prompt:", prompt.slice(0, 150) + "...");
-    
     const hf = new HfInference(HF_TOKEN);
 
     let output: any = null;
     let lastErr: any = null;
 
-    // 3 attempts with backoff
     for (let i = 0; i < 3; i++) {
       try {
         output = await (hf.textToImage as any)({
@@ -136,18 +136,16 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 30,
-            guidance_scale: 7.5,  // 🔥 Higher = stronger pixel art style
+            num_inference_steps: 4, // ✅ Schnell = fast, cleaner
+            guidance_scale: 0,      // ✅ No guidance for cleaner output
             negative_prompt:
-              "realistic, photorealistic, smooth, soft, blurry, gradients, anti-aliasing, 3D, detailed shading, glow, bloom, haze, text, watermark, frame, human, hands, distorted, ugly, low quality",
+              "blur, blurry, soft, smooth, anti-aliased, gradients, realistic, photorealistic, 3D, detailed, glow, bloom, haze, text, watermark",
           },
         });
         break;
       } catch (e: any) {
         lastErr = e;
-        if (i < 2) {
-          await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
-        }
+        if (i < 2) await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
       }
     }
 
@@ -192,8 +190,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // 🔥 Apply aggressive pixelation (32x32 grid = clean pixels like 7.jpg)
-    const px = await pixelateSquare(imgBuf, 1024, 32);
+    // 🔥 Apply ULTRA-SHARP pixelation
+    const px = await ultraPixelate(imgBuf);
     const dataUrl = `data:image/png;base64,${px.toString("base64")}`;
 
     return NextResponse.json({
