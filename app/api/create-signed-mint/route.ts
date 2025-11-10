@@ -38,9 +38,9 @@ export async function POST(req: NextRequest) {
       console.log('🔧 Initializing storage...');
       const storage = new ThirdwebStorage({ secretKey, clientId });
 
-      // Step 1: Fetch image
+      // Step 1: Fetch image (REMOVED timeout - not supported in native fetch)
       console.log('📥 Fetching image from:', imageUrl.slice(0, 100));
-      const imgRes = await fetch(imageUrl, { timeout: 10000 });
+      const imgRes = await fetch(imageUrl);
       
       if (!imgRes.ok) {
         console.log('❌ Image fetch failed:', imgRes.status, imgRes.statusText);
