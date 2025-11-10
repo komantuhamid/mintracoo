@@ -145,65 +145,67 @@ export default function MintPage() {
   };
 
   const performMint = async () => {
-    if (!address) {
-      setMessage('❌ Please connect wallet');
-      return;
+  if (!address) {
+    setMessage('❌ Please connect wallet');
+    return;
+  }
+  if (!generatedImage) {
+    setMessage('❌ Please generate raccoon first');
+    return;
+  }
+
+  setMessage('📝 Creating mint signature...');
+
+  try {
+    // Step 1: Get signature from backend
+    console.log('Requesting signature from backend...');
+    const sigRes = await fetch('/api/create-mint-signature', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address,
+        imageUrl: generatedImage,
+        username: profile?.username,
+        fid: profile?.fid,
+      }),
+    });
+
+    const sigData = await sigRes.json();
+
+    if (!sigRes.ok || sigData.error) {
+      console.error('Backend error:', sigData);
+      throw new Error(sigData.error || sigData.details || 'Failed to create signature');
     }
-    if (!generatedImage) {
-      setMessage('❌ Please generate raccoon first');
-      return;
-    }
 
-    setMessage('📝 Creating mint signature...');
+    const { payload, signature } = sigData;
+    console.log('✅ Got signed payload:', payload);
+    console.log('✅ Got signature:', signature);
 
-    try {
-      // Step 1: Get signature from backend
-      console.log('Requesting signature from backend...');
-      const sigRes = await fetch('/api/create-mint-signature', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address,
-          imageUrl: generatedImage,
-          username: profile?.username,
-          fid: profile?.fid,
-        }),
-      });
+    // Step 2: Encode function call with signature
+    setMessage('🔐 Please sign transaction in wallet...');
 
-      const sigData = await sigRes.json();
+    const data = encodeFunctionData({
+      abi: MINT_ABI,
+      functionName: 'mintWithSignature',
+      args: [payload, signature as `0x${string}`],
+    });
 
-      if (!sigRes.ok || sigData.error) {
-        console.error('Backend error:', sigData);
-        throw new Error(sigData.error || sigData.details || 'Failed to create signature');
-      }
+    console.log('📤 Sending transaction with useSendTransaction...');
 
-      const { signedPayload } = sigData;
-      console.log('✅ Got signed payload:', signedPayload);
+    // Step 3: Send transaction - this will show the wallet popup!
+    sendTransaction({
+      to: CONTRACT_ADDRESS,
+      data,
+      value: parseEther(MINT_PRICE), // User pays 0.0001 ETH
+      gas: 500000n,
+    });
+  } catch (e: any) {
+    console.error('❌ Error:', e);
+    const errorMsg = e?.message || e?.reason || 'Mint failed';
+    setMessage(`❌ ${errorMsg}`);
+  }
+};
 
-      // Step 2: Encode function call with signature
-      setMessage('🔐 Please sign transaction in wallet...');
-
-      const data = encodeFunctionData({
-        abi: MINT_ABI,
-        functionName: 'mintWithSignature',
-        args: [signedPayload, sigData.signature as `0x${string}`],
-      });
-
-      console.log('📤 Sending transaction with useSendTransaction...');
-
-      // Step 3: Send transaction - this will show the wallet popup!
-      sendTransaction({
-        to: CONTRACT_ADDRESS,
-        data,
-        value: parseEther(MINT_PRICE), // User pays 0.0001 ETH
-        gas: 500000n,
-      });
-    } catch (e: any) {
-      console.error('❌ Error:', e);
-      const errorMsg = e?.message || e?.reason || 'Mint failed';
-      setMessage(`❌ ${errorMsg}`);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6 flex items-center justify-center">
