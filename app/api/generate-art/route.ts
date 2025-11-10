@@ -7,27 +7,58 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🔥 Random styles for variety
-const STYLES = [
-  "cyberpunk neon style, futuristic, glowing lights",
-  "royal king style, golden crown, elegant robe",
-  "street gangster style, gold chain, sunglasses, cigar",
-  "wizard style, magical robe, mystical hat, glowing staff",
-  "astronaut style, space suit, helmet visor, cosmic background",
-  "samurai style, traditional armor, katana, Japanese aesthetic",
-  "pirate captain style, tricorn hat, eye patch, treasure map",
-  "hip-hop artist style, expensive jewelry, designer outfit, cool pose"
+// 🔥 Random character types (like your examples!)
+const CREATURES = [
+  "cute chubby monster",
+  "adorable cartoon creature", 
+  "funny round animal character",
+  "lovable silly beast",
+  "charming chubby critter",
+  "cute pudgy monster"
 ];
 
+// 🔥 Random textures/patterns
+const TEXTURES = [
+  "smooth gray skin",
+  "colorful honeycomb pattern scales",
+  "striped fur with bold colors",
+  "spotted skin with dots",
+  "fluffy soft fur",
+  "scaly reptile texture",
+  "smooth cartoon skin"
+];
+
+// 🔥 Random outfits/accessories
+const OUTFITS = [
+  "wearing sports uniform and helmet, holding sports equipment",
+  "wearing casual hoodie and streetwear",
+  "wearing no clothes, natural look",
+  "wearing simple t-shirt",
+  "wearing cap or beanie hat",
+  "wearing sunglasses and cool accessories",
+  "wearing crown or leaf crown"
+];
+
+// 🔥 Random facial features
+const FACES = [
+  "giant mouth with sharp pointy teeth, huge googly eyes",
+  "big wide smile, large expressive eyes",
+  "silly grin, round cute eyes",
+  "friendly smile, curious eyes",
+  "cool confident expression, half-closed eyes",
+  "happy excited face, bright eyes"
+];
+
+// 🔥 Background colors (solid, like your examples)
 const BACKGROUNDS = [
-  "neon cityscape at night",
-  "luxury penthouse with city view",
-  "dark studio with dramatic lighting",
-  "mystical forest with glowing plants",
-  "outer space with stars and planets",
-  "Japanese temple at sunset",
-  "tropical beach paradise",
-  "futuristic cyberpunk street"
+  "light beige background",
+  "teal blue background",
+  "brown taupe background",
+  "tan gold background",
+  "slate gray background",
+  "dark navy background",
+  "cream white background",
+  "dusty blue background"
 ];
 
 function getRandomElement(arr: string[]) {
@@ -35,25 +66,30 @@ function getRandomElement(arr: string[]) {
 }
 
 function buildPrompt() {
-  const style = getRandomElement(STYLES);
+  const creature = getRandomElement(CREATURES);
+  const texture = getRandomElement(TEXTURES);
+  const outfit = getRandomElement(OUTFITS);
+  const face = getRandomElement(FACES);
   const background = getRandomElement(BACKGROUNDS);
   
   const prompt = [
-    "ultra realistic 3D render, photorealistic, highly detailed",
-    "anthropomorphic raccoon character, standing upright, confident pose",
-    style,
-    "professional studio lighting, cinematic quality, 8K resolution",
-    "detailed fur texture, expressive eyes, realistic facial features",
-    `background: ${background}`,
-    "sharp focus, depth of field, masterpiece quality",
-    "trending on ArtStation, award-winning CGI, Unreal Engine quality"
+    "cute cartoon character illustration, adorable style",
+    `${creature} with ${texture}`,
+    `${face}`,
+    `${outfit}`,
+    "chubby round body shape, standing upright, centered pose",
+    "thick black outline, clean vector art style, smooth shading",
+    `solid flat ${background}, studio lighting`,
+    "professional character design, mascot quality, children's book style",
+    "high quality digital art, clean smooth rendering"
   ].join(", ");
 
   const negative = [
-    "cartoon, anime, 2D, flat, illustration, sketch, drawing",
-    "pixel art, low quality, blurry, distorted, ugly, deformed",
+    "realistic, photorealistic, photograph, 3D render",
+    "blurry, distorted, ugly, deformed, bad anatomy",
     "text, watermark, logo, signature, frame, border",
-    "multiple subjects, cropped, cut off, amateur, bad anatomy"
+    "multiple characters, cropped, human, scary, horror",
+    "pixel art, low quality, messy, sketchy"
   ].join(", ");
 
   return { prompt, negative };
@@ -71,14 +107,13 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating 3D raccoon:", prompt.slice(0, 100) + "...");
+    console.log("🎨 Generating cute monster:", prompt.slice(0, 100) + "...");
     
     const hf = new HfInference(HF_TOKEN);
 
     let output: any = null;
     let lastErr: any = null;
 
-    // 3 attempts with backoff
     for (let i = 0; i < 3; i++) {
       try {
         output = await (hf.textToImage as any)({
@@ -88,8 +123,8 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 40,  // 🔥 More steps = better quality
-            guidance_scale: 7.5,       // 🔥 Strong prompt following
+            num_inference_steps: 35,
+            guidance_scale: 7.0,
             negative_prompt: negative,
           },
         });
@@ -143,7 +178,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Return high-quality image directly (no pixelation!)
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
 
     return NextResponse.json({
