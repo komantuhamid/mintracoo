@@ -90,3 +90,75 @@ export async function POST(req: NextRequest) {
         currency: ethers.constants.AddressZero,
         validityStartTimestamp: currentTime,
         validityEndTimestamp: currentTime + 3600 * 24 * 30,
+        uid: ethers.utils.id(`${address}-${Date.now()}`),
+      };
+
+      console.log('📋 Payload created');
+
+      const domain = {
+        name: 'TokenERC721',
+        version: '1',
+        chainId: 8453,
+        verifyingContract: contractAddress,
+      };
+
+      const types = {
+        MintRequest: [
+          { name: 'to', type: 'address' },
+          { name: 'royaltyRecipient', type: 'address' },
+          { name: 'royaltyBps', type: 'uint256' },
+          { name: 'primarySaleRecipient', type: 'address' },
+          { name: 'uri', type: 'string' },
+          { name: 'price', type: 'uint256' },
+          { name: 'currency', type: 'address' },
+          { name: 'validityStartTimestamp', type: 'uint128' },
+          { name: 'validityEndTimestamp', type: 'uint128' },
+          { name: 'uid', type: 'bytes32' },
+        ],
+      };
+
+      console.log('🔐 Signing with EIP-712...');
+      const wallet = new ethers.Wallet(privateKey);
+      const signature = await wallet._signTypedData(domain, types, payload);
+
+      console.log('✅ Signature generated!');
+
+      const response = {
+        success: true,
+        payload,
+        signature,
+        metadataUri,
+        imageUri,
+      };
+
+      console.log('📤 Sending response');
+      return NextResponse.json(response);
+    } catch (innerError: any) {
+      console.error('❌ Inner error:', innerError);
+      console.error('Inner error message:', innerError?.message);
+      console.error('Inner error stack:', innerError?.stack);
+
+      return NextResponse.json(
+        {
+          error: innerError?.message || 'Backend processing error',
+          details: innerError?.stack,
+          type: innerError?.constructor?.name,
+        },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
+    console.error('❌ Outer error:', error);
+    console.error('Outer error message:', error?.message);
+    console.error('Outer error stack:', error?.stack);
+
+    return NextResponse.json(
+      {
+        error: error?.message || 'Internal server error',
+        details: error?.stack,
+        type: error?.constructor?.name,
+      },
+      { status: 500 }
+    );
+  }
+}
