@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ThirdwebSDK } from '@thirdweb-dev/sdk';
+import { ThirdwebStorage } from '@thirdweb-dev/storage';
+import { ethers } from 'ethers';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -25,11 +26,8 @@ export async function POST(req: NextRequest) {
 
     const contractAddress = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC';
 
-    console.log('🔧 Initializing Thirdweb SDK...');
-    const sdk = ThirdwebSDK.fromPrivateKey(privateKey, 'base', {
-      clientId,
-      secretKey,
-    });
+    console.log('🔧 Initializing storage...');
+    const storage = new ThirdwebStorage({ secretKey, clientId });
 
     // Step 1: Fetch image
     console.log('📥 Fetching image from URL:', imageUrl);
@@ -42,7 +40,6 @@ export async function POST(req: NextRequest) {
 
     // Step 2: Upload image to IPFS
     console.log('📤 Uploading image to IPFS...');
-    const storage = sdk.storage;
     const imageUri = await storage.upload(imageData);
     console.log('✅ Image uploaded to IPFS:', imageUri);
 
@@ -64,36 +61,74 @@ export async function POST(req: NextRequest) {
     const metadataUri = await storage.upload(metadata);
     console.log('✅ Metadata uploaded to IPFS:', metadataUri);
 
-    // Step 5: Get contract and generate signature
-    console.log('🔗 Getting contract...');
-    const contract = await sdk.getContract(contractAddress);
+    // Step 5: Generate EIP-712 signature manually
+    console.log('📝 Generating EIP-712 signature...');
 
-    console.log('📝 Generating mint signature with price 0.0001 ETH...');
-    const signedPayload = await contract.signature.generate({
-      to: address,
-      metadata: metadataUri,
-      price: '0.0001', // 0.0001 ETH
-      mintStartTime: new Date(0),
-      mintEndTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30), // Valid for 30 days
-    });
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    // Create the mint request payload
+    const payload = {
+      to: address as `0x${string}`,
+      royaltyRecipient: address as `0x${string}`,
+      royaltyBps: 0,
+      primarySaleRecipient: address as `0x${string}`,
+      uri: metadataUri,
+      price: ethers.utils.parseEther('0.0001').toString(),
+      currency: ethers.constants.AddressZero,
+      validityStartTimestamp: currentTime,
+      validityEndTimestamp: currentTime + 3600 * 24 * 30, // 30 days
+      uid: ethers.utils.id(`${address}-${Date.now()}`),
+    };
+
+    console.log('Payload:', payload);
+
+    // EIP-712 domain
+    const domain = {
+      name: 'TokenERC721',
+      version: '1',
+      chainId: 8453, // Base mainnet
+      verifyingContract: contractAddress,
+    };
+
+    // EIP-712 types
+    const types = {
+      MintRequest: [
+        { name: 'to', type: 'address' },
+        { name: 'royaltyRecipient', type: 'address' },
+        { name: 'royaltyBps', type: 'uint256' },
+        { name: 'primarySaleRecipient', type: 'address' },
+        { name: 'uri', type: 'string' },
+        { name: 'price', type: 'uint256' },
+        { name: 'currency', type: 'address' },
+        { name: 'validityStartTimestamp', type: 'uint128' },
+        { name: 'validityEndTimestamp', type: 'uint128' },
+        { name: 'uid', type: 'bytes32' },
+      ],
+    };
+
+    // Sign with admin private key
+    const wallet = new ethers.Wallet(privateKey);
+    const signature = await wallet._signTypedData(domain, types, payload);
 
     console.log('✅ Signature generated successfully!');
+    console.log('Signature:', signature);
 
     return NextResponse.json({
       success: true,
-      signedPayload,
+      payload,
+      signature,
       metadataUri,
       imageUri,
     });
   } catch (error: any) {
     console.error('❌ Backend Error:', error);
     console.error('Error message:', error?.message);
-    console.error('Error details:', error?.toString());
+    console.error('Error stack:', error?.stack);
 
     return NextResponse.json(
       {
         error: error?.message || 'Internal server error',
-        details: error?.toString(),
+        details: error?.stack,
       },
       { status: 500 }
     );
