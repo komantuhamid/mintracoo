@@ -10,10 +10,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { address, imageUrl, username, fid } = body;
 
-    console.log('📥 Request received:', { address, imageUrl: imageUrl?.slice(0, 50), username, fid });
+    console.log('📥 Request:', { address: address?.slice(0, 10), imageUrl: !!imageUrl });
 
     if (!address || !imageUrl) {
-      console.log('❌ Missing fields');
       return NextResponse.json({ error: 'Missing address or imageUrl' }, { status: 400 });
     }
 
@@ -21,144 +20,92 @@ export async function POST(req: NextRequest) {
     const clientId = process.env.THIRDWEB_CLIENT_ID;
     const secretKey = process.env.THIRDWEB_SECRET_KEY;
 
-    console.log('🔑 Checking env vars:', { privateKey: !!privateKey, clientId: !!clientId, secretKey: !!secretKey });
-
-    if (!privateKey) {
-      console.log('❌ Missing THIRDWEB_ADMIN_PRIVATE_KEY');
-      return NextResponse.json({ error: 'Missing THIRDWEB_ADMIN_PRIVATE_KEY' }, { status: 500 });
-    }
-    if (!clientId || !secretKey) {
-      console.log('❌ Missing THIRDWEB_CLIENT_ID or THIRDWEB_SECRET_KEY');
-      return NextResponse.json({ error: 'Missing Thirdweb credentials' }, { status: 500 });
+    if (!privateKey || !clientId || !secretKey) {
+      return NextResponse.json({ error: 'Missing env vars' }, { status: 500 });
     }
 
     const contractAddress = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC';
+    const storage = new ThirdwebStorage({ secretKey, clientId });
 
-    try {
-      console.log('🔧 Initializing storage...');
-      const storage = new ThirdwebStorage({ secretKey, clientId });
+    // Fetch image
+    console.log('📥 Fetching image...');
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) throw new Error('Failed to fetch image');
+    const imageData = Buffer.from(await imgRes.arrayBuffer());
 
-      // Step 1: Fetch image (REMOVED timeout - not supported in native fetch)
-      console.log('📥 Fetching image from:', imageUrl.slice(0, 100));
-      const imgRes = await fetch(imageUrl);
-      
-      if (!imgRes.ok) {
-        console.log('❌ Image fetch failed:', imgRes.status, imgRes.statusText);
-        return NextResponse.json(
-          { error: `Failed to fetch image: ${imgRes.statusText}` },
-          { status: 400 }
-        );
-      }
+    // Upload image
+    console.log('📤 Uploading image...');
+    const imageUri = await storage.upload(imageData);
 
-      const imageData = Buffer.from(await imgRes.arrayBuffer());
-      console.log('✅ Image fetched:', imageData.length, 'bytes');
+    // Create metadata
+    const metadata = {
+      name: username ? `Raccoon • @${username}` : 'Raccoon',
+      description: `AI-generated pixel art raccoon NFT for ${address}`,
+      image: imageUri,
+      attributes: [
+        { trait_type: 'Generator', value: 'AI FLUX.1' },
+        { trait_type: 'Style', value: 'Pixel Art' },
+        ...(fid ? [{ trait_type: 'FID', value: String(fid) }] : []),
+      ],
+    };
 
-      // Step 2: Upload image to IPFS
-      console.log('📤 Uploading image to IPFS...');
-      const imageUri = await storage.upload(imageData);
-      console.log('✅ Image uploaded:', imageUri);
+    // Upload metadata
+    console.log('📤 Uploading metadata...');
+    const metadataUri = await storage.upload(metadata);
 
-      // Step 3: Create metadata
-      const metadata = {
-        name: username ? `Raccoon • @${username}` : 'Raccoon',
-        description: `AI-generated pixel art raccoon NFT for ${address}`,
-        image: imageUri,
-        attributes: [
-          { trait_type: 'Generator', value: 'AI FLUX.1' },
-          { trait_type: 'Style', value: 'Pixel Art' },
-          ...(fid ? [{ trait_type: 'FID', value: String(fid) }] : []),
-        ],
-      };
+    // Generate signature
+    console.log('📝 Generating signature...');
+    const currentTime = Math.floor(Date.now() / 1000);
 
-      // Step 4: Upload metadata to IPFS
-      console.log('📤 Uploading metadata to IPFS...');
-      const metadataUri = await storage.upload(metadata);
-      console.log('✅ Metadata uploaded:', metadataUri);
+    const payload = {
+      to: address,
+      royaltyRecipient: address,
+      royaltyBps: 0,
+      primarySaleRecipient: address,
+      uri: metadataUri,
+      price: ethers.utils.parseEther('0.0001').toString(),
+      currency: ethers.constants.AddressZero,
+      validityStartTimestamp: currentTime,
+      validityEndTimestamp: currentTime + 86400 * 30,
+      uid: ethers.utils.id(`${address}-${Date.now()}`),
+    };
 
-      // Step 5: Generate EIP-712 signature
-      console.log('📝 Generating EIP-712 signature...');
+    const domain = {
+      name: 'TokenERC721',
+      version: '1',
+      chainId: 8453,
+      verifyingContract: contractAddress,
+    };
 
-      const currentTime = Math.floor(Date.now() / 1000);
+    const types = {
+      MintRequest: [
+        { name: 'to', type: 'address' },
+        { name: 'royaltyRecipient', type: 'address' },
+        { name: 'royaltyBps', type: 'uint256' },
+        { name: 'primarySaleRecipient', type: 'address' },
+        { name: 'uri', type: 'string' },
+        { name: 'price', type: 'uint256' },
+        { name: 'currency', type: 'address' },
+        { name: 'validityStartTimestamp', type: 'uint128' },
+        { name: 'validityEndTimestamp', type: 'uint128' },
+        { name: 'uid', type: 'bytes32' },
+      ],
+    };
 
-      const payload = {
-        to: address,
-        royaltyRecipient: address,
-        royaltyBps: 0,
-        primarySaleRecipient: address,
-        uri: metadataUri,
-        price: ethers.utils.parseEther('0.0001').toString(),
-        currency: ethers.constants.AddressZero,
-        validityStartTimestamp: currentTime,
-        validityEndTimestamp: currentTime + 3600 * 24 * 30,
-        uid: ethers.utils.id(`${address}-${Date.now()}`),
-      };
+    const wallet = new ethers.Wallet(privateKey);
+    const signature = await wallet._signTypedData(domain, types, payload);
 
-      console.log('📋 Payload created');
+    console.log('✅ Done!');
 
-      const domain = {
-        name: 'TokenERC721',
-        version: '1',
-        chainId: 8453,
-        verifyingContract: contractAddress,
-      };
-
-      const types = {
-        MintRequest: [
-          { name: 'to', type: 'address' },
-          { name: 'royaltyRecipient', type: 'address' },
-          { name: 'royaltyBps', type: 'uint256' },
-          { name: 'primarySaleRecipient', type: 'address' },
-          { name: 'uri', type: 'string' },
-          { name: 'price', type: 'uint256' },
-          { name: 'currency', type: 'address' },
-          { name: 'validityStartTimestamp', type: 'uint128' },
-          { name: 'validityEndTimestamp', type: 'uint128' },
-          { name: 'uid', type: 'bytes32' },
-        ],
-      };
-
-      console.log('🔐 Signing with EIP-712...');
-      const wallet = new ethers.Wallet(privateKey);
-      const signature = await wallet._signTypedData(domain, types, payload);
-
-      console.log('✅ Signature generated!');
-
-      const response = {
-        success: true,
-        payload,
-        signature,
-        metadataUri,
-        imageUri,
-      };
-
-      console.log('📤 Sending response');
-      return NextResponse.json(response);
-    } catch (innerError: any) {
-      console.error('❌ Inner error:', innerError);
-      console.error('Inner error message:', innerError?.message);
-      console.error('Inner error stack:', innerError?.stack);
-
-      return NextResponse.json(
-        {
-          error: innerError?.message || 'Backend processing error',
-          details: innerError?.stack,
-          type: innerError?.constructor?.name,
-        },
-        { status: 500 }
-      );
-    }
-  } catch (error: any) {
-    console.error('❌ Outer error:', error);
-    console.error('Outer error message:', error?.message);
-    console.error('Outer error stack:', error?.stack);
-
-    return NextResponse.json(
-      {
-        error: error?.message || 'Internal server error',
-        details: error?.stack,
-        type: error?.constructor?.name,
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: true,
+      payload,
+      signature,
+      metadataUri,
+      imageUri,
+    });
+  } catch (e: any) {
+    console.error('❌ Error:', e.message);
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
