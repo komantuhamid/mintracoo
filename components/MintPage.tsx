@@ -144,7 +144,7 @@ export default function MintPage() {
     }
   };
 
-  const performMint = async () => {
+const performMint = async () => {
   if (!address) {
     setMessage('❌ Please connect wallet');
     return;
@@ -157,8 +157,7 @@ export default function MintPage() {
   setMessage('📝 Creating mint signature...');
 
   try {
-    // Step 1: Get signature from backend
-    console.log('Requesting signature from backend...');
+    console.log('📤 Sending request to backend...');
     const sigRes = await fetch('/api/create-mint-signature', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -170,18 +169,40 @@ export default function MintPage() {
       }),
     });
 
-    const sigData = await sigRes.json();
+    console.log('📥 Response status:', sigRes.status);
 
-    if (!sigRes.ok || sigData.error) {
+    // Check if response is OK first
+    if (!sigRes.ok) {
+      console.log('❌ Response not OK:', sigRes.status, sigRes.statusText);
+      const errorData = await sigRes.json().catch(() => ({ error: 'Unknown error' }));
+      console.log('Error data:', errorData);
+      throw new Error(errorData?.error || `Backend error: ${sigRes.statusText}`);
+    }
+
+    // Try to parse JSON
+    let sigData;
+    try {
+      sigData = await sigRes.json();
+      console.log('✅ Response parsed:', sigData);
+    } catch (parseError) {
+      console.error('❌ Failed to parse response:', parseError);
+      throw new Error('Backend returned invalid JSON - check Vercel logs');
+    }
+
+    // Check for errors in the response
+    if (sigData.error) {
       console.error('Backend error:', sigData);
-      throw new Error(sigData.error || sigData.details || 'Failed to create signature');
+      throw new Error(sigData.error);
     }
 
     const { payload, signature } = sigData;
-    console.log('✅ Got signed payload:', payload);
-    console.log('✅ Got signature:', signature);
+    console.log('✅ Got payload and signature');
 
-    // Step 2: Encode function call with signature
+    if (!payload || !signature) {
+      throw new Error('Missing payload or signature in response');
+    }
+
+    // Step 2: Encode and send transaction
     setMessage('🔐 Please sign transaction in wallet...');
 
     const data = encodeFunctionData({
@@ -190,18 +211,18 @@ export default function MintPage() {
       args: [payload, signature as `0x${string}`],
     });
 
-    console.log('📤 Sending transaction with useSendTransaction...');
+    console.log('📤 Sending transaction...');
 
-    // Step 3: Send transaction - this will show the wallet popup!
+    // Send transaction - this shows wallet popup!
     sendTransaction({
       to: CONTRACT_ADDRESS,
       data,
-      value: parseEther(MINT_PRICE), // User pays 0.0001 ETH
+      value: parseEther(MINT_PRICE),
       gas: 500000n,
     });
   } catch (e: any) {
     console.error('❌ Error:', e);
-    const errorMsg = e?.message || e?.reason || 'Mint failed';
+    const errorMsg = e?.message || 'Mint failed';
     setMessage(`❌ ${errorMsg}`);
   }
 };
