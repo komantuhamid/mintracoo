@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { HfInference } from "@huggingface/inference";
 
-const MODEL_ID = "black-forest-labs/FLUX.1-Krea-dev";
-const PROVIDER: "fal-ai" | "hf-inference" = "fal-ai";
+const MODEL_ID = "black-forest-labs/FLUX.1-dev";
+const PROVIDER = "replicate"; // 🔥 Changed to Replicate!
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 function buildPrompt(extra?: string) {
@@ -43,11 +43,8 @@ async function centerSquare(input: Buffer) {
     .toBuffer();
 }
 
-// 🔥 IMPROVED: Higher quality pixelation
 async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 16) {
   const squared = await centerSquare(input);
-  
-  // 🔥 Higher resolution base (more pixels = better quality)
   const downW = Math.max(32, Math.floor(outSize / blocks));
 
   const down = await sharp(squared)
@@ -56,14 +53,14 @@ async function pixelateSquare(input: Buffer, outSize = 1024, blocks = 16) {
 
   const up = await sharp(down)
     .resize(outSize, outSize, { fit: "fill", kernel: sharp.kernel.nearest })
-    .sharpen(1.5, 1.2, 0.6) // 🔥 Stronger sharpening
+    .sharpen(1.5, 1.2, 0.6)
     .ensureAlpha()
-    .png({ 
-      palette: true, 
-      dither: 0.5, // 🔥 Slight dithering for smoother gradients
-      compressionLevel: 9, 
-      quality: 100, // 🔥 Maximum quality
-      adaptiveFiltering: true 
+    .png({
+      palette: true,
+      dither: 0.5,
+      compressionLevel: 9,
+      quality: 100,
+      adaptiveFiltering: true
     })
     .toBuffer();
 
@@ -91,15 +88,16 @@ export async function POST(req: Request) {
     // 3 attempts with backoff
     for (let i = 0; i < 3; i++) {
       try {
+        // 🔥 Using Replicate provider through HF
         output = await (hf.textToImage as any)({
           inputs: prompt,
           model: MODEL_ID,
-          provider: PROVIDER,
+          provider: PROVIDER, // ✅ Replicate provider
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 28, // 🔥 More steps = better quality
-            guidance_scale: 5.0, // 🔥 Stronger prompt adherence
+            num_inference_steps: 28,
+            guidance_scale: 5.0,
             negative_prompt:
               "text, watermark, blur, soft, glow, bloom, haze, frame, border, noisy, artifacts, human, hands, limbs, painterly, photorealistic, gradient banding, low quality, distorted",
           },
@@ -114,7 +112,7 @@ export async function POST(req: Request) {
     }
 
     if (!output) {
-      const msg = lastErr?.message || "Hugging Face Inference error";
+      const msg = lastErr?.message || "Inference error";
       const status = lastErr?.response?.status || 502;
       return NextResponse.json({ error: msg }, { status });
     }
@@ -154,7 +152,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 🔥 Pixelate with higher quality settings
+    // Pixelate with higher quality
     const px = await pixelateSquare(imgBuf, 1024, 16);
     const dataUrl = `data:image/png;base64,${px.toString("base64")}`;
 
@@ -164,7 +162,7 @@ export async function POST(req: Request) {
     });
 
   } catch (e: any) {
-    console.error("HF route error:", e);
+    console.error("Route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
