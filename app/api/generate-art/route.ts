@@ -8,7 +8,7 @@ const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 // 🔥 FIXED BASE CHARACTER (choose one!)
-const BASE_CHARACTER = "cute chubby raccoon"; // ✅ Always raccoon!
+const BASE_CHARACTER = "cute chubby striped cat"; // ✅ Always raccoon!
 
 // Or use: "cute chubby dinosaur" or "cute chubby dragon"
 
