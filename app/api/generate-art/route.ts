@@ -7,176 +7,171 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🔥 EXPANDED TRAITS - MASSIVE VARIETY!
+// 🔥 FIXED BASE CHARACTER (choose one!)
+const BASE_CHARACTER = "cute chubby raccoon"; // ✅ Always raccoon!
 
-// Base creatures (15 types)
-const CREATURES = [
-  "cute chubby dinosaur",
-  "adorable round dragon",
-  "lovable chubby monster",
-  "friendly cartoon creature",
-  "silly pudgy beast",
-  "charming chubby alien",
-  "cute fluffy monster",
-  "adorable chunky critter",
-  "playful chubby animal",
-  "sweet round character",
-  "funny plump monster",
-  "cute baby dragon",
-  "adorable fat lizard",
-  "charming chubby reptile",
-  "lovely round creature"
-];
+// Or use: "cute chubby dinosaur" or "cute chubby dragon"
 
-// Skin colors (20 options)
-const SKIN_COLORS = [
-  "bright green",
-  "lime green",
-  "forest green",
-  "mint green",
-  "olive green",
+// 🔥 Skin colors (12 options)
+const COLORS = [
+  "bright blue",
   "teal blue",
-  "sky blue",
-  "royal blue",
-  "purple",
-  "lavender",
-  "pink",
-  "hot pink",
+  "green",
+  "lime green",
   "orange",
-  "red",
   "yellow",
+  "pink",
+  "purple",
+  "red",
   "brown",
-  "tan",
   "gray",
-  "black",
-  "white"
+  "tan"
 ];
 
-// Skin patterns (15 types)
+// 🔥 Skin patterns (10 types)
 const PATTERNS = [
-  "smooth solid color skin",
-  "spotted pattern with dots all over body",
-  "striped pattern with horizontal stripes",
-  "vertical stripe pattern",
-  "honeycomb hexagon pattern scales",
-  "diamond scale pattern",
-  "leopard spot pattern",
-  "tiger stripe pattern",
-  "camouflage pattern mix",
-  "gradient fade pattern",
-  "checkered square pattern",
-  "polka dot pattern",
-  "zebra stripe pattern",
-  "giraffe spot pattern",
-  "snake scale pattern"
+  "smooth solid color",
+  "with spots dots pattern",
+  "with stripes pattern",
+  "with diamond scales",
+  "with gradient shading",
+  "smooth clean skin",
+  "with freckles dots",
+  "with tiger stripes",
+  "with leopard spots",
+  "solid flat color"
 ];
 
-// Head accessories (25 options!)
+// 🔥 Head accessories (30 options!)
 const HEAD_ITEMS = [
-  "wearing golden royal crown",
-  "wearing silver crown with jewels",
-  "wearing baseball cap backwards",
-  "wearing snapback hat",
-  "wearing beanie hat",
+  "wearing white chef hat",
+  "wearing golden crown",
+  "wearing baseball cap",
+  "wearing snapback backwards",
+  "wearing beanie",
   "wearing cowboy hat",
-  "wearing pirate tricorn hat",
-  "wearing wizard pointy hat",
+  "wearing pirate hat",
+  "wearing wizard hat",
   "wearing top hat",
-  "wearing viking helmet with horns",
+  "wearing viking helmet",
   "wearing military helmet",
-  "wearing chef hat",
   "wearing santa hat",
-  "wearing propeller beanie",
-  "wearing flower crown",
-  "wearing leaf crown headband",
-  "wearing bandana headband",
-  "wearing tiara crown",
   "wearing party hat",
   "wearing sombrero",
-  "wearing fedora hat",
-  "wearing beret",
+  "wearing fedora",
+  "wearing bandana",
+  "wearing flower crown",
+  "wearing leaf crown",
   "wearing headphones",
-  "wearing halo floating above head",
-  "no hat, natural head"
+  "wearing halo",
+  "wearing propeller beanie",
+  "wearing beret",
+  "wearing safari hat",
+  "wearing hard hat",
+  "wearing straw hat",
+  "wearing bucket hat",
+  "wearing visor cap",
+  "wearing turban",
+  "wearing bunny ears headband",
+  "no hat"
 ];
 
-// Eye accessories (15 options)
+// 🔥 Eye accessories (20 options)
 const EYE_ITEMS = [
-  "wearing black thick frame sunglasses",
-  "wearing cool aviator sunglasses",
-  "wearing round hipster glasses",
-  "wearing 3D red-blue glasses",
+  "wearing thick black sunglasses",
+  "wearing aviator sunglasses",
+  "wearing round glasses",
+  "wearing 3D glasses",
   "wearing ski goggles",
-  "wearing monocle on one eye",
-  "wearing heart-shaped sunglasses",
-  "wearing star-shaped sunglasses",
-  "wearing nerd glasses with tape",
+  "wearing monocle",
+  "wearing heart sunglasses",
+  "wearing star sunglasses",
+  "wearing nerd glasses",
   "wearing futuristic visor",
-  "wearing eye patch pirate style",
+  "wearing eye patch",
   "wearing safety goggles",
-  "wearing blue light gaming glasses",
-  "wearing rainbow lens sunglasses",
-  "no eyewear, natural eyes"
+  "wearing blue light glasses",
+  "wearing rainbow glasses",
+  "wearing steampunk goggles",
+  "wearing cat eye glasses",
+  "wearing reading glasses",
+  "wearing sports sunglasses",
+  "wearing LED cyber glasses",
+  "no eyewear"
 ];
 
-// Mouth accessories (12 options)
+// 🔥 Mouth accessories (15 options)
 const MOUTH_ITEMS = [
-  "smoking lit cigar in mouth",
-  "smoking pipe in mouth",
-  "holding lollipop candy",
-  "chewing gum bubble",
+  "smoking cigar",
+  "smoking pipe",
+  "holding lollipop",
+  "chewing bubble gum",
   "holding rose in teeth",
-  "wearing surgical mask",
+  "wearing face mask",
   "blowing party horn",
   "eating pizza slice",
-  "holding fork with food",
-  "drinking juice box with straw",
-  "whistling with mouth",
-  "normal mouth, no items"
+  "holding popsicle",
+  "drinking juice box",
+  "whistling",
+  "eating donut",
+  "eating ice cream",
+  "holding toothpick",
+  "normal smile"
 ];
 
-// Clothing (20 options)
+// 🔥 Clothing (25 options)
 const CLOTHING = [
-  "wearing black hoodie with drawstrings",
+  "wearing white chef coat with buttons",
+  "wearing black hoodie",
   "wearing sports jersey with number",
   "wearing leather jacket",
   "wearing varsity jacket",
-  "wearing t-shirt with logo",
+  "wearing t-shirt",
   "wearing tank top",
   "wearing sweater",
   "wearing suit and tie",
   "wearing tuxedo with bowtie",
   "wearing lab coat",
-  "wearing chef apron",
+  "wearing apron",
   "wearing superhero cape",
   "wearing winter coat",
-  "wearing raincoat",
-  "wearing overalls",
   "wearing Hawaiian shirt",
   "wearing ninja outfit",
   "wearing cowboy vest",
   "wearing armor",
-  "no clothing, natural body"
+  "wearing basketball uniform",
+  "wearing football jersey",
+  "wearing overalls",
+  "wearing polo shirt",
+  "wearing flannel shirt",
+  "wearing denim jacket",
+  "no clothing"
 ];
 
-// Neck accessories (10 options)
+// 🔥 Neck accessories (15 options)
 const NECK_ITEMS = [
-  "wearing thick gold chain necklace",
-  "wearing diamond chain necklace",
+  "wearing thick gold chain",
+  "wearing diamond necklace",
   "wearing pearl necklace",
   "wearing dog tag chain",
   "wearing bow tie",
   "wearing necktie",
-  "wearing scarf",
-  "wearing collar with spikes",
-  "wearing medallion pendant",
+  "wearing red scarf",
+  "wearing spiked collar",
+  "wearing medallion",
+  "wearing bandana around neck",
+  "wearing choker necklace",
+  "wearing lei flowers",
+  "wearing cross necklace",
+  "wearing pocket watch chain",
   "no neck accessory"
 ];
 
-// Hand items (18 options)
+// 🔥 Hand items (30 options!)
 const HAND_ITEMS = [
-  "holding basketball in hand",
-  "holding football in hand",
+  "holding wooden baseball bat",
+  "holding basketball",
+  "holding football",
   "holding soccer ball",
   "holding tennis racket",
   "holding baseball bat",
@@ -187,42 +182,55 @@ const HAND_ITEMS = [
   "holding sword",
   "holding shield",
   "holding book",
-  "holding trophy",
-  "holding ice cream cone",
+  "holding golden trophy",
+  "holding ice cream",
   "holding balloon",
   "holding skateboard",
-  "making peace sign gesture",
-  "hands in natural pose"
+  "holding guitar",
+  "holding money stack",
+  "holding briefcase",
+  "holding coffee cup",
+  "holding soda can",
+  "holding pizza slice",
+  "holding burger",
+  "holding hot dog",
+  "holding tools wrench",
+  "holding paint brush",
+  "holding camera",
+  "making peace sign",
+  "hands on hips"
 ];
 
-// Background colors (12 options)
+// 🔥 Background colors (12 options)
 const BACKGROUNDS = [
-  "light mint green solid background",
-  "soft baby blue solid background",
-  "warm cream beige solid background",
-  "cool slate gray solid background",
-  "dusty rose pink solid background",
-  "pale yellow solid background",
-  "light lavender purple solid background",
-  "soft peach orange solid background",
-  "light teal solid background",
-  "warm tan solid background",
-  "cool navy blue solid background",
-  "dark charcoal solid background"
+  "light mint green",
+  "soft baby blue",
+  "warm cream beige",
+  "cool slate gray",
+  "dusty rose pink",
+  "pale yellow",
+  "light lavender",
+  "soft peach",
+  "light teal",
+  "warm tan",
+  "cool navy blue",
+  "dark charcoal"
 ];
 
-// Facial expressions (10 options)
+// 🔥 Facial expressions (12 options)
 const EXPRESSIONS = [
-  "huge happy smile showing teeth",
-  "wide grin with tongue out",
+  "huge happy smile with teeth showing",
   "cool confident smirk",
-  "silly goofy expression",
+  "silly goofy grin",
   "cute shy smile with blush",
   "excited surprised face",
-  "laughing joyful face",
+  "laughing joyful expression",
   "friendly warm smile",
-  "playful winking expression",
-  "gentle kind smile"
+  "playful winking",
+  "gentle kind smile",
+  "cheeky mischievous grin",
+  "proud confident look",
+  "relaxed chill expression"
 ];
 
 function getRandomElement(arr: string[]) {
@@ -230,8 +238,7 @@ function getRandomElement(arr: string[]) {
 }
 
 function buildPrompt() {
-  const creature = getRandomElement(CREATURES);
-  const skinColor = getRandomElement(SKIN_COLORS);
+  const color = getRandomElement(COLORS);
   const pattern = getRandomElement(PATTERNS);
   const headItem = getRandomElement(HEAD_ITEMS);
   const eyeItem = getRandomElement(EYE_ITEMS);
@@ -243,8 +250,8 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    "cute cartoon character illustration, adorable mascot style",
-    `${creature} with ${skinColor} skin, ${pattern}`,
+    "cute cartoon mascot illustration, adorable character design",
+    `${BASE_CHARACTER} with ${color} skin ${pattern}`,
     `${expression}, big expressive googly eyes`,
     `${headItem}`,
     `${eyeItem}`,
@@ -252,18 +259,18 @@ function buildPrompt() {
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
-    "chubby round body shape, standing upright, centered pose",
-    "thick black outline, clean vector art, smooth cell shading",
-    `${background}, professional studio lighting`,
-    "high quality character design, NFT collection style, clean rendering"
+    "chubby round body, standing upright pose, centered",
+    "thick black outline, clean vector art style, smooth cel shading",
+    `solid ${background} background, professional studio lighting`,
+    "high quality NFT character art, clean rendering, mascot style"
   ].join(", ");
 
   const negative = [
-    "realistic, photorealistic, photograph, 3D render, CGI",
-    "blurry, distorted, ugly, deformed, bad anatomy, disfigured",
-    "text, watermark, logo, signature, frame, border, caption",
-    "multiple characters, cropped, cut off, human, scary, horror",
-    "pixel art, low quality, messy, sketchy, draft, unfinished"
+    "realistic, photorealistic, photo, 3D render, CGI",
+    "blurry, distorted, ugly, deformed, bad anatomy, disfigured, mutated",
+    "text, watermark, logo, signature, frame, border, caption, words",
+    "multiple characters, cropped, cut off, human, scary, horror, dark",
+    "pixel art, low quality, messy, sketchy, draft, unfinished, amateur"
   ].join(", ");
 
   return { prompt, negative };
@@ -281,7 +288,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating with mega traits...");
+    console.log("🎨 Generating raccoon with random traits...");
     
     const hf = new HfInference(HF_TOKEN);
 
