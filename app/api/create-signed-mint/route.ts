@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ThirdwebStorage } from '@thirdweb-dev/storage';
-import { ethers } from 'ethers';
+import { ThirdwebSDK } from '@thirdweb-dev/sdk';
+import { BaseGoerli } from '@thirdweb-dev/chains';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
     const { address, imageUrl, username, fid } = await req.json();
 
     if (!address || !imageUrl) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
     const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY;
@@ -18,21 +19,28 @@ export async function POST(req: NextRequest) {
     }
 
     const contractAddress = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC';
-    const secretKey = process.env.THIRDWEB_SECRET_KEY;
-    const clientId = process.env.THIRDWEB_CLIENT_ID;
 
-    // Initialize storage
-    const storage = new ThirdwebStorage({ secretKey, clientId });
+    console.log('🔧 Initializing SDK...');
+    
+    // Initialize SDK for Base mainnet
+    const sdk = ThirdwebSDK.fromPrivateKey(
+      privateKey,
+      'base', // Base mainnet
+      {
+        clientId: process.env.THIRDWEB_CLIENT_ID,
+        secretKey: process.env.THIRDWEB_SECRET_KEY,
+      }
+    );
 
+    // Fetch image
     console.log('📥 Fetching image...');
     const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) {
-      return NextResponse.json({ error: 'Failed to fetch image' }, { status: 400 });
-    }
+    if (!imgRes.ok) throw new Error('Failed to fetch image');
     const imageData = Buffer.from(await imgRes.arrayBuffer());
 
     // Upload image
     console.log('📤 Uploading image...');
+    const storage = sdk.storage;
     const imageUri = await storage.upload(imageData);
     console.log('✅ Image:', imageUri);
 
@@ -53,63 +61,34 @@ export async function POST(req: NextRequest) {
     const metadataUri = await storage.upload(metadata);
     console.log('✅ Metadata:', metadataUri);
 
-    // ✅ Create mint request payload
-    const currentTime = Math.floor(Date.now() / 1000);
+    // Get contract
+    const contract = await sdk.getContract(contractAddress, 'signature-drop');
+
+    // Generate signature payload
+    console.log('📝 Generating signature...');
     
-    const payload = {
-      to: address as `0x${string}`,
-      royaltyRecipient: address as `0x${string}`,
-      royaltyBps: 0,
-      primarySaleRecipient: address as `0x${string}`,
-      uri: metadataUri,
-      price: ethers.utils.parseEther('0.0001').toString(),
-      currency: ethers.constants.AddressZero,
-      validityStartTimestamp: currentTime,
-      validityEndTimestamp: currentTime + 3600, // 1 hour
-      uid: ethers.utils.id(`${address}-${Date.now()}`),
-    };
+    const payload = await contract.signature.generate({
+      to: address,
+      metadata: metadataUri,
+      price: '0.0001', // 0.0001 ETH
+      mintStartTime: new Date(),
+      mintEndTime: new Date(Date.now() + 3600 * 1000), // 1 hour from now
+    });
 
-    console.log('📝 Payload created:', payload);
-
-    // ✅ Generate signature using EIP-712
-    const domain = {
-      name: 'TokenERC721',
-      version: '1',
-      chainId: 8453, // Base
-      verifyingContract: contractAddress,
-    };
-
-    const types = {
-      MintRequest: [
-        { name: 'to', type: 'address' },
-        { name: 'royaltyRecipient', type: 'address' },
-        { name: 'royaltyBps', type: 'uint256' },
-        { name: 'primarySaleRecipient', type: 'address' },
-        { name: 'uri', type: 'string' },
-        { name: 'price', type: 'uint256' },
-        { name: 'currency', type: 'address' },
-        { name: 'validityStartTimestamp', type: 'uint128' },
-        { name: 'validityEndTimestamp', type: 'uint128' },
-        { name: 'uid', type: 'bytes32' },
-      ],
-    };
-
-    const wallet = new ethers.Wallet(privateKey);
-    const signature = await wallet._signTypedData(domain, types, payload);
-
-    console.log('✅ Signature:', signature);
+    console.log('✅ Signature generated!');
 
     return NextResponse.json({
       success: true,
-      payload,
-      signature,
+      payload: payload.payload,
+      signature: payload.signature,
       metadataUri,
       imageUri,
     });
   } catch (e: any) {
-    console.error('❌ Backend error:', e);
+    console.error('❌ Error:', e);
+    console.error('Stack:', e.stack);
     return NextResponse.json(
-      { error: e?.message || 'Server error' },
+      { error: e?.message || 'Server error', details: e.stack },
       { status: 500 }
     );
   }
