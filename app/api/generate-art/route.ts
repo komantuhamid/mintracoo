@@ -7,42 +7,45 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🔥 FIXED BASE CHARACTER (choose one!)
-const BASE_CHARACTER = "cute chubby striped cat"; // ✅ Always raccoon!
+// 🐱 FIXED BASE CHARACTER - CUTE CAT!
+const BASE_CHARACTER = "cute chubby cartoon cat";
 
-// Or use: "cute chubby dinosaur" or "cute chubby dragon"
-
-// 🔥 Skin colors (12 options)
+// 🐯 Skin colors (15 options)
 const COLORS = [
-  "bright blue",
-  "teal blue",
-  "green",
+  "bright yellow",
   "lime green",
   "orange",
-  "yellow",
+  "tan brown",
+  "cream white",
+  "gray",
+  "light blue",
   "pink",
   "purple",
   "red",
-  "brown",
-  "gray",
-  "tan"
+  "golden yellow",
+  "teal",
+  "mint green",
+  "peach",
+  "lavender"
 ];
 
-// 🔥 Skin patterns (10 types)
+// 🐯 Skin patterns (12 types)
 const PATTERNS = [
-  "smooth solid color",
-  "with spots dots pattern",
-  "with stripes pattern",
-  "with diamond scales",
-  "with gradient shading",
-  "smooth clean skin",
-  "with freckles dots",
-  "with tiger stripes",
+  "with bold tiger stripes",
+  "with zebra black stripes",
   "with leopard spots",
-  "solid flat color"
+  "with cheetah spots",
+  "with tabby stripes",
+  "with calico patches",
+  "with tuxedo pattern",
+  "with spotted pattern",
+  "smooth solid color",
+  "with tiger stripe pattern",
+  "with gradient shading",
+  "with tortoiseshell pattern"
 ];
 
-// 🔥 Head accessories (30 options!)
+// 👒 Head accessories (30 options!)
 const HEAD_ITEMS = [
   "wearing white chef hat",
   "wearing golden crown",
@@ -76,9 +79,9 @@ const HEAD_ITEMS = [
   "no hat"
 ];
 
-// 🔥 Eye accessories (20 options)
+// 😎 Eye accessories (20 options)
 const EYE_ITEMS = [
-  "wearing thick black sunglasses",
+  "wearing thick purple sunglasses",
   "wearing aviator sunglasses",
   "wearing round glasses",
   "wearing 3D glasses",
@@ -100,7 +103,7 @@ const EYE_ITEMS = [
   "no eyewear"
 ];
 
-// 🔥 Mouth accessories (15 options)
+// 👄 Mouth accessories (15 options)
 const MOUTH_ITEMS = [
   "smoking cigar",
   "smoking pipe",
@@ -116,10 +119,10 @@ const MOUTH_ITEMS = [
   "eating donut",
   "eating ice cream",
   "holding toothpick",
-  "normal smile"
+  "normal cute smile"
 ];
 
-// 🔥 Clothing (25 options)
+// 👕 Clothing (25 options)
 const CLOTHING = [
   "wearing white chef coat with buttons",
   "wearing black hoodie",
@@ -148,15 +151,15 @@ const CLOTHING = [
   "no clothing"
 ];
 
-// 🔥 Neck accessories (15 options)
+// ⛓️ Neck accessories (15 options)
 const NECK_ITEMS = [
   "wearing thick gold chain",
   "wearing diamond necklace",
   "wearing pearl necklace",
   "wearing dog tag chain",
   "wearing bow tie",
-  "wearing necktie",
-  "wearing red scarf",
+  "wearing red necktie",
+  "wearing colorful scarf",
   "wearing spiked collar",
   "wearing medallion",
   "wearing bandana around neck",
@@ -167,14 +170,14 @@ const NECK_ITEMS = [
   "no neck accessory"
 ];
 
-// 🔥 Hand items (30 options!)
+// 🏆 Hand items (30 options!)
 const HAND_ITEMS = [
   "holding wooden baseball bat",
+  "holding golden trophy",
   "holding basketball",
   "holding football",
   "holding soccer ball",
   "holding tennis racket",
-  "holding baseball bat",
   "holding video game controller",
   "holding smartphone",
   "holding microphone",
@@ -182,8 +185,8 @@ const HAND_ITEMS = [
   "holding sword",
   "holding shield",
   "holding book",
-  "holding golden trophy",
-  "holding ice cream",
+  "holding ice cream cone",
+  "holding red rose",
   "holding balloon",
   "holding skateboard",
   "holding guitar",
@@ -194,14 +197,14 @@ const HAND_ITEMS = [
   "holding pizza slice",
   "holding burger",
   "holding hot dog",
-  "holding tools wrench",
+  "holding wrench tools",
   "holding paint brush",
   "holding camera",
   "making peace sign",
   "hands on hips"
 ];
 
-// 🔥 Background colors (12 options)
+// 🎨 Background colors (12 options)
 const BACKGROUNDS = [
   "light mint green",
   "soft baby blue",
@@ -217,7 +220,7 @@ const BACKGROUNDS = [
   "dark charcoal"
 ];
 
-// 🔥 Facial expressions (12 options)
+// 😊 Facial expressions (12 options)
 const EXPRESSIONS = [
   "huge happy smile with teeth showing",
   "cool confident smirk",
@@ -251,8 +254,8 @@ function buildPrompt() {
   
   const prompt = [
     "cute cartoon mascot illustration, adorable character design",
-    `${BASE_CHARACTER} with ${color} skin ${pattern}`,
-    `${expression}, big expressive googly eyes`,
+    `${BASE_CHARACTER} with ${color} fur ${pattern}`,
+    `${expression}, big expressive googly eyes, cat ears`,
     `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
@@ -266,7 +269,7 @@ function buildPrompt() {
   ].join(", ");
 
   const negative = [
-    "realistic, photorealistic, photo, 3D render, CGI",
+    "realistic, photorealistic, photo, 3D render, CGI, hyperrealistic",
     "blurry, distorted, ugly, deformed, bad anatomy, disfigured, mutated",
     "text, watermark, logo, signature, frame, border, caption, words",
     "multiple characters, cropped, cut off, human, scary, horror, dark",
@@ -288,7 +291,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating raccoon with random traits...");
+    console.log("🐱 Generating cat with random traits...");
     
     const hf = new HfInference(HF_TOKEN);
 
