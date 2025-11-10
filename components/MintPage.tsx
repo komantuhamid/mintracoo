@@ -213,7 +213,7 @@ export default function MintPage() {
 
         {txHash && (
           <div className="mt-2 p-2 bg-gray-700 rounded text-xs text-gray-300 break-all">
-            TX: {txHash}
+            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </div>
         )}
       </div>
