@@ -1,111 +1,85 @@
+// app/api/create-signed-mint/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { ThirdwebStorage } from '@thirdweb-dev/storage';
-import { ethers } from 'ethers';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
+const storage = new ThirdwebStorage({
+  // يفضَّل SECRET_KEY فالسيرفر. غادي يخدم حتى إذا كان غير CLIENT_ID.
+  secretKey: process.env.THIRDWEB_SECRET_KEY,
+  clientId: process.env.THIRDWEB_CLIENT_ID,
+});
+
+type Body = {
+  address: `0x${string}`;
+  imageUrl: string; // جاية من /api/generate-art
+  username?: string;
+  fid?: number | string;
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { address, imageUrl, username, fid } = body;
+    const { address, imageUrl, username, fid } = (await req.json()) as Body;
 
-    console.log('📥 Request:', { address: address?.slice(0, 10), imageUrl: !!imageUrl });
-
-    if (!address || !imageUrl) {
-      return NextResponse.json({ error: 'Missing address or imageUrl' }, { status: 400 });
+    if (!address) {
+      return NextResponse.json({ error: 'Missing address' }, { status: 400 });
+    }
+    if (!imageUrl) {
+      return NextResponse.json({ error: 'Missing imageUrl' }, { status: 400 });
+    }
+    if (!process.env.THIRDWEB_SECRET_KEY && !process.env.THIRDWEB_CLIENT_ID) {
+      return NextResponse.json(
+        { error: 'Missing THIRDWEB credentials' },
+        { status: 500 }
+      );
     }
 
-    const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY;
-    const clientId = process.env.THIRDWEB_CLIENT_ID;
-    const secretKey = process.env.THIRDWEB_SECRET_KEY;
-
-    if (!privateKey || !clientId || !secretKey) {
-      return NextResponse.json({ error: 'Missing env vars' }, { status: 500 });
-    }
-
-    const contractAddress = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC';
-    const storage = new ThirdwebStorage({ secretKey, clientId });
-
-    // Fetch image
-    console.log('📥 Fetching image...');
+    // 1) حمّل الصورة من رابط Hugging Face
     const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) throw new Error('Failed to fetch image');
-    const imageData = Buffer.from(await imgRes.arrayBuffer());
+    if (!imgRes.ok) throw new Error('Failed to fetch generated image');
 
-    // Upload image
-    console.log('📤 Uploading image...');
-    const imageUri = await storage.upload(imageData);
+    // ✅ استعمل Buffer ديال Node (ماشي File/Web stream) لتفادي e.on is not a function
+    const arrayBuf = await imgRes.arrayBuffer();
+    const nodeBuffer = Buffer.from(arrayBuf);
 
-    // Create metadata
+    // 2) رفع الصورة إلى IPFS (يرجع ipfs://...)
+    const ipfsImageUri = await storage.upload(nodeBuffer, {
+      uploadWithoutDirectory: true,
+    });
+
+    // 3) بنِي metadata باستعمال ipfsImageUri
+    const name =
+      username && username.trim().length > 0
+        ? `Raccoon • @${username}`
+        : 'Raccoon';
+
     const metadata = {
-      name: username ? `Raccoon • @${username}` : 'Raccoon',
-      description: `AI-generated pixel art raccoon NFT for ${address}`,
-      image: imageUri,
+      name,
+      description: `AI-generated pixel art raccoon NFT. Generated for ${address}${
+        fid ? ` (FID ${fid})` : ''
+      }`,
+      image: ipfsImageUri, // مهم: ipfs://… باش الصورة تبان فالمحافظ/thirdweb
       attributes: [
-        { trait_type: 'Generator', value: 'AI FLUX.1' },
+        { trait_type: 'Generator', value: 'Hugging Face FLUX.1' },
         { trait_type: 'Style', value: 'Pixel Art' },
         ...(fid ? [{ trait_type: 'FID', value: String(fid) }] : []),
+        ...(username ? [{ trait_type: 'Creator', value: `@${username}` }] : []),
       ],
     };
 
-    // Upload metadata
-    console.log('📤 Uploading metadata...');
-    const metadataUri = await storage.upload(metadata);
-
-    // Generate signature
-    console.log('📝 Generating signature...');
-    const currentTime = Math.floor(Date.now() / 1000);
-
-    const payload = {
-      to: address,
-      royaltyRecipient: address,
-      royaltyBps: 0,
-      primarySaleRecipient: address,
-      uri: metadataUri,
-      price: ethers.utils.parseEther('0.0001').toString(),
-      currency: ethers.constants.AddressZero,
-      validityStartTimestamp: currentTime,
-      validityEndTimestamp: currentTime + 86400 * 30,
-      uid: ethers.utils.id(`${address}-${Date.now()}`),
-    };
-
-    const domain = {
-      name: 'TokenERC721',
-      version: '1',
-      chainId: 8453,
-      verifyingContract: contractAddress,
-    };
-
-    const types = {
-      MintRequest: [
-        { name: 'to', type: 'address' },
-        { name: 'royaltyRecipient', type: 'address' },
-        { name: 'royaltyBps', type: 'uint256' },
-        { name: 'primarySaleRecipient', type: 'address' },
-        { name: 'uri', type: 'string' },
-        { name: 'price', type: 'uint256' },
-        { name: 'currency', type: 'address' },
-        { name: 'validityStartTimestamp', type: 'uint128' },
-        { name: 'validityEndTimestamp', type: 'uint128' },
-        { name: 'uid', type: 'bytes32' },
-      ],
-    };
-
-    const wallet = new ethers.Wallet(privateKey);
-    const signature = await wallet._signTypedData(domain, types, payload);
-
-    console.log('✅ Done!');
-
-    return NextResponse.json({
-      success: true,
-      payload,
-      signature,
-      metadataUri,
-      imageUri,
+    // 4) رفع metadata نفسها لـ IPFS (ipfs://...)
+    const metadataUri = await storage.upload(metadata, {
+      uploadWithoutDirectory: true,
     });
+
+    // 5) رجّع metadataUri للواجهة (غادي تدير mintTo(address, metadataUri))
+    return NextResponse.json({ metadataUri });
   } catch (e: any) {
-    console.error('❌ Error:', e.message);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error('create-signed-mint error:', e);
+    return NextResponse.json(
+      { error: e?.message || 'Server error' },
+      { status: 500 }
+    );
   }
 }
