@@ -1,24 +1,52 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { parseAbi, encodeFunctionData, parseEther } from 'viem';
+import { encodeFunctionData, parseEther } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
 const CONTRACT_ADDRESS = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC' as `0x${string}`;
 const MINT_PRICE = '0.0001';
 
-// ✅ mintWithSignature ABI
-const MINT_WITH_SIG_ABI = parseAbi([
-  'function mintWithSignature((address to, address royaltyRecipient, uint256 royaltyBps, address primarySaleRecipient, string uri, uint256 price, address currency, uint128 validityStartTimestamp, uint128 validityEndTimestamp, bytes32 uid) _req, bytes _signature) payable returns (uint256)',
-]);
+// ABI for mintWithSignature function
+const MINT_ABI = [
+  {
+    inputs: [
+      {
+        components: [
+          { name: 'to', type: 'address' },
+          { name: 'royaltyRecipient', type: 'address' },
+          { name: 'royaltyBps', type: 'uint256' },
+          { name: 'primarySaleRecipient', type: 'address' },
+          { name: 'uri', type: 'string' },
+          { name: 'price', type: 'uint256' },
+          { name: 'currency', type: 'address' },
+          { name: 'validityStartTimestamp', type: 'uint128' },
+          { name: 'validityEndTimestamp', type: 'uint128' },
+          { name: 'uid', type: 'bytes32' },
+        ],
+        name: '_req',
+        type: 'tuple',
+      },
+      { name: '_signature', type: 'bytes' },
+    ],
+    name: 'mintWithSignature',
+    outputs: [{ name: 'tokenIdMinted', type: 'uint256' }],
+    stateMutability: 'payable',
+    type: 'function',
+  },
+] as const;
 
 export default function MintPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-  const { sendTransaction, isPending, data: txHash } = useSendTransaction();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+
+  // useSendTransaction hook
+  const { sendTransaction, isPending: isSending, data: txHash } = useSendTransaction();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
   const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -28,64 +56,109 @@ export default function MintPage() {
 
   const shortAddr = useMemo(() => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : ''), [address]);
 
+  // Initialize app
   useEffect(() => {
-    sdk.actions.ready().then(() => setIsAppReady(true)).catch(() => setIsAppReady(true));
+    (async () => {
+      try {
+        await sdk.actions.ready();
+        setIsAppReady(true);
+      } catch (e) {
+        console.error('SDK not ready:', e);
+        setIsAppReady(true);
+      }
+    })();
   }, []);
 
+  // Auto-connect user
   useEffect(() => {
     if (!isAppReady || isConnected) return;
+
     (async () => {
       try {
         const context = await sdk.context;
-        if (context?.user && connectors[0]) await connect({ connector: connectors[0] });
-      } catch (e) {}
+        if (context?.user && connectors[0]) {
+          await connect({ connector: connectors[0] });
+        }
+      } catch (e) {
+        console.error('Auto-connect error:', e);
+      }
     })();
   }, [isAppReady, isConnected, connectors, connect]);
 
+  // Fetch user profile
   useEffect(() => {
     (async () => {
       try {
         const context = await sdk.context;
         if (!context?.user?.fid) return;
+
         const r = await fetch('/api/fetch-pfp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fid: context.user.fid }),
         });
+
         const j = await r.json();
-        setProfile({ username: j.username || '', fid: context.user.fid });
-      } catch (e) {}
+        setProfile({
+          username: j.username || '',
+          fid: context.user.fid,
+        });
+      } catch (e) {
+        console.error('Profile fetch error:', e);
+      }
     })();
   }, []);
 
+  // Watch for transaction confirmation
+  useEffect(() => {
+    if (isSending) {
+      setMessage('⏳ Pending...');
+    } else if (isConfirming) {
+      setMessage('⏳ Confirming...');
+    } else if (isConfirmed) {
+      setMessage('🎉 Minted successfully!');
+      setGeneratedImage(null);
+    }
+  }, [isSending, isConfirming, isConfirmed]);
+
   const generateRaccoon = async () => {
     setLoading(true);
-    setMessage('🎨 Generating...');
+    setMessage('🎨 Generating pixel art raccoon...');
+
     try {
       const r = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ style: 'pixel raccoon' }),
       });
+
       const j = await r.json();
-      if (!r.ok) throw new Error(j?.error || 'Failed');
+      if (!r.ok) throw new Error(j?.error || 'Generation failed');
+
       setGeneratedImage(j.generated_image_url || j.imageUrl);
-      setMessage('✅ Ready to mint!');
+      setMessage('✅ Raccoon ready to mint!');
     } catch (e: any) {
-      setMessage(`❌ ${e?.message}`);
+      setMessage(`❌ Generation failed: ${e?.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   const performMint = async () => {
-    if (!address) return setMessage('❌ Connect wallet');
-    if (!generatedImage) return setMessage('❌ Generate first');
+    if (!address) {
+      setMessage('❌ Please connect wallet');
+      return;
+    }
+    if (!generatedImage) {
+      setMessage('❌ Please generate raccoon first');
+      return;
+    }
 
-    setMessage('📝 Creating signature...');
+    setMessage('📝 Creating mint signature...');
 
     try {
-      // Get signature from backend
+      // Step 1: Get signature from backend
+      console.log('Requesting signature from backend...');
       const sigRes = await fetch('/api/create-mint-signature', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,101 +171,126 @@ export default function MintPage() {
       });
 
       const sigData = await sigRes.json();
+
       if (!sigRes.ok || sigData.error) {
-        throw new Error(sigData.error || 'Signature failed');
+        console.error('Backend error:', sigData);
+        throw new Error(sigData.error || sigData.details || 'Failed to create signature');
       }
 
-      const { payload, signature } = sigData;
+      const { signedPayload } = sigData;
+      console.log('✅ Got signed payload:', signedPayload);
 
-      console.log('✅ Payload:', payload);
-      console.log('✅ Signature:', signature);
+      // Step 2: Encode function call with signature
+      setMessage('🔐 Please sign transaction in wallet...');
 
-      // Encode transaction
       const data = encodeFunctionData({
-        abi: MINT_WITH_SIG_ABI,
+        abi: MINT_ABI,
         functionName: 'mintWithSignature',
-        args: [payload, signature as `0x${string}`],
+        args: [signedPayload, sigData.signature as `0x${string}`],
       });
 
-      setMessage(`🔐 Sign (${MINT_PRICE} ETH)...`);
+      console.log('📤 Sending transaction with useSendTransaction...');
 
-      // Send transaction with payment
+      // Step 3: Send transaction - this will show the wallet popup!
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
-        value: parseEther(MINT_PRICE), // ✅ User pays 0.0001 ETH
+        value: parseEther(MINT_PRICE), // User pays 0.0001 ETH
         gas: 500000n,
       });
     } catch (e: any) {
       console.error('❌ Error:', e);
-      setMessage(`❌ ${e?.message || 'Failed'}`);
+      const errorMsg = e?.message || e?.reason || 'Mint failed';
+      setMessage(`❌ ${errorMsg}`);
     }
   };
 
-  useEffect(() => {
-    if (isPending) {
-      setMessage('⏳ Pending...');
-    } else if (isConfirming) {
-      setMessage('⏳ Confirming...');
-    } else if (isConfirmed) {
-      setMessage('🎉 Minted!');
-    }
-  }, [isPending, isConfirming, isConfirmed]);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6 flex items-center justify-center">
-      <div className="max-w-md w-full bg-slate-800 rounded-lg shadow-2xl p-8 border border-slate-700">
-        <h1 className="text-3xl font-bold text-white mb-6 text-center">🦝 Raccoon Mint</h1>
-        
-        <div className="mb-4 p-3 bg-purple-900/30 rounded border border-purple-500">
-          <p className="text-purple-300 text-sm text-center">
-            <strong>Price:</strong> {MINT_PRICE} ETH • <strong>Supply:</strong> 3333
+      <div className="max-w-md w-full bg-slate-800 rounded-xl shadow-2xl p-8 border border-slate-700">
+        {/* Title */}
+        <h1 className="text-4xl font-bold text-white mb-2 text-center">🦝 Raccoon</h1>
+        <p className="text-center text-slate-400 mb-6">AI Pixel Art NFT Mint</p>
+
+        {/* Price Info */}
+        <div className="mb-4 p-3 bg-purple-900/30 rounded-lg border border-purple-500">
+          <p className="text-purple-300 text-sm text-center font-semibold">
+            💰 Price: <strong>{MINT_PRICE} ETH</strong> • 📊 Supply: <strong>3333</strong>
           </p>
         </div>
 
-        <div className="mb-6 bg-slate-700 rounded-lg p-4 min-h-64 flex items-center justify-center border-2 border-slate-600">
+        {/* Image Preview */}
+        <div className="mb-6 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg p-4 min-h-64 flex items-center justify-center border-2 border-slate-600 shadow-inner">
           {generatedImage ? (
-            <img src={generatedImage} alt="Raccoon" className="w-full h-auto rounded" />
+            <img src={generatedImage} alt="Raccoon NFT" className="w-full h-auto rounded-lg shadow-lg" />
           ) : (
-            <span className="text-slate-400 text-sm">No image</span>
+            <div className="text-center">
+              <p className="text-slate-400 text-lg">🎨</p>
+              <p className="text-slate-400 text-sm">Generate your raccoon</p>
+            </div>
           )}
         </div>
 
-        {profile && (
-          <div className="mb-4 p-3 bg-slate-700 rounded border border-slate-600">
-            <p className="text-slate-300 text-sm"><strong>User:</strong> {profile.username}</p>
+        {/* User Info */}
+        {profile?.username && (
+          <div className="mb-4 p-3 bg-slate-700 rounded-lg border border-slate-600">
+            <p className="text-slate-300 text-sm">
+              <strong>Creator:</strong> @{profile.username}
+            </p>
           </div>
         )}
 
-        <div className="mb-4 p-3 bg-slate-700 rounded border border-slate-600">
-          <p className="text-slate-300 text-sm"><strong>Wallet:</strong> {shortAddr || 'Connecting...'}</p>
+        {/* Wallet Info */}
+        <div className="mb-4 p-3 bg-slate-700 rounded-lg border border-slate-600">
+          <p className="text-slate-300 text-sm">
+            <strong>Wallet:</strong> {shortAddr || 'Connecting...'}
+          </p>
           {isConnected && (
-            <button onClick={() => disconnect()} className="mt-2 w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm">
+            <button
+              onClick={() => disconnect()}
+              className="mt-2 w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition"
+            >
               Disconnect
             </button>
           )}
         </div>
 
+        {/* Buttons */}
         <div className="space-y-3 mb-4">
-          <button onClick={generateRaccoon} disabled={loading} className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 text-white rounded font-semibold">
-            {loading ? '⏳ Generating...' : '🎨 Generate'}
+          <button
+            onClick={generateRaccoon}
+            disabled={loading || isSending || isConfirming}
+            className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-lg font-bold transition transform hover:scale-105 disabled:scale-100"
+          >
+            {loading ? '⏳ Generating...' : '🎨 Generate Raccoon'}
           </button>
 
-          <button onClick={performMint} disabled={isPending || isConfirming || !address || !generatedImage} className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white rounded font-semibold">
-            {isPending || isConfirming ? '⏳ Minting...' : `💰 Mint (${MINT_PRICE} ETH)`}
+          <button
+            onClick={performMint}
+            disabled={isSending || isConfirming || !address || !generatedImage}
+            className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-lg font-bold transition transform hover:scale-105 disabled:scale-100"
+          >
+            {isSending || isConfirming ? '⏳ Minting...' : `💰 Mint (${MINT_PRICE} ETH)`}
           </button>
         </div>
 
+        {/* Status Message */}
         {message && (
-          <div className="p-3 bg-slate-700 rounded border border-slate-600 text-slate-200 text-sm text-center">
+          <div className="p-4 bg-slate-700 rounded-lg border border-slate-600 text-slate-200 text-sm text-center">
             {message}
           </div>
         )}
 
+        {/* Transaction Link */}
         {txHash && (
           <div className="mt-4">
-            <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded font-semibold text-sm">
-              🔗 View TX
+            <a
+              href={`https://basescan.org/tx/${txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-center rounded-lg font-bold transition"
+            >
+              🔗 View on Basescan
             </a>
           </div>
         )}
