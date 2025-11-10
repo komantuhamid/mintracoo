@@ -6,10 +6,11 @@ import sdk from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
 const CONTRACT_ADDRESS = '0xD1b64081848FF10000D79D1268bA04536DDF6DbC' as `0x${string}`;
-const MINT_PRICE = '0.0001'; // 0.0001 ETH
+const MINT_PRICE = '0.0001';
 
-const MINT_ABI = parseAbi([
-  'function mintTo(address _to, string _uri) payable returns (uint256)',
+// ✅ mintWithSignature ABI
+const MINT_WITH_SIG_ABI = parseAbi([
+  'function mintWithSignature((address to, address royaltyRecipient, uint256 royaltyBps, address primarySaleRecipient, string uri, uint256 price, address currency, uint128 validityStartTimestamp, uint128 validityEndTimestamp, bytes32 uid) _req, bytes _signature) payable returns (uint256)',
 ]);
 
 export default function MintPage() {
@@ -17,9 +18,7 @@ export default function MintPage() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { sendTransaction, isPending, data: txHash } = useSendTransaction();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -83,11 +82,11 @@ export default function MintPage() {
     if (!address) return setMessage('❌ Connect wallet');
     if (!generatedImage) return setMessage('❌ Generate first');
 
-    setMessage('📤 Uploading to IPFS...');
+    setMessage('📝 Creating signature...');
 
     try {
-      // Upload to IPFS
-      const uploadRes = await fetch('/api/create-signed-mint', {
+      // Get signature from backend
+      const sigRes = await fetch('/api/create-mint-signature', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,22 +97,24 @@ export default function MintPage() {
         }),
       });
 
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok || uploadData.error) {
-        throw new Error(uploadData.error || 'Upload failed');
+      const sigData = await sigRes.json();
+      if (!sigRes.ok || sigData.error) {
+        throw new Error(sigData.error || 'Signature failed');
       }
 
-      const { metadataUri } = uploadData;
-      console.log('✅ Metadata URI:', metadataUri);
+      const { payload, signature } = sigData;
+
+      console.log('✅ Payload:', payload);
+      console.log('✅ Signature:', signature);
 
       // Encode transaction
       const data = encodeFunctionData({
-        abi: MINT_ABI,
-        functionName: 'mintTo',
-        args: [address, metadataUri],
+        abi: MINT_WITH_SIG_ABI,
+        functionName: 'mintWithSignature',
+        args: [payload, signature as `0x${string}`],
       });
 
-      setMessage(`🔐 Please sign (${MINT_PRICE} ETH)...`);
+      setMessage(`🔐 Sign (${MINT_PRICE} ETH)...`);
 
       // Send transaction with payment
       sendTransaction({
@@ -128,14 +129,13 @@ export default function MintPage() {
     }
   };
 
-  // Watch transaction status
   useEffect(() => {
     if (isPending) {
-      setMessage('⏳ Transaction pending...');
+      setMessage('⏳ Pending...');
     } else if (isConfirming) {
       setMessage('⏳ Confirming...');
     } else if (isConfirmed) {
-      setMessage('🎉 NFT Minted!');
+      setMessage('🎉 Minted!');
     }
   }, [isPending, isConfirming, isConfirmed]);
 
@@ -179,7 +179,7 @@ export default function MintPage() {
           </button>
 
           <button onClick={performMint} disabled={isPending || isConfirming || !address || !generatedImage} className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white rounded font-semibold">
-            {isPending || isConfirming ? '⏳ Minting...' : `🎯 Mint (${MINT_PRICE} ETH)`}
+            {isPending || isConfirming ? '⏳ Minting...' : `💰 Mint (${MINT_PRICE} ETH)`}
           </button>
         </div>
 
@@ -192,7 +192,7 @@ export default function MintPage() {
         {txHash && (
           <div className="mt-4">
             <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded font-semibold text-sm">
-              🔗 View Transaction
+              🔗 View TX
             </a>
           </div>
         )}
