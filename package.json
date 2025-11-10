@@ -8,10 +8,10 @@
     "start": "next start",
     "lint": "next lint"
   },
- "dependencies": {
+  "dependencies": {
     "@thirdweb-dev/sdk": "^4.0.99",
+    "@thirdweb-dev/storage": "^2.0.0",
     "ethers": "^5.7.2",
-
     "@farcaster/miniapp-sdk": "^0.2.0",
     "@farcaster/miniapp-wagmi-connector": "1.1.0",
     "@huggingface/inference": "^4.13.0",
