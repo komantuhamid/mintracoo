@@ -3,14 +3,17 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { HfInference } from "@huggingface/inference";
 
-const MODEL_ID = "black-forest-labs/FLUX.1-schnell"; // 🔥 FASTER MODEL!
+// 🔥 CHOOSE ONE:
+// const MODEL_ID = "black-forest-labs/FLUX.1-schnell"; // Fast (max 4 steps)
+const MODEL_ID = "black-forest-labs/FLUX.1-dev";      // Better quality (max 50 steps)
+
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 // 🎨 SINGLE FIXED TEMPLATE CHARACTER (NO VARIATION!)
 const TEMPLATE_BASE = "chibi style cute round blob goblin mascot character";
 
-// 🎨 72 COLOR SCHEMES (unchanged)
+// 🎨 72 COLOR SCHEMES
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green", bg: "bright neon lime green" },
   { skin: "dark forest green", bg: "dark forest green" },
@@ -249,8 +252,8 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 25,      // 🔥 FASTER + MORE CONSISTENT
-            guidance_scale: 12.0,         // 🔥 MAXIMUM CONTROL!
+            num_inference_steps: 40,       // 🔥 FIXED! (for dev model)
+            guidance_scale: 12.0,          // 🔥 MAXIMUM CONTROL!
             negative_prompt: negative,
           },
         });
