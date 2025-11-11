@@ -7,61 +7,62 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
+// 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 EXACT MATCHING BACKGROUNDS! (36 pairs)
+// 🎨 36 COLOR SCHEMES - EXACT MATCHING! (Both skin and bg use SAME description!)
 const GOBLIN_COLOR_SCHEMES = [
   // 💚 GREEN (8)
-  { skin: "bright neon lime green glowing", bg: "solid bright neon lime green" },
-  { skin: "dark forest green deep", bg: "solid dark forest green" },
-  { skin: "mint green pastel light", bg: "solid mint green pastel" },
-  { skin: "olive green earthy", bg: "solid olive green earthy" },
-  { skin: "emerald green rich vibrant", bg: "solid emerald green vibrant" },
-  { skin: "sage green muted soft", bg: "solid sage green muted" },
-  { skin: "chartreuse yellow-green bright", bg: "solid chartreuse yellow-green" },
-  { skin: "jade green medium", bg: "solid jade green medium" },
+  { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
+  { skin: "dark forest green deep", bg: "dark forest green deep" },
+  { skin: "mint green pastel light", bg: "mint green pastel light" },
+  { skin: "olive green earthy", bg: "olive green earthy" },
+  { skin: "emerald green rich vibrant", bg: "emerald green rich vibrant" },
+  { skin: "sage green muted soft", bg: "sage green muted soft" },
+  { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
+  { skin: "jade green medium", bg: "jade green medium" },
   
-  // 💙 BLUE (6) - 🔥 FIXED EXACT MATCH!
-  { skin: "cobalt blue bright electric", bg: "solid cobalt blue bright" },
-  { skin: "navy blue dark deep", bg: "solid navy blue dark" },
-  { skin: "cyan blue light bright", bg: "solid cyan blue light" },
-  { skin: "teal turquoise blue-green", bg: "solid teal turquoise blue-green" },
-  { skin: "sky blue pastel light", bg: "solid sky blue pastel" },
-  { skin: "royal blue rich vibrant", bg: "solid royal blue vibrant" },
+  // 💙 BLUE (6)
+  { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
+  { skin: "navy blue dark deep", bg: "navy blue dark deep" },
+  { skin: "cyan blue light bright", bg: "cyan blue light bright" },
+  { skin: "teal turquoise blue-green", bg: "teal turquoise blue-green" },
+  { skin: "sky blue pastel light", bg: "sky blue pastel light" },
+  { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
   
-  // 💜 PURPLE (5) - 🔥 FIXED EXACT MATCH!
-  { skin: "violet purple bright", bg: "solid violet purple bright" },
-  { skin: "deep purple dark rich", bg: "solid deep purple dark" },
-  { skin: "lavender purple pastel", bg: "solid lavender purple pastel" },
-  { skin: "magenta purple-pink bright", bg: "solid magenta purple-pink" },
-  { skin: "indigo purple-blue deep", bg: "solid indigo purple-blue" },
+  // 💜 PURPLE (5)
+  { skin: "violet purple bright", bg: "violet purple bright" },
+  { skin: "deep purple dark rich", bg: "deep purple dark rich" },
+  { skin: "lavender purple pastel", bg: "lavender purple pastel" },
+  { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
+  { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
   
-  // ❤️ RED/ORANGE (5) - 🔥 FIXED EXACT MATCH!
-  { skin: "crimson red bright", bg: "solid crimson red bright" },
-  { skin: "dark red maroon deep", bg: "solid dark red maroon" },
-  { skin: "orange bright vibrant", bg: "solid orange bright vibrant" },
-  { skin: "coral orange-pink", bg: "solid coral orange-pink" },
-  { skin: "rust orange-brown", bg: "solid rust orange-brown" },
+  // ❤️ RED/ORANGE (5)
+  { skin: "crimson red bright", bg: "crimson red bright" },
+  { skin: "dark red maroon deep", bg: "dark red maroon deep" },
+  { skin: "orange bright vibrant", bg: "orange bright vibrant" },
+  { skin: "coral orange-pink", bg: "coral orange-pink" },
+  { skin: "rust orange-brown", bg: "rust orange-brown" },
   
-  // 🩶 GRAY/BLACK/WHITE (4) - 🔥 FIXED EXACT MATCH!
-  { skin: "charcoal gray dark", bg: "solid charcoal gray dark" },
-  { skin: "slate gray medium", bg: "solid slate gray medium" },
-  { skin: "bone white pale cream", bg: "solid bone white pale" },
-  { skin: "jet black dark", bg: "solid jet black dark" },
+  // 🩶 GRAY/BLACK/WHITE (4)
+  { skin: "charcoal gray dark", bg: "charcoal gray dark" },
+  { skin: "slate gray medium", bg: "slate gray medium" },
+  { skin: "bone white pale cream", bg: "bone white pale cream" },
+  { skin: "jet black dark", bg: "jet black dark" },
   
-  // 💛 YELLOW/GOLD (3) - 🔥 FIXED EXACT MATCH!
-  { skin: "golden yellow bright", bg: "solid golden yellow bright" },
-  { skin: "mustard yellow earthy", bg: "solid mustard yellow earthy" },
-  { skin: "lemon yellow pale", bg: "solid lemon yellow pale" },
+  // 💛 YELLOW/GOLD (3)
+  { skin: "golden yellow bright", bg: "golden yellow bright" },
+  { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
+  { skin: "lemon yellow pale", bg: "lemon yellow pale" },
   
-  // 🤎 BROWN (3) - 🔥 FIXED EXACT MATCH!
-  { skin: "chocolate brown dark", bg: "solid chocolate brown dark" },
-  { skin: "tan brown light", bg: "solid tan brown light" },
-  { skin: "mahogany red-brown deep", bg: "solid mahogany red-brown" },
+  // 🤎 BROWN (3)
+  { skin: "chocolate brown dark", bg: "chocolate brown dark" },
+  { skin: "tan brown light", bg: "tan brown light" },
+  { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
   
-  // 🩷 PINK (2) - 🔥 FIXED EXACT MATCH!
-  { skin: "hot pink bright vibrant", bg: "solid hot pink bright" },
-  { skin: "rose pink soft", bg: "solid rose pink soft" }
+  // 🩷 PINK (2)
+  { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
+  { skin: "rose pink soft", bg: "rose pink soft" }
 ];
 
 // 👒 HEAD ITEMS (30)
@@ -202,8 +203,8 @@ function getRandomElement<T>(arr: T[]): T {
 
 function buildPrompt() {
   const colorScheme = getRandomElement(GOBLIN_COLOR_SCHEMES);
-  const skinColor = colorScheme.skin;
-  const background = colorScheme.bg;
+  const skinColor = colorScheme.skin;  // Full color description
+  const background = colorScheme.bg;    // SAME full description!
   
   const headItem = getRandomElement(HEAD_ITEMS);
   const eyeItem = getRandomElement(EYE_ITEMS);
@@ -241,10 +242,16 @@ function buildPrompt() {
     "standing upright full body visible",
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
-    `${background} background flat solid color`,
-    "background exact same color as character skin",
-    "background matches character perfectly",
-    "monochromatic color scheme",
+    
+    // 🔥 ULTRA-STRONG EXACT MATCHING (Repeat color 3x!)
+    `entire background is ${skinColor}`,
+    `flat solid ${background} background`,
+    `${skinColor} fills entire background`,
+    "background is identical color to character skin",
+    "character and background are SAME EXACT color",
+    "perfect monochromatic single-color scheme",
+    "zero color difference between character and background",
+    "character blends into background color perfectly",
     "simple cartoon mascot cute blob monster character"
   ].join(", ");
 
@@ -271,11 +278,26 @@ function buildPrompt() {
     "hat floating, clothing on wrong body part",
     "accessories in wrong positions, jumbled traits",
     "items overlapping incorrectly",
+    
+    // 🔥 ULTRA-STRONG BACKGROUND NEGATIVES!
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
-    "contrasting background, complementary colors",
     "different background color, mismatched colors",
-    "background color different from character"
+    "background different from character color",
+    "background lighter than character",
+    "background darker than character",
+    "background brighter than character",
+    "background duller than character",
+    "contrasting background, complementary colors",
+    "two-tone color scheme, multi-color palette",
+    "color variation, color gradient, color difference",
+    "background has different shade or tone",
+    "wrong background color, incorrect background color",
+    "tan background when character is not tan",
+    "brown background when character is not brown",
+    "beige background when character is not beige",
+    "gray background when character is not gray",
+    "any background color except character color"
   ].join(", ");
 
   return { prompt, negative };
@@ -293,7 +315,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating EXACT-MATCH GOBLIN...");
+    console.log("🎨 Generating EXACT-MATCH NFT Goblin...");
     
     const hf = new HfInference(HF_TOKEN);
 
