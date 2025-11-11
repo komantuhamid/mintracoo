@@ -267,12 +267,14 @@ function buildPrompt() {
     "children's book art style, cute storybook character",
     "vector graphic flat design, minimalist shading",
     
+    // 🔥 CONSISTENT BODY SIZE (Same proportions every time!)
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
     "round soft blob body, smooth chubby round belly",
     "simple cute dumpy proportions, pudgy spherical torso",
     "tiny short stubby legs, small rounded arms",
     "no muscle definition, soft pillowy cuddly body",
     "wide short squat stature, roly-poly blob build",
+    
     `${expression} facial expression`,
     "small pointed ears on sides of head",
     `${headItem}`,
@@ -374,7 +376,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin...");
+    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin with CONSISTENT SIZE...");
     
     const hf = new HfInference(HF_TOKEN);
 
