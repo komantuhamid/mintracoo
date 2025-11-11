@@ -10,59 +10,59 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 MEGA SKIN COLORS (30+ options!) - MAXIMUM VARIETY!
-const SKIN_COLORS = [
-  // 💚 GREEN FAMILY (8 shades)
-  "bright neon lime green glowing",
-  "dark forest green deep",
-  "mint green pastel light",
-  "olive green earthy",
-  "emerald green rich vibrant",
-  "sage green muted soft",
-  "chartreuse yellow-green bright",
-  "jade green medium",
+// 🎨 SKIN COLORS WITH MATCHING BACKGROUNDS!
+const GOBLIN_COLOR_SCHEMES = [
+  // 💚 GREEN GOBLINS → Warm backgrounds
+  { skin: "bright neon lime green glowing", bg: "solid warm orange brown" },
+  { skin: "dark forest green deep", bg: "solid rich burgundy red" },
+  { skin: "mint green pastel light", bg: "solid soft coral pink" },
+  { skin: "olive green earthy", bg: "solid warm terracotta orange" },
+  { skin: "emerald green rich vibrant", bg: "solid deep maroon red" },
+  { skin: "sage green muted soft", bg: "solid dusty rose pink" },
+  { skin: "chartreuse yellow-green bright", bg: "solid deep purple" },
+  { skin: "jade green medium", bg: "solid warm rust orange" },
   
-  // 💙 BLUE FAMILY (6 shades)
-  "cobalt blue bright electric",
-  "navy blue dark deep",
-  "cyan blue light bright",
-  "teal turquoise blue-green",
-  "sky blue pastel light",
-  "royal blue rich vibrant",
+  // 💙 BLUE GOBLINS → Orange/warm backgrounds
+  { skin: "cobalt blue bright electric", bg: "solid bright orange" },
+  { skin: "navy blue dark deep", bg: "solid golden yellow" },
+  { skin: "cyan blue light bright", bg: "solid warm coral orange" },
+  { skin: "teal turquoise blue-green", bg: "solid deep rust red" },
+  { skin: "sky blue pastel light", bg: "solid soft peach orange" },
+  { skin: "royal blue rich vibrant", bg: "solid amber orange" },
   
-  // 💜 PURPLE FAMILY (5 shades)
-  "violet purple bright",
-  "deep purple dark rich",
-  "lavender purple pastel",
-  "magenta purple-pink bright",
-  "indigo purple-blue deep",
+  // 💜 PURPLE GOBLINS → Yellow/green backgrounds
+  { skin: "violet purple bright", bg: "solid golden yellow" },
+  { skin: "deep purple dark rich", bg: "solid lime green" },
+  { skin: "lavender purple pastel", bg: "solid soft yellow" },
+  { skin: "magenta purple-pink bright", bg: "solid chartreuse green" },
+  { skin: "indigo purple-blue deep", bg: "solid warm gold" },
   
-  // ❤️ RED/ORANGE FAMILY (5 shades)
-  "crimson red bright",
-  "dark red maroon deep",
-  "orange bright vibrant",
-  "coral orange-pink",
-  "rust orange-brown",
+  // ❤️ RED/ORANGE GOBLINS → Teal/blue-green backgrounds
+  { skin: "crimson red bright", bg: "solid deep teal" },
+  { skin: "dark red maroon deep", bg: "solid cyan blue-green" },
+  { skin: "orange bright vibrant", bg: "solid dark teal blue" },
+  { skin: "coral orange-pink", bg: "solid turquoise teal" },
+  { skin: "rust orange-brown", bg: "solid deep sea teal" },
   
-  // 🩶 GRAY/BLACK/WHITE FAMILY (4 shades)
-  "charcoal gray dark",
-  "slate gray medium",
-  "bone white pale cream",
-  "jet black dark",
+  // 🩶 GRAY/BLACK/WHITE GOBLINS → Vibrant backgrounds
+  { skin: "charcoal gray dark", bg: "solid bright cyan blue" },
+  { skin: "slate gray medium", bg: "solid vibrant purple" },
+  { skin: "bone white pale cream", bg: "solid deep navy blue" },
+  { skin: "jet black dark", bg: "solid electric orange" },
   
-  // 💛 YELLOW/GOLD FAMILY (3 shades)
-  "golden yellow bright",
-  "mustard yellow earthy",
-  "lemon yellow pale",
+  // 💛 YELLOW/GOLD GOBLINS → Purple/blue backgrounds
+  { skin: "golden yellow bright", bg: "solid deep purple" },
+  { skin: "mustard yellow earthy", bg: "solid royal blue" },
+  { skin: "lemon yellow pale", bg: "solid soft lavender" },
   
-  // 🤎 BROWN FAMILY (3 shades)
-  "chocolate brown dark",
-  "tan brown light",
-  "mahogany red-brown deep",
+  // 🤎 BROWN GOBLINS → Blue/teal backgrounds
+  { skin: "chocolate brown dark", bg: "solid bright cyan" },
+  { skin: "tan brown light", bg: "solid deep teal" },
+  { skin: "mahogany red-brown deep", bg: "solid turquoise blue" },
   
-  // 🩷 PINK FAMILY (2 shades)
-  "hot pink bright vibrant",
-  "rose pink soft"
+  // 🩷 PINK GOBLINS → Green backgrounds
+  { skin: "hot pink bright vibrant", bg: "solid emerald green" },
+  { skin: "rose pink soft", bg: "solid sage green" }
 ];
 
 // 👒 Head items (15 options)
@@ -169,20 +169,6 @@ const HAND_ITEMS = [
   "both hands clenched in small fists"
 ];
 
-// 🎨 Background colors (10 options)
-const BACKGROUNDS = [
-  "solid bright green",
-  "solid dark teal",
-  "solid warm brown",
-  "solid cool gray",
-  "solid deep navy blue",
-  "solid rich purple",
-  "solid bright orange",
-  "solid crimson red",
-  "solid sky blue",
-  "solid olive green"
-];
-
 // 😠 Expressions (8 options)
 const EXPRESSIONS = [
   "angry scowling",
@@ -200,14 +186,17 @@ function getRandomElement(arr: string[]) {
 }
 
 function buildPrompt() {
-  const skinColor = getRandomElement(SKIN_COLORS);
+  // 🎨 Pick color scheme (skin + matching background!)
+  const colorScheme = getRandomElement(GOBLIN_COLOR_SCHEMES);
+  const skinColor = colorScheme.skin;
+  const background = colorScheme.bg;
+  
   const headItem = getRandomElement(HEAD_ITEMS);
   const eyeItem = getRandomElement(EYE_ITEMS);
   const mouthItem = getRandomElement(MOUTH_ITEMS);
   const clothing = getRandomElement(CLOTHING);
   const neckItem = getRandomElement(NECK_ITEMS);
   const handItem = getRandomElement(HAND_ITEMS);
-  const background = getRandomElement(BACKGROUNDS);
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
@@ -250,8 +239,9 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
     
-    // 🎨 BACKGROUND
-    `${background} background solid flat color no details`,
+    // 🎨 COLOR-MATCHED BACKGROUND!
+    `${background} background flat solid color no details`,
+    "background color complements character perfectly",
     "simple cartoon mascot, cute blob monster character"
   ].join(", ");
 
@@ -289,7 +279,8 @@ function buildPrompt() {
     "items overlapping incorrectly",
     
     // ❌ BACKGROUND BLOCKS
-    "gradient background, textured backdrop, complex scene"
+    "gradient background, textured backdrop, complex scene",
+    "background scenery, background objects, detailed background"
   ].join(", ");
 
   return { prompt, negative };
@@ -307,7 +298,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🧌 Generating MEGA-COLOR GOBLIN...");
+    console.log("🎨 Generating COLOR-MATCHED GOBLIN...");
     
     const hf = new HfInference(HF_TOKEN);
 
