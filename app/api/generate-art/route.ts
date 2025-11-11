@@ -9,7 +9,7 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - ALL KEPT FROM YOUR CODE!
+// 🎨 72 COLOR SCHEMES - EXACT MATCHING!
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -85,7 +85,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// ALL YOUR ITEMS KEPT (30 + 25 + 15 + 35 + 30 + 40 + 15 = 190 items!)
+// ALL ITEMS (190 total!)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -229,7 +229,7 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    // 🔥 YOUR ULTRA-FLAT STYLE (KEPT!)
+    // 🔥 ULTRA-FLAT STYLE
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
@@ -245,7 +245,7 @@ function buildPrompt() {
     "no muscle definition, soft pillowy cuddly body",
     "wide short squat stature, roly-poly blob build",
 
-    // 🔥🔥🔥 NEW: NUCLEAR EAR CONSISTENCY
+    // 🔥 EARS CONSISTENCY
     "MANDATORY: EXACTLY TWO small pointed ears",
     "BOTH ears MUST be EXACTLY same size identical",
     "BOTH ears MUST be EXACTLY same shape identical",
@@ -255,7 +255,7 @@ function buildPrompt() {
     "ears pointing upward at same angle perfectly matched",
     "NO ear variation ZERO DIFFERENCE between ears",
 
-    // 🔥🔥🔥 NEW: NUCLEAR LEG CONSISTENCY
+    // 🔥 LEGS CONSISTENCY
     "MANDATORY: EXACTLY TWO tiny short stubby legs",
     "BOTH legs MUST be EXACTLY same length identical",
     "BOTH legs MUST be EXACTLY same thickness identical",
@@ -265,7 +265,7 @@ function buildPrompt() {
     "legs are very short minimal length identical twins",
     "NO leg variation ZERO DIFFERENCE between legs",
 
-    // 🔥🔥🔥 NEW: NUCLEAR ARM CONSISTENCY
+    // 🔥 ARMS CONSISTENCY
     "MANDATORY: EXACTLY TWO small rounded arms",
     "BOTH arms MUST be EXACTLY same length identical",
     "BOTH arms MUST be EXACTLY same thickness identical",
@@ -293,25 +293,31 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
 
-    // 🔥 YOUR EXACT COLOR MATCHING (KEPT!)
-    `entire background is ${skinColor}`,
-    `flat solid ${background} background`,
-    `${skinColor} fills entire background`,
-    "background is identical color to character skin",
-    "character and background are SAME EXACT color",
-    "perfect monochromatic single-color scheme",
+    // 🔥🔥🔥 NUCLEAR BACKGROUND COLOR MATCHING!
+    `CRITICAL: entire background MUST be ${skinColor}`,
+    `background color is EXACTLY ${background}`,
+    `fill entire background with ${skinColor}`,
+    `paint entire backdrop ${background}`,
+    `whole scene background is ${skinColor}`,
+    "character body color and background color are IDENTICAL",
+    "character skin and backdrop are SAME EXACT COLOR",
+    "perfect monochromatic color scheme single color only",
     "zero color difference between character and background",
-    "character blends into background color perfectly",
-    "background is completely flat solid color",
-    "no background shading, no background gradient",
-    "background has zero depth or dimension",
+    "character blends seamlessly into background color",
+    "background has EXACT SAME color as character body",
+    "body color equals background color perfectly matched",
+    "monochrome palette character and backdrop same tone",
+    "uniform single color fills entire image completely",
+    "no background color variation or difference whatsoever",
+    "background is NOT beige NOT cream NOT tan NOT neutral",
+    "background MUST match character NOT be different color",
     "simple cartoon mascot cute blob monster character"
   ].join(", ");
 
   const negative = [
     "3D render, CGI, realistic, photorealistic, detailed",
     
-    // 🔥 YOUR ULTRA-STRONG ANTI-SHADING (KEPT!)
+    // 🔥 ANTI-SHADING
     "complex shading, dramatic lighting, shadows, depth",
     "gradient shading, soft shading, ambient occlusion",
     "drop shadow, cast shadow, shadow under character",
@@ -339,11 +345,11 @@ function buildPrompt() {
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
 
-    // 🔥 YOUR ULTRA-STRONG BACKGROUND NEGATIVES (KEPT!)
+    // 🔥🔥🔥 NUCLEAR ANTI-DIFFERENT-BACKGROUND!
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
-    "different background color, mismatched colors",
-    "background different from character color",
+    "WRONG background color, mismatched colors",
+    "background DIFFERENT from character color",
     "background lighter than character",
     "background darker than character",
     "background brighter than character",
@@ -352,14 +358,22 @@ function buildPrompt() {
     "two-tone color scheme, multi-color palette",
     "color variation, color gradient, color difference",
     "background has different shade or tone",
-    "wrong background color, incorrect background color",
+    "incorrect background color, wrong background color",
     "background with depth, background with shadow",
     "background gradient from light to dark",
     "background shading, background vignette",
     "darker background at bottom, lighter at top",
-    "any variation in background color",
+    "any variation in background color whatsoever",
+    "beige background, cream background, tan background",
+    "neutral background, white background, gray background",
+    "brown background, khaki background, sand background",
+    "background NOT matching character body color",
+    "different color background than character",
+    "pastel background when character is bright",
+    "dull background when character is vibrant",
+    "background color wrong tone wrong hue wrong shade",
 
-    // 🔥🔥🔥 NEW: ANTI-ASYMMETRY NEGATIVES
+    // 🔥 ANTI-ASYMMETRY
     "asymmetrical ears, uneven ears, different ear sizes",
     "one ear bigger, one ear smaller, mismatched ears",
     "ears different shapes, tilted ears, crooked ears",
@@ -391,7 +405,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating PERFECT SYMMETRY NFT...");
+    console.log("🎨 Generating PERFECT BACKGROUND MATCH NFT...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -408,7 +422,7 @@ export async function POST(req: Request) {
             width: 1024,
             height: 1024,
             num_inference_steps: 35,
-            guidance_scale: 7.5,
+            guidance_scale: 8.5,
             negative_prompt: negative,
           },
         });
