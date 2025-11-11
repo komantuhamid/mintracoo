@@ -10,9 +10,10 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 36 COLOR SCHEMES - EXACT MATCHING! (Both skin and bg use SAME description!)
+// 🎨 72 COLOR SCHEMES - EXACT MATCHING! 
+// (Standard 36 + Pastel 12 + Neon 12 + Metallic 12)
 const GOBLIN_COLOR_SCHEMES = [
-  // 💚 GREEN (8)
+  // 💚 GREEN - STANDARD (8)
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
   { skin: "mint green pastel light", bg: "mint green pastel light" },
@@ -22,7 +23,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
   { skin: "jade green medium", bg: "jade green medium" },
   
-  // 💙 BLUE (6)
+  // 💙 BLUE - STANDARD (6)
   { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
   { skin: "navy blue dark deep", bg: "navy blue dark deep" },
   { skin: "cyan blue light bright", bg: "cyan blue light bright" },
@@ -30,39 +31,81 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "sky blue pastel light", bg: "sky blue pastel light" },
   { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
   
-  // 💜 PURPLE (5)
+  // 💜 PURPLE - STANDARD (5)
   { skin: "violet purple bright", bg: "violet purple bright" },
   { skin: "deep purple dark rich", bg: "deep purple dark rich" },
   { skin: "lavender purple pastel", bg: "lavender purple pastel" },
   { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
   { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
   
-  // ❤️ RED/ORANGE (5)
+  // ❤️ RED/ORANGE - STANDARD (5)
   { skin: "crimson red bright", bg: "crimson red bright" },
   { skin: "dark red maroon deep", bg: "dark red maroon deep" },
   { skin: "orange bright vibrant", bg: "orange bright vibrant" },
   { skin: "coral orange-pink", bg: "coral orange-pink" },
   { skin: "rust orange-brown", bg: "rust orange-brown" },
   
-  // 🩶 GRAY/BLACK/WHITE (4)
+  // 🩶 GRAY/BLACK/WHITE - STANDARD (4)
   { skin: "charcoal gray dark", bg: "charcoal gray dark" },
   { skin: "slate gray medium", bg: "slate gray medium" },
   { skin: "bone white pale cream", bg: "bone white pale cream" },
   { skin: "jet black dark", bg: "jet black dark" },
   
-  // 💛 YELLOW/GOLD (3)
+  // 💛 YELLOW/GOLD - STANDARD (3)
   { skin: "golden yellow bright", bg: "golden yellow bright" },
   { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
   { skin: "lemon yellow pale", bg: "lemon yellow pale" },
   
-  // 🤎 BROWN (3)
+  // 🤎 BROWN - STANDARD (3)
   { skin: "chocolate brown dark", bg: "chocolate brown dark" },
   { skin: "tan brown light", bg: "tan brown light" },
   { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
   
-  // 🩷 PINK (2)
+  // 🩷 PINK - STANDARD (2)
   { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
-  { skin: "rose pink soft", bg: "rose pink soft" }
+  { skin: "rose pink soft", bg: "rose pink soft" },
+
+  // 🌸 PASTEL COLORS (12) - Soft and Sweet!
+  { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light" },
+  { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light" },
+  { skin: "pastel mint green soft light", bg: "pastel mint green soft light" },
+  { skin: "pastel lavender purple soft light", bg: "pastel lavender purple soft light" },
+  { skin: "pastel peach orange soft light", bg: "pastel peach orange soft light" },
+  { skin: "pastel lemon yellow soft light", bg: "pastel lemon yellow soft light" },
+  { skin: "pastel lilac purple soft light", bg: "pastel lilac purple soft light" },
+  { skin: "pastel aqua blue-green soft light", bg: "pastel aqua blue-green soft light" },
+  { skin: "pastel coral pink-orange soft light", bg: "pastel coral pink-orange soft light" },
+  { skin: "pastel sage green soft light", bg: "pastel sage green soft light" },
+  { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light" },
+  { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light" },
+
+  // ⚡ NEON COLORS (12) - Super Bright and Glowing!
+  { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric" },
+  { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric" },
+  { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric" },
+  { skin: "neon yellow bright glowing electric", bg: "neon yellow bright glowing electric" },
+  { skin: "neon orange bright glowing electric", bg: "neon orange bright glowing electric" },
+  { skin: "neon purple bright glowing electric", bg: "neon purple bright glowing electric" },
+  { skin: "neon magenta bright glowing electric", bg: "neon magenta bright glowing electric" },
+  { skin: "neon turquoise bright glowing electric", bg: "neon turquoise bright glowing electric" },
+  { skin: "neon red bright glowing electric", bg: "neon red bright glowing electric" },
+  { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green glowing electric" },
+  { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
+  { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
+
+  // 💎 METALLIC COLORS (12) - Shiny and Premium!
+  { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
+  { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming" },
+  { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny" },
+  { skin: "metallic rose gold pink shiny", bg: "metallic rose gold pink shiny" },
+  { skin: "metallic platinum silver-white shiny", bg: "metallic platinum silver-white shiny" },
+  { skin: "metallic copper orange shiny", bg: "metallic copper orange shiny" },
+  { skin: "metallic chrome silver mirror shiny", bg: "metallic chrome silver mirror shiny" },
+  { skin: "metallic brass yellow shiny", bg: "metallic brass yellow shiny" },
+  { skin: "metallic titanium gray shiny", bg: "metallic titanium gray shiny" },
+  { skin: "metallic pearl white iridescent shiny", bg: "metallic pearl white iridescent shiny" },
+  { skin: "metallic gunmetal dark gray shiny", bg: "metallic gunmetal dark gray shiny" },
+  { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
 // 👒 HEAD ITEMS (30)
@@ -272,8 +315,8 @@ function buildPrompt() {
     "tall, long limbs, stretched, slender, lanky",
     "thin, skinny, slim, lean, human proportions",
     "cigar, pipe, smoking, cigarette, tobacco",
-    "cigar in mouth, pipe in mouth, smoking item",
-    "holding cigar, holding pipe, smoke, smoking",
+    "cigar in mouth, pipe in mouth, smoke, smoking",
+    "holding cigar, holding pipe, smoke, smoking item",
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
     "accessories in wrong positions, jumbled traits",
@@ -315,7 +358,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating EXACT-MATCH NFT Goblin...");
+    console.log("🎨 Generating 72-COLOR NFT Goblin (Standard/Pastel/Neon/Metallic)...");
     
     const hf = new HfInference(HF_TOKEN);
 
