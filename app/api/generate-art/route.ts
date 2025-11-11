@@ -7,8 +7,8 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🧌 BASE CHARACTER - FAT CHUNKY STYLE!
-const BASE_CHARACTER = "chubby fat round goblin monster creature";
+// 🧌 BASE CHARACTER - SOFT BLOB STYLE!
+const BASE_CHARACTER = "cute round blob goblin creature monster";
 
 // 🧌 Goblin skin colors (12 options)
 const SKIN_COLORS = [
@@ -26,147 +26,123 @@ const SKIN_COLORS = [
   "brown"
 ];
 
-// 👒 Head items (25 options)
+// 👒 Head items (20 options) - SIMPLE ONLY!
 const HEAD_ITEMS = [
-  "wearing leather cap",
-  "wearing metal helmet",
+  "wearing small leather cap",
+  "wearing tiny metal helmet",
   "wearing cloth hood",
-  "wearing bandana",
+  "wearing small bandana",
   "wearing bone helmet",
-  "wearing iron crown",
+  "wearing small iron crown",
   "wearing bucket hat",
-  "wearing feather headdress",
   "wearing wizard hat",
   "wearing fur hat",
-  "wearing chain mail hood",
   "wearing wooden mask",
   "wearing mushroom cap",
-  "wearing horned helmet",
+  "wearing small horned helmet",
   "wearing goggles",
   "wearing skull cap",
-  "wearing bronze crown",
   "wearing straw hat",
   "wearing jester hat",
   "wearing pointed hood",
-  "wearing antler crown",
   "wearing war paint",
-  "wearing scrap helmet",
   "wearing animal pelt",
-  "bald goblin head"
+  "bald round head"
 ];
 
-// 👀 Eye items (14 options)
+// 👀 Eye items (12 options) - SIMPLE!
 const EYE_ITEMS = [
-  "wearing eye patch",
-  "wearing goggles",
-  "wearing monocle",
+  "wearing small eye patch",
+  "wearing tiny goggles",
+  "wearing small monocle",
   "wearing round glasses",
-  "wearing bone glasses",
-  "wearing scrap goggles",
-  "wearing bandage over eye",
-  "wearing face paint",
-  "wearing iron visor",
-  "wearing mechanical eye",
-  "wearing mask",
-  "wearing aviator goggles",
-  "wearing blindfold",
-  "large yellow eyes"
+  "wearing small scrap goggles",
+  "wearing bandage over one eye",
+  "wearing face paint stripes",
+  "wearing small mask",
+  "wearing tiny aviator goggles",
+  "wearing small blindfold",
+  "large round yellow eyes",
+  "small beady eyes"
 ];
 
-// 👄 Mouth items (12 options)
+// 👄 Mouth items (10 options) - SIMPLE!
 const MOUTH_ITEMS = [
-  "smoking wooden pipe",
-  "holding rat in teeth",
-  "smoking cigar",
-  "chewing bone",
-  "holding dagger in teeth",
-  "smoking clay pipe",
-  "chewing leather",
-  "holding coin in mouth",
-  "biting rope",
-  "smoking mushroom pipe",
-  "holding key in teeth",
-  "grinning showing fangs"
+  "smoking tiny wooden pipe",
+  "smoking small cigar",
+  "chewing small bone",
+  "holding tiny coin in mouth",
+  "smoking small clay pipe",
+  "huge wide grinning mouth showing sharp fangs",
+  "giant open mouth with jagged teeth",
+  "massive toothy grin menacing",
+  "enormous mouth with rows of sharp fangs",
+  "wide crazy smile showing all teeth"
 ];
 
-// 👕 Clothing (25 options)
+// 👕 Clothing (20 options) - SIMPLE!
 const CLOTHING = [
-  "wearing leather vest",
-  "wearing torn rags",
-  "wearing cloth tunic",
-  "wearing chain mail",
-  "wearing fur vest",
-  "wearing leather jerkin",
-  "wearing torn robes",
-  "wearing scale armor",
-  "wearing burlap tunic",
-  "wearing patchwork leather",
-  "wearing animal hide",
-  "wearing torn shirt",
-  "wearing iron armor",
-  "wearing torn cloak",
-  "wearing leather coat",
-  "wearing pirate vest",
-  "wearing prisoner rags",
-  "wearing leather apron",
-  "wearing stolen doublet",
-  "wearing monk robes",
-  "wearing bandit leather",
-  "wearing scrap armor",
-  "wearing bone armor",
-  "wearing sailor vest",
-  "bare chest"
+  "wearing small leather vest",
+  "wearing tiny torn rags",
+  "wearing simple cloth tunic",
+  "wearing small fur vest",
+  "wearing simple leather jerkin",
+  "wearing tiny torn robes",
+  "wearing simple burlap tunic",
+  "wearing small patchwork leather",
+  "wearing tiny animal hide",
+  "wearing simple torn shirt",
+  "wearing small iron armor",
+  "wearing tiny torn cloak",
+  "wearing simple leather coat",
+  "wearing small pirate vest",
+  "wearing simple prisoner rags",
+  "wearing tiny leather apron",
+  "wearing simple monk robes",
+  "wearing small bandit leather",
+  "wearing tiny sailor vest",
+  "bare chest chubby belly"
 ];
 
-// ⛓️ Neck items (12 options)
+// ⛓️ Neck items (10 options) - SIMPLE!
 const NECK_ITEMS = [
-  "wearing bone necklace",
-  "wearing iron collar",
-  "wearing tooth necklace",
-  "wearing leather cord",
-  "wearing gold chain",
-  "wearing bead necklace",
-  "wearing rope",
-  "wearing bronze medallion",
-  "wearing fur collar",
-  "wearing spiked collar",
-  "wearing skull pendant",
+  "wearing small bone necklace",
+  "wearing tiny iron collar",
+  "wearing small tooth necklace",
+  "wearing simple leather cord",
+  "wearing tiny gold chain",
+  "wearing small bead necklace",
+  "wearing simple rope",
+  "wearing tiny medallion",
+  "wearing small skull pendant",
   "bare neck"
 ];
 
-// 🗡️ Hand items (28 options)
+// 🗡️ Hand items (20 options) - SIMPLE SMALL ITEMS!
 const HAND_ITEMS = [
-  "holding rusty dagger",
-  "holding wooden club",
-  "holding coin bag",
-  "holding wooden shield",
-  "holding crossbow",
-  "holding torch",
-  "holding battle axe",
-  "holding shortsword",
-  "holding iron mace",
-  "holding wooden spear",
-  "holding bow and arrow",
-  "holding loot sack",
-  "holding lantern",
-  "holding skull cup",
-  "holding potion vial",
-  "holding bomb",
-  "holding chain weapon",
-  "holding pickaxe",
-  "holding rope",
-  "holding meat leg",
-  "holding chicken",
-  "holding fish",
-  "holding mushroom",
-  "holding treasure chest",
-  "holding keys",
-  "holding map scroll",
-  "holding bottle",
-  "clenched fist"
+  "holding small rusty dagger",
+  "holding tiny wooden club",
+  "holding small coin bag",
+  "holding tiny wooden shield",
+  "holding small torch",
+  "holding tiny battle axe",
+  "holding small shortsword",
+  "holding tiny iron mace",
+  "holding small wooden spear",
+  "holding tiny bow",
+  "holding small loot sack",
+  "holding tiny lantern",
+  "holding small skull cup",
+  "holding tiny potion vial",
+  "holding small bomb",
+  "holding tiny pickaxe",
+  "holding small meat leg",
+  "holding tiny mushroom",
+  "holding small keys",
+  "small clenched fists"
 ];
 
-// 🎨 Background colors (10 options) - SOLID FLAT COLORS!
+// 🎨 Background colors (10 options) - SOLID FLAT!
 const BACKGROUNDS = [
   "solid bright green",
   "solid dark green",
@@ -180,18 +156,16 @@ const BACKGROUNDS = [
   "solid olive"
 ];
 
-// 😠 Expressions (10 options)
+// 😠 Expressions (8 options)
 const EXPRESSIONS = [
-  "angry scowling",
-  "evil grinning",
-  "grumpy frowning",
-  "crazy laughing",
-  "sneaky smirking",
-  "confused stupid",
-  "aggressive snarling",
-  "greedy drooling",
-  "surprised shocked",
-  "proud confident"
+  "angry scowling mean",
+  "evil grinning wicked",
+  "grumpy frowning annoyed",
+  "crazy laughing maniacal",
+  "sneaky smirking mischievous",
+  "confused dumb stupid",
+  "aggressive menacing fierce",
+  "proud confident smug"
 ];
 
 function getRandomElement(arr: string[]) {
@@ -211,50 +185,52 @@ function buildPrompt() {
   
   const prompt = [
     "simple flat 2D cartoon illustration, clean vector art style",
-    `adorable cute ${BASE_CHARACTER} with ${skinColor} smooth skin`,
-    // 🔥 NEW - FAT BODY DESCRIPTION!
-    "extremely fat chubby body, round plump belly, thick chunky legs",
-    "rotund obese proportions, pudgy overweight, wide stocky build",
-    "big fat round torso, chubby thick arms, stubby short limbs",
-    `${expression} expression, large pointed ears`,
-    "small cute chubby creature, chibi blob proportions",
+    `adorable ${BASE_CHARACTER} with ${skinColor} smooth soft skin`,
+    // 🔥 KEY FIX - SOFT BLOB BODY (NO MUSCLES!)
+    "round soft blob body shape, smooth chubby belly no abs",
+    "simple dumpy proportions, pudgy spherical torso",
+    "tiny short stubby legs, small rounded arms no muscles",
+    "no muscle definition, soft pillowy body, cuddly round shape",
+    "wide short stature, squat compact build, roly-poly body",
+    `${expression} facial expression, small pointed ears`,
+    `${mouthItem}`,
+    "cute small chubby creature, simple chibi blob design",
     `${headItem}`,
     `${eyeItem}`,
-    `${mouthItem}`,
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
-    "facing directly forward toward camera, straight front view, symmetrical pose",
-    "standing upright centered perfectly, full body visible",
-    "looking straight ahead at viewer, direct eye contact forward",
-    "feet planted on ground facing forward, not turned sideways",
-    "thick black outlines, bold lines, simple coloring",
-    "flat cartoon shading minimal, clean vector style",
-    "children's book illustration aesthetic, storybook art",
-    `${background} background flat color no details`,
-    "simple cartoon character design, mascot style, clean flat art",
-    "character portrait style, facing camera directly, front-facing pose"
+    "facing directly forward toward camera, straight front view, symmetrical",
+    "standing upright centered, full body visible front-facing",
+    "looking straight ahead at viewer, direct forward pose",
+    "feet planted on ground, short stubby legs visible",
+    "thick black outlines, bold cartoon lines, simple flat coloring",
+    "minimal soft shading, clean vector illustration style",
+    "children's book art, storybook character design",
+    `${background} background flat solid color no details`,
+    "simple cartoon mascot style, cute blob monster design"
   ].join(", ");
 
   const negative = [
     "3D render, CGI, realistic, photorealistic, detailed rendering",
-    "complex shading, realistic lighting, dramatic shadows, atmospheric depth",
-    "detailed texture, realistic skin, fur detail, hair strands visible",
-    "cinematic lighting, studio lighting, professional photography",
-    "painted style, brush strokes, oil painting, watercolor, matte painting",
-    "blurry, low quality, messy, sketchy, unfinished",
-    "text, watermark, logo, signature, frame, border",
-    "multiple characters, cropped, background details, scenery",
-    "realistic proportions, human-like, detailed anatomy",
-    "gradient background, textured background, detailed environment",
-    "side view, profile view, turned sideways, angled pose",
-    "3/4 view, looking to the side, facing left, facing right",
-    "back view, rear view, turned around, rotated",
-    "diagonal angle, tilted, asymmetrical pose, off-center",
-    // 🔥 NEW - BLOCK THIN BODIES!
-    "thin, skinny, slim, slender, lean body",
-    "muscular, athletic, fit, toned physique",
-    "tall, lanky, long limbs, stretched proportions"
+    "complex shading, realistic lighting, dramatic shadows, depth",
+    "detailed texture, realistic skin, fur strands, hair detail",
+    "cinematic lighting, professional photography, studio setup",
+    "painted style, brush strokes, oil painting, watercolor, matte",
+    "blurry, low quality, messy, sketchy, unfinished, draft",
+    "text, watermark, logo, signature, caption, frame, border",
+    "multiple characters, cropped body, background scenery, objects",
+    "realistic proportions, human anatomy, detailed muscles",
+    "gradient background, textured backdrop, complex environment",
+    "side view, profile, turned sideways, angled pose, diagonal",
+    "3/4 view, looking sideways, facing left, facing right",
+    "back view, rear, turned around, rotated, off-center",
+    // 🔥 KEY FIX - BLOCK ALL MUSCLES/DEFINITION!
+    "muscular, athletic, fit, toned, ripped, abs visible",
+    "muscle definition, biceps, six pack, defined muscles",
+    "strong warrior, bodybuilder, athletic build, buff",
+    "tall, long limbs, stretched proportions, slender",
+    "thin, skinny, slim, lean body, lanky proportions"
   ].join(", ");
 
   return { prompt, negative };
@@ -272,7 +248,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🧌 Generating FAT CHUBBY GOBLIN...");
+    console.log("🧌 Generating SOFT BLOB GOBLIN...");
     
     const hf = new HfInference(HF_TOKEN);
 
