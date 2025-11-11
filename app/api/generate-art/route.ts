@@ -7,281 +7,242 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🐱 BASE CHARACTER - MALE/NEUTRAL
-const BASE_CHARACTER = "cute chubby male cartoon cat boy character";
+// 🧌 BASE CHARACTER - GOBLIN!
+const BASE_CHARACTER = "fantasy goblin character";
 
-// 🎨 Body types (make them thick/fat like your examples!)
-const BODY_TYPES = [
-  "chubby thick body",
-  "fat round body", 
-  "plump chubby body",
-  "thick chunky body",
-  "chonky fat body",
-  "round plump body"
+// 🧌 Goblin skin colors (15 options)
+const SKIN_COLORS = [
+  "bright green",
+  "dark green",
+  "lime green",
+  "olive green",
+  "mossy green",
+  "yellow-green",
+  "gray-green",
+  "brown-green",
+  "orange goblin",
+  "red goblin",
+  "purple goblin",
+  "blue goblin",
+  "gray goblin",
+  "brown goblin",
+  "pale green"
 ];
 
-// 🎨 Skin colors (20 options)
-const COLORS = [
-  "gray and white",
-  "orange tabby",
-  "ginger orange",
-  "black",
-  "white",
-  "cream beige",
-  "brown",
-  "blue gray",
-  "silver gray",
-  "golden yellow",
-  "pink",
-  "purple",
-  "teal blue",
-  "mint green",
-  "lavender purple",
-  "peach orange",
-  "red",
-  "tan brown",
-  "green",
-  "yellow"
+// 🧌 Goblin skin textures (12 types)
+const SKIN_TEXTURES = [
+  "with rough bumpy textured skin with warts",
+  "with wrinkled leathery skin",
+  "with smooth shiny skin",
+  "with scaly reptilian skin texture",
+  "with mottled patchy skin",
+  "with scarred battle-worn skin",
+  "with spotted freckled skin",
+  "with cracked dry skin texture",
+  "with oily shiny greasy skin",
+  "with hairy fuzzy skin patches",
+  "with crusty rough skin",
+  "with weathered aged skin texture"
 ];
 
-// 🐯 Fur patterns (18 types)
-const FUR_PATTERNS = [
-  "with detailed striped tabby fur",
-  "with bold tiger stripes",
-  "with leopard spotted fur",
-  "with spotted pattern",
-  "with calico patches",
-  "with tuxedo black white pattern",
-  "with tortoiseshell pattern",
-  "with siamese points",
-  "with dalmatian spots",
-  "with marble swirl pattern",
-  "with mackerel stripes",
-  "with rosette spots",
-  "with bicolor split",
-  "with brindle pattern",
-  "with smooth solid fur",
-  "with fluffy thick fur",
-  "with short sleek fur",
-  "with ombre gradient fur"
-];
-
-// 👒 Head accessories (35 options)
+// 👒 Goblin head items (30 options)
 const HEAD_ITEMS = [
-  "wearing tall white chef hat",
-  "wearing golden crown",
-  "wearing red baseball cap",
-  "wearing snapback cap backwards",
-  "wearing blue snapback cap",
-  "wearing knit beanie",
-  "wearing cowboy hat",
-  "wearing black pirate hat",
-  "wearing purple wizard hat with stars",
-  "wearing black top hat",
-  "wearing viking helmet with horns",
-  "wearing green military helmet",
-  "wearing santa red hat",
-  "wearing party cone hat",
-  "wearing sombrero",
-  "wearing fedora",
-  "wearing red bandana headband",
-  "wearing flower crown with pink roses",
-  "wearing leaf crown",
-  "wearing headphones",
-  "wearing glowing halo above head",
-  "wearing propeller beanie",
-  "wearing french beret",
-  "wearing safari hat",
-  "wearing yellow hard hat",
-  "wearing straw sun hat",
-  "wearing bucket hat",
-  "wearing visor cap",
-  "wearing turban",
-  "wearing bunny ears",
-  "wearing tiara",
-  "wearing graduation cap",
-  "wearing astronaut helmet",
-  "wearing winter earmuffs",
-  "no hat"
+  "wearing worn leather tricorn pirate hat",
+  "wearing rusty metal viking helmet with horns",
+  "wearing tattered wizard pointed hat",
+  "wearing dirty cloth headband",
+  "wearing skull cap bone helmet",
+  "wearing iron crown rusted",
+  "wearing broken bucket helmet",
+  "wearing feathered tribal headdress",
+  "wearing patched bandana",
+  "wearing cracked horned helmet",
+  "wearing old leather cap worn",
+  "wearing fur barbarianhelmet",
+  "wearing chain mail coif armor",
+  "wearing wooden tribal mask",
+  "wearing mushroom cap hat fantasy",
+  "wearing torn hood cloak",
+  "wearing goggles steampunk brass",
+  "wearing animal skull helmet",
+  "wearing bronze circlet ancient",
+  "wearing straw farmer hat",
+  "wearing jester hat bells",
+  "wearing metal bucket rusty",
+  "wearing leaf crown natural",
+  "wearing antler crown bone",
+  "wearing hood with horns demonic",
+  "wearing tribal bone headdress",
+  "wearing cracked pottery helmet",
+  "wearing fungus mushroom cap",
+  "wearing scrap metal helmet mad max",
+  "no headwear bald goblin head"
 ];
 
-// 😎 Eye accessories (22 options)
+// 👀 Goblin eye items (18 options)
 const EYE_ITEMS = [
-  "wearing thick black sunglasses cool",
-  "wearing gold aviator sunglasses",
-  "wearing round hipster glasses",
-  "wearing red 3D glasses",
-  "wearing ski goggles",
-  "wearing monocle on one eye",
-  "wearing pink heart sunglasses",
-  "wearing yellow star sunglasses",
-  "wearing nerd glasses with tape",
-  "wearing futuristic cyber visor",
-  "wearing black eye patch pirate",
-  "wearing safety yellow goggles",
-  "wearing blue light gaming glasses",
-  "wearing rainbow lens glasses",
-  "wearing steampunk goggles brass",
-  "wearing cat eye vintage glasses",
-  "wearing reading glasses",
-  "wearing sports wrap sunglasses",
-  "wearing LED glowing glasses",
-  "wearing diamond bling glasses",
-  "wearing mask superhero",
-  "no eyewear"
+  "wearing broken cracked goggles",
+  "wearing leather eye patch pirate",
+  "wearing rusty metal monocle",
+  "wearing dirty round glasses",
+  "wearing bone frame spectacles",
+  "wearing scrap metal visor",
+  "wearing wooden tribal mask",
+  "wearing bandage over one eye",
+  "wearing goggles with colored lenses",
+  "wearing iron eye protection",
+  "wearing clockwork mechanical eye",
+  "wearing crystal gem monocle",
+  "wearing leather aviator goggles",
+  "wearing shaman tribal eye paint",
+  "wearing steampunk brass goggles",
+  "wearing broken mirror goggles",
+  "wearing skull eye mask",
+  "natural goblin eyes large yellow"
 ];
 
-// 👄 Mouth accessories (18 options)
+// 👄 Goblin mouth items (15 options)
 const MOUTH_ITEMS = [
-  "smoking brown cigar in mouth",
-  "smoking wooden pipe with smoke",
-  "holding red lollipop candy stick",
-  "chewing pink bubble gum with bubble",
-  "holding red rose in teeth romantic",
-  "wearing white face mask",
-  "blowing party horn colorful",
-  "eating hot pizza slice melting cheese",
-  "holding rainbow popsicle ice cream",
-  "drinking juice box with straw",
-  "whistling with musical notes",
-  "eating pink frosted donut with sprinkles",
-  "eating ice cream cone dripping",
-  "holding wooden toothpick cool",
-  "eating burger with lettuce",
-  "eating hot dog",
-  "holding candy cane striped",
-  "happy smile"
+  "smoking old wooden pipe tobacco",
+  "holding dead rat in teeth",
+  "smoking cigar stub dirty",
+  "chewing on bone",
+  "holding dagger blade in teeth",
+  "smoking herb pipe magical",
+  "holding gold coin in mouth",
+  "chewing tobacco plug",
+  "holding cork bottle in teeth",
+  "smoking clay pipe",
+  "biting rope thick",
+  "holding key in teeth rusty",
+  "smoking mushroom pipe hallucinogenic",
+  "chewing on leather strap",
+  "grinning showing sharp jagged teeth"
 ];
 
-// 👕 Clothing (30 options) - MALE STYLE!
+// 👕 Goblin clothing (30 options) - FANTASY STYLE!
 const CLOTHING = [
-  "wearing white chef coat with buttons",
-  "wearing black leather jacket cool",
-  "wearing navy blue hoodie with pockets",
-  "wearing sports jersey with number",
-  "wearing brown bomber jacket",
-  "wearing varsity jacket with patches",
-  "wearing plain t-shirt casual",
-  "wearing tank top",
-  "wearing cozy sweater",
-  "wearing formal suit and tie",
-  "wearing tuxedo with black bowtie",
-  "wearing white lab coat scientist",
-  "wearing colorful apron cooking",
-  "wearing red superhero cape flying",
-  "wearing winter puffy jacket",
-  "wearing Hawaiian floral shirt tropical",
-  "wearing black ninja outfit stealth",
-  "wearing cowboy vest with badge",
-  "wearing shiny armor knight",
-  "wearing basketball uniform sports",
-  "wearing football jersey team",
-  "wearing blue denim overalls",
-  "wearing polo shirt with collar",
-  "wearing flannel plaid shirt lumberjack",
-  "wearing denim jean jacket",
-  "wearing tracksuit athletic",
-  "wearing bomber flight jacket",
-  "wearing kimono robe japanese",
-  "wearing vest with bowtie formal",
-  "no clothing natural"
+  "wearing tattered leather armor battle-worn",
+  "wearing dirty brown linen rags",
+  "wearing patched cloth tunic medieval",
+  "wearing rusty chain mail armor",
+  "wearing fur vest barbaric",
+  "wearing leather jerkin studded",
+  "wearing tattered wizard robes",
+  "wearing scale mail armor bronze",
+  "wearing burlap sack tunic",
+  "wearing patchwork leather jacket scrap",
+  "wearing tribal animal hide vest",
+  "wearing torn cloth shirt",
+  "wearing iron plate armor dented",
+  "wearing hooded cloak torn",
+  "wearing mercenary leather coat",
+  "wearing pirate vest with buckles",
+  "wearing prisoner rags chains",
+  "wearing apron blacksmith leather",
+  "wearing noble stolen doublet",
+  "wearing monk robes brown",
+  "wearing bandit leather armor",
+  "wearing scavenger patchwork armor",
+  "wearing tribal war paint no shirt",
+  "wearing bone armor primitive",
+  "wearing stolen knight armor damaged",
+  "wearing sailor vest nautical",
+  "wearing alchemist robes stained",
+  "wearing peasant tunic simple",
+  "wearing gladiator armor leather straps",
+  "bare chested muscular goblin warrior"
 ];
 
-// ⛓️ Neck accessories (18 options)
+// ⛓️ Goblin neck items (16 options)
 const NECK_ITEMS = [
-  "wearing thick gold chain necklace bling",
-  "wearing diamond necklace sparkling",
-  "wearing pearl necklace elegant",
-  "wearing dog tag chain military",
-  "wearing red bow tie dapper",
-  "wearing blue striped necktie business",
-  "wearing red scarf flowing winter",
-  "wearing spiked collar punk rock",
-  "wearing large gold medallion pendant",
-  "wearing bandana around neck cowboy",
-  "wearing black choker necklace",
-  "wearing lei flower necklace hawaiian",
-  "wearing silver cross necklace",
-  "wearing pocket watch chain vintage",
-  "wearing bell collar cat",
-  "wearing name tag badge",
-  "wearing whistle on chain sports",
-  "no neck accessory"
+  "wearing bone necklace with skulls",
+  "wearing rusty iron collar slave",
+  "wearing tooth necklace trophy",
+  "wearing leather strap necklace",
+  "wearing gold chain stolen loot",
+  "wearing tribal bead necklace",
+  "wearing rope noose hanging",
+  "wearing medallion bronze tarnished",
+  "wearing fur collar",
+  "wearing spiked collar iron",
+  "wearing pendant skull charm",
+  "wearing amulet glowing magical",
+  "wearing key ring necklace",
+  "wearing coin necklace looted",
+  "wearing scarf torn dirty",
+  "no neck accessory bare neck"
 ];
 
-// 🏆 HAND ITEMS - MUST HOLD CLEARLY! (35 options)
+// 🗡️ Goblin hand items (35 options) - WEAPONS & LOOT!
 const HAND_ITEMS = [
-  "clearly holding wooden baseball bat in both hands raised",
-  "proudly holding shiny golden trophy cup high up",
-  "holding orange basketball in one hand",
-  "holding brown leather football in hands",
-  "holding white soccer ball",
-  "holding tennis racket grip visible",
-  "holding black game controller playing",
-  "holding smartphone texting with thumbs",
-  "holding silver microphone singing performance",
-  "holding magic wand with star tip glowing",
-  "holding silver sword blade up warrior",
-  "holding medieval shield defensive",
-  "holding thick book reading pages visible",
-  "holding ice cream cone with drips melting",
-  "holding red rose flower romantic",
-  "holding colorful balloons strings in hand",
-  "holding skateboard deck under arm",
-  "holding electric guitar by neck",
-  "holding stack of cash money bills fanned",
-  "holding brown briefcase handle grip",
-  "holding steaming coffee cup mug warm",
-  "holding soda can drink refreshing",
-  "holding pizza slice with melted cheese stretchy",
-  "holding burger with lettuce visible layers",
-  "holding hot dog with mustard",
-  "holding wrench tool mechanic",
-  "holding paint brush painting artist",
-  "holding camera taking photo",
-  "holding fishing rod line cast",
-  "holding glowing lightsaber energy blade",
-  "holding dart aimed throw",
-  "holding drumsticks crossed music",
-  "holding bow with arrow ready aim",
-  "making peace V sign gesture fingers clear",
-  "hands on hips standing confident pose"
+  "holding rusty curved dagger blade ready",
+  "holding wooden club spiked nails",
+  "holding leather coin pouch bulging with gold",
+  "holding small wooden shield cracked",
+  "holding crossbow loaded bolt aimed",
+  "holding torch burning flame",
+  "holding battle axe chipped blade",
+  "holding shortsword rusty blade",
+  "holding mace iron heavy",
+  "holding spear pointed wooden shaft",
+  "holding bow with arrow nocked ready",
+  "holding sack bag of loot",
+  "holding lantern oil lamp glowing",
+  "holding skull drinking cup",
+  "holding potion vial bubbling liquid",
+  "holding bomb black powder round",
+  "holding chain with hook weapon",
+  "holding pickaxe mining tool",
+  "holding rope coiled",
+  "holding meat leg cooked eating",
+  "holding stolen chicken",
+  "holding fish caught",
+  "holding mushroom magical large",
+  "holding treasure chest small wooden",
+  "holding key ring multiple keys",
+  "holding lockpick tools thief",
+  "holding map scroll parchment",
+  "holding bottle liquor rum",
+  "holding tankard ale beer mug",
+  "holding wand magical wooden",
+  "holding net fishing trap",
+  "holding hammer blacksmith tool",
+  "holding knife throwing blade",
+  "making fist clenched threatening gesture",
+  "scratching head confused thinking pose"
 ];
 
-// 🎨 Background colors (14 options)
+// 🎨 Background colors (12 options) - FANTASY ATMOSPHERES!
 const BACKGROUNDS = [
-  "soft mint green",
-  "pastel baby blue",
-  "warm cream beige",
-  "cool slate gray",
-  "dusty rose pink",
-  "pale butter yellow",
-  "light lavender purple",
-  "soft peach orange",
-  "light teal aqua",
-  "warm tan brown",
-  "cool navy blue",
-  "ivory white",
-  "sage green",
-  "powder blue"
+  "dark dungeon stone wall gray",
+  "murky green swamp foggy",
+  "warm tavern interior wooden",
+  "misty forest dark green",
+  "cave rocky brown",
+  "gloomy castle gray stone",
+  "foggy graveyard atmosphere eerie",
+  "torchlit dungeon orange glow",
+  "mossy ruins ancient green",
+  "dark alley cobblestone",
+  "underground cavern dark",
+  "stormy sky gray clouds"
 ];
 
-// 😊 Facial expressions (14 options)
+// 😠 Goblin facial expressions (12 options)
 const EXPRESSIONS = [
-  "huge happy smile showing teeth cheerful",
-  "cool confident smirk winking one eye",
-  "silly goofy grin laughing",
-  "cute smile with rosy blush cheeks",
-  "excited surprised face wide eyes amazed",
-  "laughing joyful expression fun",
-  "friendly warm smile welcoming kind",
-  "playful winking one eye cheeky",
-  "gentle kind smile soft sweet",
-  "mischievous grin scheming playful",
-  "proud confident look strong powerful",
-  "relaxed chill expression cool calm",
-  "tongue out silly playful cute",
-  "sweet innocent adorable look"
+  "angry scowling fierce threatening",
+  "evil grinning sinister wicked smile",
+  "grumpy frowning annoyed irritated",
+  "cackling laughing maniacal crazy",
+  "sneaky scheming plotting mischievous grin",
+  "confused puzzled stupid dumb look",
+  "aggressive snarling teeth bared",
+  "greedy hungry drooling",
+  "surprised shocked wide-eyed",
+  "tired exhausted weary",
+  "proud confident smug",
+  "battle-scarred veteran warrior tough"
 ];
 
 function getRandomElement(arr: string[]) {
@@ -289,9 +250,8 @@ function getRandomElement(arr: string[]) {
 }
 
 function buildPrompt() {
-  const bodyType = getRandomElement(BODY_TYPES);
-  const color = getRandomElement(COLORS);
-  const pattern = getRandomElement(FUR_PATTERNS);
+  const skinColor = getRandomElement(SKIN_COLORS);
+  const skinTexture = getRandomElement(SKIN_TEXTURES);
   const headItem = getRandomElement(HEAD_ITEMS);
   const eyeItem = getRandomElement(EYE_ITEMS);
   const mouthItem = getRandomElement(MOUTH_ITEMS);
@@ -302,33 +262,34 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    "professional cute cartoon mascot character, high quality NFT digital art",
-    `adorable ${BASE_CHARACTER} with ${color} ${pattern}`,
-    `${bodyType}, ${expression}`,
-    "big expressive googly kawaii eyes sparkling",
+    "fantasy illustration, painted digital art, RPG character portrait",
+    `detailed ${BASE_CHARACTER} ${skinColor} ${skinTexture}`,
+    `${expression}, large pointed ears, sharp nose crooked`,
+    "small hunched posture, thin wiry muscular arms",
     `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
-    "standing upright centered pose, both hands clearly visible holding items",
-    "detailed fur texture realistic visible strands, whiskers on face",
-    "thick black outlines clean, smooth cel shading anime style",
-    "professional studio lighting dramatic, sharp focus ultra detailed",
-    `solid flat ${background} background simple clean`,
-    "masterpiece quality trending artstation, 8K ultra HD, kawaii aesthetic cute"
+    "standing pose front view centered, full body visible",
+    "highly detailed painted style, traditional fantasy art aesthetic",
+  "textured brush strokes visible, matte painting quality",
+    "dramatic lighting with shadows, depth and atmosphere",
+    `${background} background atmospheric mood`,
+    "Dungeons and Dragons style, Warhammer art, World of Warcraft aesthetic",
+    "professional fantasy book cover art quality, detailed illustration"
   ].join(", ");
 
   const negative = [
-    "female, girl, feminine, lady, woman, girly, female features",
-    "realistic photo, photorealistic, 3D render, CGI, hyperrealistic",
-    "blurry, distorted, ugly, deformed, bad anatomy, disfigured, mutated",
-    "text, watermark, logo, signature, frame, border, words, letters",
-    "multiple characters, cropped, cut off, incomplete, human person",
-    "scary, horror, creepy, dark, evil, monster with sharp claws",
-    "pixel art, low quality, messy, sketchy, draft, amateur, bad proportions",
-    "empty hands, no items, hands behind back, missing hands, hidden hands"
+    "3D render, CGI, Pixar, Disney, smooth plastic, glossy 3D",
+    "anime, manga, kawaii, cute, adorable, chibi proportions",
+    "photorealistic, photograph, realistic human, cosplay",
+    "blurry, low quality, amateur, sketchy draft, unfinished",
+    "text, watermark, logo, signature, caption, frame border",
+    "multiple characters, cropped incomplete, floating parts",
+    "modern clothing, contemporary, t-shirt, jeans, sneakers",
+    "colorful rainbow, bright happy, cheerful cartoon"
   ].join(", ");
 
   return { prompt, negative };
@@ -346,7 +307,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🐱 Generating MALE CAT with clear hands & items...");
+    console.log("🧌 Generating FANTASY GOBLIN character...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -363,7 +324,7 @@ export async function POST(req: Request) {
             width: 1024,
             height: 1024,
             num_inference_steps: 50,
-            guidance_scale: 8.0,  // 🔥 Even stronger prompt control!
+            guidance_scale: 8.0,
             negative_prompt: negative,
           },
         });
