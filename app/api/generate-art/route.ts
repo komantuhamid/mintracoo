@@ -7,8 +7,8 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🧌 BASE CHARACTER - SIMPLE CARTOON!
-const BASE_CHARACTER = "simple cartoon goblin character";
+// 🧌 BASE CHARACTER - CONSISTENT DIRECTION!
+const BASE_CHARACTER = "simple cartoon goblin monster character";
 
 // 🧌 Goblin skin colors (12 options)
 const SKIN_COLORS = [
@@ -220,12 +220,17 @@ function buildPrompt() {
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
-    "standing centered pose, full body front view",
+    // 🔥 KEY FIX - FORCE FRONT FACING DIRECTION!
+    "facing directly forward toward camera, straight front view, symmetrical pose",
+    "standing upright centered perfectly, full body visible",
+    "looking straight ahead at viewer, direct eye contact forward",
+    "feet planted on ground facing forward, not turned sideways",
     "thick black outlines, bold lines, simple coloring",
     "flat cartoon shading minimal, clean vector style",
     "children's book illustration aesthetic, storybook art",
     `${background} background flat color no details`,
-    "simple cartoon character design, mascot style, clean flat art"
+    "simple cartoon character design, mascot style, clean flat art",
+    "character portrait style, facing camera directly, front-facing pose"
   ].join(", ");
 
   const negative = [
@@ -238,7 +243,12 @@ function buildPrompt() {
     "text, watermark, logo, signature, frame, border",
     "multiple characters, cropped, background details, scenery",
     "realistic proportions, human-like, detailed anatomy",
-    "gradient background, textured background, detailed environment"
+    "gradient background, textured background, detailed environment",
+    // 🔥 KEY FIX - BLOCK SIDE VIEWS/ANGLES!
+    "side view, profile view, turned sideways, angled pose",
+    "3/4 view, looking to the side, facing left, facing right",
+    "back view, rear view, turned around, rotated",
+    "diagonal angle, tilted, asymmetrical pose, off-center"
   ].join(", ");
 
   return { prompt, negative };
@@ -256,7 +266,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🧌 Generating SIMPLE FLAT CARTOON GOBLIN...");
+    console.log("🧌 Generating FRONT-FACING GOBLIN...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -272,8 +282,8 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 35,  // Lower steps = simpler style!
-            guidance_scale: 7.0,
+            num_inference_steps: 35,
+            guidance_scale: 7.5,  // ← Increased for better prompt control!
             negative_prompt: negative,
           },
         });
