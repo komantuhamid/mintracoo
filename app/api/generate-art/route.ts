@@ -9,7 +9,7 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - Character + Background SAME COLOR!
+// 🎨 72 COLOR SCHEMES - ALL KEPT
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -85,7 +85,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// ALL ITEMS KEPT (30 head, 25 eye, 15 mouth, 35 clothing, 30 neck, 40 hand, 15 expression)
+// ALL ITEMS KEPT (190 total!)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -231,7 +231,7 @@ function buildPrompt() {
   const prompt = [
     // 🔥 ULTRA-FLAT STYLE
     "ULTRA FLAT 2D STICKER STYLE PNG EMOJI NFT",
-    "thick bold black cartoon outlines 5px width around everything",
+    "thick bold black cartoon outlines around character edges",
     "flat vector art illustration completely 2D zero depth",
     "solid flat colors only NO shading NO gradients ANYWHERE",
     "cel-shaded flat cartoon style like animated sticker",
@@ -239,6 +239,13 @@ function buildPrompt() {
     "simple flat coloring like children's coloring book",
     "clean flat illustration vector graphic design",
     "sticker emoji style PNG cutout flat design",
+    
+    // 🔥 ONLY BLACK OUTLINES (NO WHITE!)
+    "ONLY BLACK OUTLINES around character",
+    "black ink outlines cartoon style no white borders",
+    "character has ONLY black outline edges",
+    "NO white border NO white outline NO white edge",
+    "black cartoon lines around character only",
 
     `adorable ${BASE_CHARACTER} with ${skinColor} flat uniform color`,
     
@@ -250,26 +257,52 @@ function buildPrompt() {
     "dumpy roly-poly spherical pudgy blob",
     "wide short squat spherical blob build",
 
-    // 🔥 EXTREME LEG CONSISTENCY
-    "EXACT LEG TEMPLATE: TWO short stubby legs identical",
-    "legs EXACTLY 20% of body height very short",
-    "both legs SAME LENGTH perfectly symmetrical",
-    "legs are thick rounded stumps cylindrical",
-    "both legs parallel standing straight down",
-    "NO leg length variation allowed",
-    "stubby short legs minimal length",
+    // 🔥🔥🔥 NUCLEAR EAR CONSISTENCY (NEW!)
+    "MANDATORY: EXACTLY TWO ears perfectly identical twins",
+    "BOTH ears MUST be EXACTLY same size NO EXCEPTION",
+    "BOTH ears MUST be EXACTLY same shape NO EXCEPTION",
+    "BOTH ears MUST be small pointed triangles identical",
+    "ears are PERFECT MIRROR COPIES of each other",
+    "left ear IDENTICAL to right ear absolutely",
+    "ears positioned at EXACT same height on sides of head",
+    "BOTH ears same distance from top of head perfectly symmetrical",
+    "ears are small pointed elf-like triangles matching perfectly",
+    "BOTH ears pointing upward at same angle identical",
+    "NO ear variation allowed ZERO DIFFERENCE between ears",
+    "ears MUST match perfectly like mirror reflection",
+    "small pointed ears identical twins perfectly symmetrical",
 
-    // 🔥 EXTREME ARM CONSISTENCY
-    "EXACT ARM TEMPLATE: TWO small rounded arms identical",
-    "arms EXACTLY 25% of body width very short",
-    "both arms SAME LENGTH perfectly symmetrical",
-    "arms are rounded noodle tubes soft",
-    "both arms mirror each other perfectly",
-    "NO arm length variation allowed",
-    "short stubby arms minimal length",
+    // 🔥 NUCLEAR LEG CONSISTENCY
+    "MANDATORY: EXACTLY TWO legs perfectly identical twins",
+    "BOTH legs MUST be EXACTLY same length NO EXCEPTION",
+    "BOTH legs MUST be EXACTLY same thickness NO EXCEPTION",
+    "BOTH legs MUST be EXACTLY same shape NO EXCEPTION",
+    "legs are PERFECT MIRROR COPIES of each other",
+    "left leg IDENTICAL to right leg absolutely",
+    "legs EXACTLY 20% of body height very short stubby",
+    "legs are thick rounded stumps cylindrical identical",
+    "BOTH legs parallel standing straight down together",
+    "BOTH legs same distance from center perfectly symmetrical",
+    "NO leg variation allowed ZERO DIFFERENCE between legs",
+    "legs MUST match perfectly like mirror reflection",
+    "stubby short legs minimal length identical twins",
+
+    // 🔥 NUCLEAR ARM CONSISTENCY
+    "MANDATORY: EXACTLY TWO arms perfectly identical twins",
+    "BOTH arms MUST be EXACTLY same length NO EXCEPTION",
+    "BOTH arms MUST be EXACTLY same thickness NO EXCEPTION",
+    "BOTH arms MUST be EXACTLY same shape NO EXCEPTION",
+    "arms are PERFECT MIRROR COPIES of each other",
+    "left arm IDENTICAL to right arm absolutely",
+    "arms EXACTLY 25% of body width very short stubby",
+    "arms are rounded noodle tubes soft identical",
+    "BOTH arms mirror each other perfectly symmetrical",
+    "BOTH arms same distance from center perfectly balanced",
+    "NO arm variation allowed ZERO DIFFERENCE between arms",
+    "arms MUST match perfectly like mirror reflection",
+    "short stubby arms minimal length identical twins",
 
     `${expression} facial expression`,
-    "small pointed ears on sides of head",
     `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
@@ -281,7 +314,7 @@ function buildPrompt() {
     "standing upright full body visible",
     "looking straight at viewer",
 
-    // 🔥🔥🔥 SAME COLOR BACKGROUND (EXACTLY LIKE YOUR EXAMPLES!)
+    // 🔥 SAME COLOR BACKGROUND
     `entire background is ${skinColor}`,
     `flat solid ${background} background uniform color`,
     `${skinColor} fills entire background completely`,
@@ -315,22 +348,63 @@ function buildPrompt() {
     "depth, dimension, volume, perspective",
     "cinematic lighting, studio lighting, professional lighting",
 
-    // 🔥🔥🔥 ANTI-DIFFERENT BACKGROUND
+    // 🔥 ANTI-WHITE BORDER/OUTLINE
+    "white border, white outline, white edge around character",
+    "white glow, white halo, white rim around character",
+    "white stroke, white border line, white outer edge",
+    "white frame, white boundary, white perimeter",
+    "white contour, white silhouette edge, white outer line",
+    "glowing white edge, bright white border, white highlight edge",
+    "white separator, white divider line around character",
+    "white stroke outline, white cartoon outline",
+    "sticker border, white sticker edge, white cutout border",
+    "white background leak, white edge bleed",
+    "light outline, bright outline, pale outline",
+    "double outline, multiple outlines, extra outlines",
+
+    // 🔥 ANTI-DIFFERENT BACKGROUND
     "gradient background, shaded background, depth background",
     "background gradient, background shading, background variation",
     "different background color, mismatched colors",
     "two-tone background, multi-color background",
-    "darker background, lighter background, bright background",
     "background different from character color",
     "contrasting background, complementary colors",
     "background color mismatch, wrong background",
+
+    // 🔥🔥🔥 NUCLEAR ANTI-ASYMMETRY
+    "asymmetrical legs, uneven legs, different leg lengths",
+    "one leg longer, one leg shorter, mismatched legs",
+    "legs different sizes, legs different shapes, unequal legs",
+    "asymmetrical arms, uneven arms, different arm lengths",
+    "one arm longer, one arm shorter, mismatched arms",
+    "arms different sizes, arms different shapes, unequal arms",
+    "lopsided limbs, crooked limbs, bent limbs",
+    "varying limb thickness, inconsistent limb width",
+    "limbs at different angles, tilted limbs",
+    "unbalanced proportions, irregular limbs",
+    "deformed limbs, malformed limbs, distorted limbs",
+    "three legs, four legs, one leg, no legs",
+    "three arms, four arms, one arm, no arms",
+    "extra limbs, missing limbs, wrong number of limbs",
+
+    // 🔥🔥🔥 NUCLEAR ANTI-EAR ASYMMETRY (NEW!)
+    "asymmetrical ears, uneven ears, different ear sizes",
+    "one ear bigger, one ear smaller, mismatched ears",
+    "ears different shapes, one ear round one ear pointed",
+    "ears at different heights, tilted ears, crooked ears",
+    "floppy ears, droopy ears, bent ears, folded ears",
+    "round ears, circular ears, oval ears",
+    "long ears, tall ears, big ears, large ears",
+    "rabbit ears, bunny ears, elf ears long",
+    "human ears, realistic ears, detailed ears",
+    "three ears, four ears, one ear, no ears",
+    "extra ears, missing ears, wrong number of ears",
+    "ears on top of head, ears on face",
 
     // 🔥 CONSISTENCY NEGATIVES
     "different body proportions, varying sizes",
     "long legs, tall legs, stretched legs, thin legs",
     "long arms, stretched arms, thin arms",
-    "uneven legs, asymmetrical legs, different leg sizes",
-    "uneven arms, asymmetrical arms, different arm sizes",
     "human proportions, realistic anatomy",
     "muscular, athletic, fit, toned, defined muscles",
 
@@ -359,7 +433,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating ULTRA-FLAT SAME-COLOR NFT...");
+    console.log("🎨 Generating PERFECTLY SYMMETRICAL NFT (WITH EARS!)...");
     
     const hf = new HfInference(HF_TOKEN);
 
