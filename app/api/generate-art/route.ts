@@ -3,18 +3,14 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { HfInference } from "@huggingface/inference";
 
-// 🔥 FIXED: Changed to dev model for better quality
 const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - EXACT MATCHING!
-// Standard (36) + Pastel (12) + Neon (12) + Metallic (12)
+// 🎨 72 COLOR SCHEMES - Character + Background SAME COLOR!
 const GOBLIN_COLOR_SCHEMES = [
-  // 💚 GREEN - STANDARD (8)
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
   { skin: "mint green pastel light", bg: "mint green pastel light" },
@@ -23,50 +19,34 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "sage green muted soft", bg: "sage green muted soft" },
   { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
   { skin: "jade green medium", bg: "jade green medium" },
-
-  // 💙 BLUE - STANDARD (6)
   { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
   { skin: "navy blue dark deep", bg: "navy blue dark deep" },
   { skin: "cyan blue light bright", bg: "cyan blue light bright" },
   { skin: "teal turquoise blue-green", bg: "teal turquoise blue-green" },
   { skin: "sky blue pastel light", bg: "sky blue pastel light" },
   { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
-
-  // 💜 PURPLE - STANDARD (5)
   { skin: "violet purple bright", bg: "violet purple bright" },
   { skin: "deep purple dark rich", bg: "deep purple dark rich" },
   { skin: "lavender purple pastel", bg: "lavender purple pastel" },
   { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
   { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
-
-  // ❤️ RED/ORANGE - STANDARD (5)
   { skin: "crimson red bright", bg: "crimson red bright" },
   { skin: "dark red maroon deep", bg: "dark red maroon deep" },
   { skin: "orange bright vibrant", bg: "orange bright vibrant" },
   { skin: "coral orange-pink", bg: "coral orange-pink" },
   { skin: "rust orange-brown", bg: "rust orange-brown" },
-
-  // 🩶 GRAY/BLACK/WHITE - STANDARD (4)
   { skin: "charcoal gray dark", bg: "charcoal gray dark" },
   { skin: "slate gray medium", bg: "slate gray medium" },
   { skin: "bone white pale cream", bg: "bone white pale cream" },
   { skin: "jet black dark", bg: "jet black dark" },
-
-  // 💛 YELLOW/GOLD - STANDARD (3)
   { skin: "golden yellow bright", bg: "golden yellow bright" },
   { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
   { skin: "lemon yellow pale", bg: "lemon yellow pale" },
-
-  // 🤎 BROWN - STANDARD (3)
   { skin: "chocolate brown dark", bg: "chocolate brown dark" },
   { skin: "tan brown light", bg: "tan brown light" },
   { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
-
-  // 🩷 PINK - STANDARD (2)
   { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
   { skin: "rose pink soft", bg: "rose pink soft" },
-
-  // 🌸 PASTEL COLORS (12)
   { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light" },
   { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light" },
   { skin: "pastel mint green soft light", bg: "pastel mint green soft light" },
@@ -79,8 +59,6 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "pastel sage green soft light", bg: "pastel sage green soft light" },
   { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light" },
   { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light" },
-
-  // ⚡ NEON COLORS (12)
   { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric" },
   { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric" },
   { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric" },
@@ -93,8 +71,6 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green glowing electric" },
   { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
   { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
-
-  // 💎 METALLIC COLORS (12)
   { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
   { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming" },
   { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny" },
@@ -109,7 +85,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// 👒 HEAD ITEMS (30)
+// ALL ITEMS KEPT (30 head, 25 eye, 15 mouth, 35 clothing, 30 neck, 40 hand, 15 expression)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -128,7 +104,6 @@ const HEAD_ITEMS = [
   "santa hat red on head", "party hat cone on head"
 ];
 
-// 👀 EYE ITEMS (25)
 const EYE_ITEMS = [
   "small eye patch over one eye", "tiny goggles over eyes",
   "small monocle over one eye", "round glasses over eyes",
@@ -145,7 +120,6 @@ const EYE_ITEMS = [
   "X-ray specs over eyes"
 ];
 
-// 👄 MOUTH ITEMS (15)
 const MOUTH_ITEMS = [
   "huge wide grinning mouth showing many sharp fangs",
   "giant open mouth with rows of jagged fangs",
@@ -164,7 +138,6 @@ const MOUTH_ITEMS = [
   "tongue sticking out cheeky"
 ];
 
-// 👕 CLOTHING (35)
 const CLOTHING = [
   "small leather vest worn on torso", "tiny torn rags covering body",
   "simple cloth tunic on body", "small fur vest on torso",
@@ -186,7 +159,6 @@ const CLOTHING = [
   "poncho over shoulders"
 ];
 
-// ⛓️ NECK ITEMS (30)
 const NECK_ITEMS = [
   "small bone necklace around neck", "tiny iron collar around neck",
   "small tooth necklace on neck", "simple leather cord around neck",
@@ -205,7 +177,6 @@ const NECK_ITEMS = [
   "gemstone necklace colorful on neck", "choker tight around neck"
 ];
 
-// 🗡️ HAND ITEMS (40)
 const HAND_ITEMS = [
   "holding small rusty dagger in hand", "gripping tiny wooden club in hand",
   "holding small coin bag in hand", "holding tiny wooden shield in hand",
@@ -229,7 +200,6 @@ const HAND_ITEMS = [
   "holding gem crystal in hand", "gripping staff wooden in hand"
 ];
 
-// 😠 EXPRESSIONS (15)
 const EXPRESSIONS = [
   "angry scowling", "evil grinning maniacally",
   "grumpy frowning", "crazy laughing wild",
@@ -259,112 +229,119 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
-    "simple flat 2D cartoon illustration, clean vector art style",
-    "thick black outlines, bold cartoon lines, simple coloring",
-    "absolutely flat shading, NO gradients, NO depth",
-    "completely flat illustration, zero dimension, pure 2D",
-    "flat solid colors only, no shading variations",
-    "children's book art style, cute storybook character",
-    "vector graphic flat design, minimalist shading",
+    // 🔥 ULTRA-FLAT STYLE
+    "ULTRA FLAT 2D STICKER STYLE PNG EMOJI NFT",
+    "thick bold black cartoon outlines 5px width around everything",
+    "flat vector art illustration completely 2D zero depth",
+    "solid flat colors only NO shading NO gradients ANYWHERE",
+    "cel-shaded flat cartoon style like animated sticker",
+    "NO 3D rendering NO rounded shading NO depth shading",
+    "simple flat coloring like children's coloring book",
+    "clean flat illustration vector graphic design",
+    "sticker emoji style PNG cutout flat design",
 
-    `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
-    "round soft blob body, smooth chubby round belly",
-    "simple cute dumpy proportions, pudgy spherical torso",
-    "tiny short stubby legs, small rounded arms",
-    "no muscle definition, soft pillowy cuddly body",
-    "wide short squat stature, roly-poly blob build",
+    `adorable ${BASE_CHARACTER} with ${skinColor} flat uniform color`,
+    
+    // 🔥 EXTREME BODY CONSISTENCY
+    "EXACT BODY TEMPLATE: perfectly circular round blob torso",
+    "body is perfect sphere shape width equals height 1:1",
+    "soft round chubby belly smooth spherical body",
+    "body MUST be perfect circle NO variation",
+    "dumpy roly-poly spherical pudgy blob",
+    "wide short squat spherical blob build",
+
+    // 🔥 EXTREME LEG CONSISTENCY
+    "EXACT LEG TEMPLATE: TWO short stubby legs identical",
+    "legs EXACTLY 20% of body height very short",
+    "both legs SAME LENGTH perfectly symmetrical",
+    "legs are thick rounded stumps cylindrical",
+    "both legs parallel standing straight down",
+    "NO leg length variation allowed",
+    "stubby short legs minimal length",
+
+    // 🔥 EXTREME ARM CONSISTENCY
+    "EXACT ARM TEMPLATE: TWO small rounded arms identical",
+    "arms EXACTLY 25% of body width very short",
+    "both arms SAME LENGTH perfectly symmetrical",
+    "arms are rounded noodle tubes soft",
+    "both arms mirror each other perfectly",
+    "NO arm length variation allowed",
+    "short stubby arms minimal length",
 
     `${expression} facial expression`,
     "small pointed ears on sides of head",
     `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
-    "mouth showing fangs teeth clearly visible",
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
 
-    "all accessories in correct anatomical positions",
-    "hat on head, eyes on face, mouth on face visible",
-    "clothing on body, necklace on neck, weapon in hands",
-
-    "facing directly forward straight ahead toward camera",
-    "front view centered symmetrical pose",
+    "facing directly forward front view centered",
     "standing upright full body visible",
-    "looking straight at viewer, feet on ground",
-    "stubby legs visible, centered composition",
+    "looking straight at viewer",
 
-    // 🔥 EXACT COLOR MATCHING (Triple reinforcement!)
+    // 🔥🔥🔥 SAME COLOR BACKGROUND (EXACTLY LIKE YOUR EXAMPLES!)
     `entire background is ${skinColor}`,
-    `flat solid ${background} background`,
-    `${skinColor} fills entire background`,
-    "background is identical color to character skin",
-    "character and background are SAME EXACT color",
+    `flat solid ${background} background uniform color`,
+    `${skinColor} fills entire background completely`,
+    "background is SAME EXACT color as character skin",
     "perfect monochromatic single-color scheme",
-    "zero color difference between character and background",
-    "character blends into background color perfectly",
-    "background is completely flat solid color",
-    "no background shading, no background gradient",
-    "background has zero depth or dimension",
+    "character blends perfectly into background color",
+    "background completely flat solid NO variation",
+    "background and character are IDENTICAL COLOR",
+    "monochrome color palette same tone everywhere",
 
-    "simple cartoon mascot cute blob monster character"
+    "flat 2D sticker emoji PNG NFT character"
   ].join(", ");
 
   const negative = [
-    "3D render, CGI, realistic, photorealistic, detailed",
+    // 🔥 NUCLEAR ANTI-3D
+    "3D render, CGI, realistic, photorealistic, Unreal Engine",
+    "3D shading, 3D lighting, 3D depth, 3D rendering",
+    "rounded shading, spherical shading, volumetric shading",
+    "soft shading, smooth shading, gradient shading",
+    "shading on body, belly shading, torso shading",
+    "light and shadow, lighting effects, dramatic lighting",
+    "shadows anywhere, shadow on character, shadow under feet",
+    "drop shadow, cast shadow, ground shadow, floor shadow",
+    "depth of field, blur, bokeh, atmospheric haze",
+    "ambient occlusion, contact shadows, soft shadows",
+    "rim lighting, edge lighting, backlighting",
+    "highlights, specular highlights, glossy highlights",
+    "gradients on body, color gradients, tone gradients",
+    "shading at edges, darkening at bottom, vignette",
+    "3D modeling, sculpted, rendered, raytraced",
+    "depth, dimension, volume, perspective",
+    "cinematic lighting, studio lighting, professional lighting",
 
-    // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
-    "complex shading, dramatic lighting, shadows, depth",
-    "gradient shading, soft shading, ambient occlusion",
-    "drop shadow, cast shadow, shadow under character",
-    "shading at bottom, darkening at edges, vignette",
-    "3D lighting, volumetric lighting, rim lighting",
-    "depth of field, blur, bokeh, atmospheric perspective",
-    "ground shadow, floor reflection, depth effect",
-    "dimensional shading, spherical shading, rounded shading",
-    "ambient shadows, contact shadows, soft shadows",
-    "radial gradient, color gradient in background",
-
-    "detailed texture, fur strands, hair detail, realistic skin",
-    "cinematic lighting, photography, studio lighting",
-    "painted, brush strokes, oil painting, watercolor",
-    "blurry, low quality, messy, sketchy, unfinished",
-    "text, watermark, logo, signature, frame, border",
-
-    "multiple characters, cropped, background scenery",
-    "side view, profile, turned sideways, angled",
-    "3/4 view, looking sideways, facing left or right",
-    "back view, rear view, turned around, rotated",
-
-    "muscular, athletic, fit, toned, abs visible",
-    "muscle definition, biceps, six pack, defined",
-    "tall, long limbs, stretched, slender, lanky",
-    "thin, skinny, slim, lean, human proportions",
-
-    "cigar, pipe, smoking, cigarette, tobacco",
-    "floating accessories, misplaced items",
-    "hat floating, clothing on wrong body part",
-
-    // 🔥 ULTRA-STRONG BACKGROUND NEGATIVES
-    "gradient background, textured backdrop, complex scene",
-    "background scenery, background objects, detailed background",
+    // 🔥🔥🔥 ANTI-DIFFERENT BACKGROUND
+    "gradient background, shaded background, depth background",
+    "background gradient, background shading, background variation",
     "different background color, mismatched colors",
+    "two-tone background, multi-color background",
+    "darker background, lighter background, bright background",
     "background different from character color",
-    "background lighter than character",
-    "background darker than character",
-    "background brighter than character",
-    "background duller than character",
     "contrasting background, complementary colors",
-    "two-tone color scheme, multi-color palette",
-    "color variation, color gradient, color difference",
-    "background has different shade or tone",
-    "wrong background color, incorrect background color",
-    "background with depth, background with shadow",
-    "background gradient from light to dark",
-    "background shading, background vignette",
-    "darker background at bottom, lighter at top",
-    "any variation in background color"
+    "background color mismatch, wrong background",
+
+    // 🔥 CONSISTENCY NEGATIVES
+    "different body proportions, varying sizes",
+    "long legs, tall legs, stretched legs, thin legs",
+    "long arms, stretched arms, thin arms",
+    "uneven legs, asymmetrical legs, different leg sizes",
+    "uneven arms, asymmetrical arms, different arm sizes",
+    "human proportions, realistic anatomy",
+    "muscular, athletic, fit, toned, defined muscles",
+
+    // 🔥 QUALITY NEGATIVES
+    "blurry, low quality, messy, sketchy, unfinished",
+    "detailed texture, fur detail, skin texture, pores",
+    "painted, brush strokes, oil painting, watercolor",
+    "text, watermark, logo, signature, frame",
+    "multiple characters, cropped, cut off",
+    "side view, profile, angled, back view",
+    "smoking, cigar, cigarette, tobacco"
   ].join(", ");
 
   return { prompt, negative };
@@ -382,7 +359,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin...");
+    console.log("🎨 Generating ULTRA-FLAT SAME-COLOR NFT...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -398,8 +375,8 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 40,      // 🔥 FIXED: Was 35, now 40 for dev model
-            guidance_scale: 10.0,         // 🔥 IMPROVED: Was 7.5, now 10.0 for better consistency
+            num_inference_steps: 40,
+            guidance_scale: 15.0,
             negative_prompt: negative,
           },
         });
