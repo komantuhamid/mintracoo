@@ -10,8 +10,8 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - EXACT MATCHING! 
-// (Standard 36 + Pastel 12 + Neon 12 + Metallic 12)
+// 🎨 72 COLOR SCHEMES - EXACT MATCHING!
+// Standard (36) + Pastel (12) + Neon (12) + Metallic (12)
 const GOBLIN_COLOR_SCHEMES = [
   // 💚 GREEN - STANDARD (8)
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
@@ -65,7 +65,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
   { skin: "rose pink soft", bg: "rose pink soft" },
 
-  // 🌸 PASTEL COLORS (12) - Soft and Sweet!
+  // 🌸 PASTEL COLORS (12)
   { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light" },
   { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light" },
   { skin: "pastel mint green soft light", bg: "pastel mint green soft light" },
@@ -79,7 +79,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light" },
   { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light" },
 
-  // ⚡ NEON COLORS (12) - Super Bright and Glowing!
+  // ⚡ NEON COLORS (12)
   { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric" },
   { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric" },
   { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric" },
@@ -93,7 +93,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
   { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
 
-  // 💎 METALLIC COLORS (12) - Shiny and Premium!
+  // 💎 METALLIC COLORS (12)
   { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
   { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming" },
   { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny" },
@@ -246,8 +246,8 @@ function getRandomElement<T>(arr: T[]): T {
 
 function buildPrompt() {
   const colorScheme = getRandomElement(GOBLIN_COLOR_SCHEMES);
-  const skinColor = colorScheme.skin;  // Full color description
-  const background = colorScheme.bg;    // SAME full description!
+  const skinColor = colorScheme.skin;
+  const background = colorScheme.bg;
   
   const headItem = getRandomElement(HEAD_ITEMS);
   const eyeItem = getRandomElement(EYE_ITEMS);
@@ -258,10 +258,15 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
+    // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
-    "soft minimal shading, smooth vector illustration",
+    "absolutely flat shading, NO gradients, NO depth",
+    "completely flat illustration, zero dimension, pure 2D",
+    "flat solid colors only, no shading variations",
     "children's book art style, cute storybook character",
+    "vector graphic flat design, minimalist shading",
+    
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
     "round soft blob body, smooth chubby round belly",
     "simple cute dumpy proportions, pudgy spherical torso",
@@ -286,7 +291,7 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
     
-    // 🔥 ULTRA-STRONG EXACT MATCHING (Repeat color 3x!)
+    // 🔥 EXACT COLOR MATCHING (Triple reinforcement!)
     `entire background is ${skinColor}`,
     `flat solid ${background} background`,
     `${skinColor} fills entire background`,
@@ -295,12 +300,27 @@ function buildPrompt() {
     "perfect monochromatic single-color scheme",
     "zero color difference between character and background",
     "character blends into background color perfectly",
+    "background is completely flat solid color",
+    "no background shading, no background gradient",
+    "background has zero depth or dimension",
     "simple cartoon mascot cute blob monster character"
   ].join(", ");
 
   const negative = [
     "3D render, CGI, realistic, photorealistic, detailed",
+    
+    // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
     "complex shading, dramatic lighting, shadows, depth",
+    "gradient shading, soft shading, ambient occlusion",
+    "drop shadow, cast shadow, shadow under character",
+    "shading at bottom, darkening at edges, vignette",
+    "3D lighting, volumetric lighting, rim lighting",
+    "depth of field, blur, bokeh, atmospheric perspective",
+    "ground shadow, floor reflection, depth effect",
+    "dimensional shading, spherical shading, rounded shading",
+    "ambient shadows, contact shadows, soft shadows",
+    "radial gradient, color gradient in background",
+    
     "detailed texture, fur strands, hair detail, realistic skin",
     "cinematic lighting, photography, studio lighting",
     "painted, brush strokes, oil painting, watercolor",
@@ -315,14 +335,10 @@ function buildPrompt() {
     "tall, long limbs, stretched, slender, lanky",
     "thin, skinny, slim, lean, human proportions",
     "cigar, pipe, smoking, cigarette, tobacco",
-    "cigar in mouth, pipe in mouth, smoke, smoking",
-    "holding cigar, holding pipe, smoke, smoking item",
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
-    "accessories in wrong positions, jumbled traits",
-    "items overlapping incorrectly",
     
-    // 🔥 ULTRA-STRONG BACKGROUND NEGATIVES!
+    // 🔥 ULTRA-STRONG BACKGROUND NEGATIVES
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
     "different background color, mismatched colors",
@@ -336,11 +352,11 @@ function buildPrompt() {
     "color variation, color gradient, color difference",
     "background has different shade or tone",
     "wrong background color, incorrect background color",
-    "tan background when character is not tan",
-    "brown background when character is not brown",
-    "beige background when character is not beige",
-    "gray background when character is not gray",
-    "any background color except character color"
+    "background with depth, background with shadow",
+    "background gradient from light to dark",
+    "background shading, background vignette",
+    "darker background at bottom, lighter at top",
+    "any variation in background color"
   ].join(", ");
 
   return { prompt, negative };
@@ -358,7 +374,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating 72-COLOR NFT Goblin (Standard/Pastel/Neon/Metallic)...");
+    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin...");
     
     const hf = new HfInference(HF_TOKEN);
 
