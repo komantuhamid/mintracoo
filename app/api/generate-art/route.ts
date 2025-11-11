@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { HfInference } from "@huggingface/inference";
 
 const MODEL_ID = "black-forest-labs/FLUX.1-schnell"; // 🔥 FASTER MODEL!
-const PROVIDER: "fal-ai" | "hf-inference" = "fal-ai";
+const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 // 🎨 SINGLE FIXED TEMPLATE CHARACTER (NO VARIATION!)
