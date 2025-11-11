@@ -10,7 +10,7 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 SKIN COLORS WITH MATCHING BACKGROUNDS!
+// 🎨 COLOR SCHEMES WITH MATCHED BACKGROUNDS (36 perfect pairs!)
 const GOBLIN_COLOR_SCHEMES = [
   // 💚 GREEN GOBLINS → Warm backgrounds
   { skin: "bright neon lime green glowing", bg: "solid warm orange brown" },
