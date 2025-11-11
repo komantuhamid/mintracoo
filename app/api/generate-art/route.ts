@@ -7,8 +7,8 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🧌 BASE CHARACTER - CONSISTENT DIRECTION!
-const BASE_CHARACTER = "simple cartoon goblin monster character";
+// 🧌 BASE CHARACTER - FAT CHUNKY STYLE!
+const BASE_CHARACTER = "chubby fat round goblin monster creature";
 
 // 🧌 Goblin skin colors (12 options)
 const SKIN_COLORS = [
@@ -211,16 +211,19 @@ function buildPrompt() {
   
   const prompt = [
     "simple flat 2D cartoon illustration, clean vector art style",
-    `cute ${BASE_CHARACTER} with ${skinColor} smooth skin`,
+    `adorable cute ${BASE_CHARACTER} with ${skinColor} smooth skin`,
+    // 🔥 NEW - FAT BODY DESCRIPTION!
+    "extremely fat chubby body, round plump belly, thick chunky legs",
+    "rotund obese proportions, pudgy overweight, wide stocky build",
+    "big fat round torso, chubby thick arms, stubby short limbs",
     `${expression} expression, large pointed ears`,
-    "small hunched posture, simple cartoon proportions",
+    "small cute chubby creature, chibi blob proportions",
     `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
-    // 🔥 KEY FIX - FORCE FRONT FACING DIRECTION!
     "facing directly forward toward camera, straight front view, symmetrical pose",
     "standing upright centered perfectly, full body visible",
     "looking straight ahead at viewer, direct eye contact forward",
@@ -244,11 +247,14 @@ function buildPrompt() {
     "multiple characters, cropped, background details, scenery",
     "realistic proportions, human-like, detailed anatomy",
     "gradient background, textured background, detailed environment",
-    // 🔥 KEY FIX - BLOCK SIDE VIEWS/ANGLES!
     "side view, profile view, turned sideways, angled pose",
     "3/4 view, looking to the side, facing left, facing right",
     "back view, rear view, turned around, rotated",
-    "diagonal angle, tilted, asymmetrical pose, off-center"
+    "diagonal angle, tilted, asymmetrical pose, off-center",
+    // 🔥 NEW - BLOCK THIN BODIES!
+    "thin, skinny, slim, slender, lean body",
+    "muscular, athletic, fit, toned physique",
+    "tall, lanky, long limbs, stretched proportions"
   ].join(", ");
 
   return { prompt, negative };
@@ -266,7 +272,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🧌 Generating FRONT-FACING GOBLIN...");
+    console.log("🧌 Generating FAT CHUBBY GOBLIN...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -283,7 +289,7 @@ export async function POST(req: Request) {
             width: 1024,
             height: 1024,
             num_inference_steps: 35,
-            guidance_scale: 7.5,  // ← Increased for better prompt control!
+            guidance_scale: 7.5,
             negative_prompt: negative,
           },
         });
