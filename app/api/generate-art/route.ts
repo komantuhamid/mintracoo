@@ -10,59 +10,59 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 COLOR SCHEMES WITH MATCHED BACKGROUNDS (36 perfect pairs!)
+// 🎨 COLOR SCHEMES - BG MATCHES GOBLIN COLOR! (36 pairs)
 const GOBLIN_COLOR_SCHEMES = [
-  // 💚 GREEN GOBLINS → Warm backgrounds
-  { skin: "bright neon lime green glowing", bg: "solid warm orange brown" },
-  { skin: "dark forest green deep", bg: "solid rich burgundy red" },
-  { skin: "mint green pastel light", bg: "solid soft coral pink" },
-  { skin: "olive green earthy", bg: "solid warm terracotta orange" },
-  { skin: "emerald green rich vibrant", bg: "solid deep maroon red" },
-  { skin: "sage green muted soft", bg: "solid dusty rose pink" },
-  { skin: "chartreuse yellow-green bright", bg: "solid deep purple" },
-  { skin: "jade green medium", bg: "solid warm rust orange" },
+  // 💚 GREEN GOBLINS → Green/similar backgrounds
+  { skin: "bright neon lime green glowing", bg: "solid lime green bright" },
+  { skin: "dark forest green deep", bg: "solid forest green dark" },
+  { skin: "mint green pastel light", bg: "solid mint green pale" },
+  { skin: "olive green earthy", bg: "solid olive green muted" },
+  { skin: "emerald green rich vibrant", bg: "solid emerald green" },
+  { skin: "sage green muted soft", bg: "solid sage green soft" },
+  { skin: "chartreuse yellow-green bright", bg: "solid yellow-green" },
+  { skin: "jade green medium", bg: "solid jade green" },
   
-  // 💙 BLUE GOBLINS → Orange/warm backgrounds
-  { skin: "cobalt blue bright electric", bg: "solid bright orange" },
-  { skin: "navy blue dark deep", bg: "solid golden yellow" },
-  { skin: "cyan blue light bright", bg: "solid warm coral orange" },
-  { skin: "teal turquoise blue-green", bg: "solid deep rust red" },
-  { skin: "sky blue pastel light", bg: "solid soft peach orange" },
-  { skin: "royal blue rich vibrant", bg: "solid amber orange" },
+  // 💙 BLUE GOBLINS → Blue/similar backgrounds
+  { skin: "cobalt blue bright electric", bg: "solid bright blue" },
+  { skin: "navy blue dark deep", bg: "solid dark navy blue" },
+  { skin: "cyan blue light bright", bg: "solid cyan blue" },
+  { skin: "teal turquoise blue-green", bg: "solid teal turquoise" },
+  { skin: "sky blue pastel light", bg: "solid sky blue pale" },
+  { skin: "royal blue rich vibrant", bg: "solid royal blue" },
   
-  // 💜 PURPLE GOBLINS → Yellow/green backgrounds
-  { skin: "violet purple bright", bg: "solid golden yellow" },
-  { skin: "deep purple dark rich", bg: "solid lime green" },
-  { skin: "lavender purple pastel", bg: "solid soft yellow" },
-  { skin: "magenta purple-pink bright", bg: "solid chartreuse green" },
-  { skin: "indigo purple-blue deep", bg: "solid warm gold" },
+  // 💜 PURPLE GOBLINS → Purple/similar backgrounds
+  { skin: "violet purple bright", bg: "solid violet purple" },
+  { skin: "deep purple dark rich", bg: "solid deep purple" },
+  { skin: "lavender purple pastel", bg: "solid lavender purple" },
+  { skin: "magenta purple-pink bright", bg: "solid magenta pink" },
+  { skin: "indigo purple-blue deep", bg: "solid indigo purple" },
   
-  // ❤️ RED/ORANGE GOBLINS → Teal/blue-green backgrounds
-  { skin: "crimson red bright", bg: "solid deep teal" },
-  { skin: "dark red maroon deep", bg: "solid cyan blue-green" },
-  { skin: "orange bright vibrant", bg: "solid dark teal blue" },
-  { skin: "coral orange-pink", bg: "solid turquoise teal" },
-  { skin: "rust orange-brown", bg: "solid deep sea teal" },
+  // ❤️ RED/ORANGE GOBLINS → Red/orange backgrounds
+  { skin: "crimson red bright", bg: "solid crimson red" },
+  { skin: "dark red maroon deep", bg: "solid maroon red" },
+  { skin: "orange bright vibrant", bg: "solid bright orange" },
+  { skin: "coral orange-pink", bg: "solid coral orange" },
+  { skin: "rust orange-brown", bg: "solid rust orange" },
   
-  // 🩶 GRAY/BLACK/WHITE GOBLINS → Vibrant backgrounds
-  { skin: "charcoal gray dark", bg: "solid bright cyan blue" },
-  { skin: "slate gray medium", bg: "solid vibrant purple" },
-  { skin: "bone white pale cream", bg: "solid deep navy blue" },
-  { skin: "jet black dark", bg: "solid electric orange" },
+  // 🩶 GRAY/BLACK/WHITE GOBLINS → Gray/neutral backgrounds
+  { skin: "charcoal gray dark", bg: "solid dark gray charcoal" },
+  { skin: "slate gray medium", bg: "solid slate gray" },
+  { skin: "bone white pale cream", bg: "solid cream beige pale" },
+  { skin: "jet black dark", bg: "solid dark gray black" },
   
-  // 💛 YELLOW/GOLD GOBLINS → Purple/blue backgrounds
-  { skin: "golden yellow bright", bg: "solid deep purple" },
-  { skin: "mustard yellow earthy", bg: "solid royal blue" },
-  { skin: "lemon yellow pale", bg: "solid soft lavender" },
+  // 💛 YELLOW/GOLD GOBLINS → Yellow/gold backgrounds
+  { skin: "golden yellow bright", bg: "solid golden yellow" },
+  { skin: "mustard yellow earthy", bg: "solid mustard yellow" },
+  { skin: "lemon yellow pale", bg: "solid lemon yellow" },
   
-  // 🤎 BROWN GOBLINS → Blue/teal backgrounds
-  { skin: "chocolate brown dark", bg: "solid bright cyan" },
-  { skin: "tan brown light", bg: "solid deep teal" },
-  { skin: "mahogany red-brown deep", bg: "solid turquoise blue" },
+  // 🤎 BROWN GOBLINS → Brown backgrounds
+  { skin: "chocolate brown dark", bg: "solid dark brown" },
+  { skin: "tan brown light", bg: "solid tan brown" },
+  { skin: "mahogany red-brown deep", bg: "solid mahogany brown" },
   
-  // 🩷 PINK GOBLINS → Green backgrounds
-  { skin: "hot pink bright vibrant", bg: "solid emerald green" },
-  { skin: "rose pink soft", bg: "solid sage green" }
+  // 🩷 PINK GOBLINS → Pink backgrounds
+  { skin: "hot pink bright vibrant", bg: "solid hot pink" },
+  { skin: "rose pink soft", bg: "solid rose pink" }
 ];
 
 // 👒 Head items (15 options)
@@ -181,13 +181,13 @@ const EXPRESSIONS = [
   "proud confident"
 ];
 
-// 🔧 FIXED - Generic function that works with any type!
+// 🔧 Generic function
 function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 function buildPrompt() {
-  // 🎨 Pick color scheme (skin + matching background!)
+  // 🎨 Pick color scheme (skin + MATCHING background!)
   const colorScheme = getRandomElement(GOBLIN_COLOR_SCHEMES);
   const skinColor = colorScheme.skin;
   const background = colorScheme.bg;
@@ -240,9 +240,9 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
     
-    // 🎨 COLOR-MATCHED BACKGROUND!
+    // 🎨 SAME-COLOR BACKGROUND!
     `${background} background flat solid color no details`,
-    "background color complements character perfectly",
+    "background same color family as character",
     "simple cartoon mascot, cute blob monster character"
   ].join(", ");
 
@@ -281,7 +281,8 @@ function buildPrompt() {
     
     // ❌ BACKGROUND BLOCKS
     "gradient background, textured backdrop, complex scene",
-    "background scenery, background objects, detailed background"
+    "background scenery, background objects, detailed background",
+    "contrasting background, complementary colors"
   ].join(", ");
 
   return { prompt, negative };
@@ -299,7 +300,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating COLOR-MATCHED GOBLIN...");
+    console.log("🎨 Generating SAME-COLOR GOBLIN...");
     
     const hf = new HfInference(HF_TOKEN);
 
