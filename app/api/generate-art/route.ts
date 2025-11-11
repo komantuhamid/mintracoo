@@ -181,7 +181,8 @@ const EXPRESSIONS = [
   "proud confident"
 ];
 
-function getRandomElement(arr: string[]) {
+// 🔧 FIXED - Generic function that works with any type!
+function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
