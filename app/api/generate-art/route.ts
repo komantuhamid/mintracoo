@@ -7,230 +7,191 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🧌 BASE CHARACTER
-const BASE_CHARACTER = "fantasy goblin creature";
+// 🧌 BASE CHARACTER - SIMPLE CARTOON!
+const BASE_CHARACTER = "simple cartoon goblin character";
 
-// 🧌 Goblin skin colors (15 options)
+// 🧌 Goblin skin colors (12 options)
 const SKIN_COLORS = [
   "bright green",
-  "dark forest green",
+  "dark green",
   "lime green",
   "olive green",
-  "mossy green",
   "yellow-green",
   "gray-green",
-  "brown-green",
   "orange",
   "red",
   "purple",
-  "blue-gray",
-  "muddy gray",
-  "earthy brown",
-  "pale sickly green"
+  "blue",
+  "gray",
+  "brown"
 ];
 
-// 🧌 Skin textures (12 types)
-const SKIN_TEXTURES = [
-  "with rough bumpy warty skin texture",
-  "with wrinkled old leathery skin",
-  "with smooth matte skin",
-  "with scaly lizard-like skin",
-  "with mottled blotchy patchy skin",
-  "with scarred battle-damaged skin",
-  "with spotted freckled skin texture",
-  "with cracked dry crusty skin",
-  "with hairy fuzzy patches",
-  "with weathered aged rough skin",
-  "with slimy oily sheen skin",
-  "with pockmarked crater skin"
-];
-
-// 👒 Head items (28 options)
+// 👒 Head items (25 options)
 const HEAD_ITEMS = [
-  "wearing worn leather cap",
-  "wearing rusty metal helmet dented",
-  "wearing tattered cloth hood",
-  "wearing dirty bandana headband",
-  "wearing bone helmet primitive",
-  "wearing iron crown rusted",
-  "wearing bucket on head makeshift",
-  "wearing feather headdress tribal",
-  "wearing torn wizard hat pointy",
-  "wearing fur hat barbaric",
-  "wearing chain mail coif",
-  "wearing wooden mask carved",
-  "wearing mushroom cap hat",
-  "wearing horned helmet viking",
-  "wearing goggles leather straps",
-  "wearing skull cap bone",
-  "wearing bronze circlet ancient",
-  "wearing straw hat farmer",
-  "wearing jester hat with bells",
-  "wearing hood with pointed ears",
+  "wearing leather cap",
+  "wearing metal helmet",
+  "wearing cloth hood",
+  "wearing bandana",
+  "wearing bone helmet",
+  "wearing iron crown",
+  "wearing bucket hat",
+  "wearing feather headdress",
+  "wearing wizard hat",
+  "wearing fur hat",
+  "wearing chain mail hood",
+  "wearing wooden mask",
+  "wearing mushroom cap",
+  "wearing horned helmet",
+  "wearing goggles",
+  "wearing skull cap",
+  "wearing bronze crown",
+  "wearing straw hat",
+  "wearing jester hat",
+  "wearing pointed hood",
   "wearing antler crown",
-  "wearing tribal war paint markings",
-  "wearing scrap metal helmet patchwork",
-  "wearing animal pelt hood",
-  "wearing leaf crown natural",
-  "wearing cracked pottery bowl helmet",
-  "wearing bandage wraps head injured",
-  "bald goblin head no hat"
+  "wearing war paint",
+  "wearing scrap helmet",
+  "wearing animal pelt",
+  "bald goblin head"
 ];
 
-// 👀 Eye items (16 options)
+// 👀 Eye items (14 options)
 const EYE_ITEMS = [
-  "wearing leather eye patch scarred",
-  "wearing broken cracked goggles",
-  "wearing rusty metal monocle",
-  "wearing dirty round spectacles",
-  "wearing bone frame glasses",
-  "wearing scrap goggles steampunk",
-  "wearing bandage over one eye bloody",
-  "wearing tribal face paint around eyes",
-  "wearing iron eye guard visor",
-  "wearing clockwork mechanical glass eye",
-  "wearing wooden tribal mask covering eyes",
-  "wearing aviator goggles cracked lens",
-  "wearing blindfold torn rag",
-  "wearing crystal monocle magical",
-  "wearing skull mask over face",
-  "large yellow goblin eyes natural no eyewear"
+  "wearing eye patch",
+  "wearing goggles",
+  "wearing monocle",
+  "wearing round glasses",
+  "wearing bone glasses",
+  "wearing scrap goggles",
+  "wearing bandage over eye",
+  "wearing face paint",
+  "wearing iron visor",
+  "wearing mechanical eye",
+  "wearing mask",
+  "wearing aviator goggles",
+  "wearing blindfold",
+  "large yellow eyes"
 ];
 
-// 👄 Mouth items (14 options)
+// 👄 Mouth items (12 options)
 const MOUTH_ITEMS = [
-  "smoking old wooden pipe tobacco",
-  "holding dead rat in teeth",
-  "smoking cigar stub dirty",
-  "chewing on bone gnawing",
-  "holding dagger blade between teeth",
+  "smoking wooden pipe",
+  "holding rat in teeth",
+  "smoking cigar",
+  "chewing bone",
+  "holding dagger in teeth",
   "smoking clay pipe",
-  "chewing leather strap",
-  "holding gold coin in mouth",
-  "biting rope thick twine",
+  "chewing leather",
+  "holding coin in mouth",
+  "biting rope",
   "smoking mushroom pipe",
-  "holding key in teeth rusty",
-  "chewing tobacco wad bulging cheek",
-  "holding cork bottle stopper",
-  "grinning showing sharp jagged fangs"
+  "holding key in teeth",
+  "grinning showing fangs"
 ];
 
-// 👕 Clothing (28 options)
+// 👕 Clothing (25 options)
 const CLOTHING = [
-  "wearing tattered leather vest armor worn",
-  "wearing dirty brown rags torn cloth",
-  "wearing patched tunic medieval peasant",
-  "wearing rusty chain mail armor",
-  "wearing fur vest primitive barbaric",
-  "wearing studded leather jerkin",
-  "wearing torn wizard robes tattered",
-  "wearing bronze scale mail armor",
-  "wearing burlap sack tunic rough",
-  "wearing patchwork scrap leather",
-  "wearing animal hide vest tribal",
-  "wearing torn shirt cloth",
-  "wearing dented iron plate armor",
-  "wearing hooded cloak torn brown",
-  "wearing mercenary leather coat",
-  "wearing pirate vest buckles",
-  "wearing prisoner rags chains",
-  "wearing blacksmith leather apron",
-  "wearing stolen noble doublet fancy",
-  "wearing monk robes brown simple",
-  "wearing bandit leather straps",
-  "wearing scavenger armor mismatched",
-  "wearing bone armor ribs primitive",
-  "wearing damaged knight armor stolen",
-  "wearing sailor vest nautical",
-  "wearing alchemist robes stained",
-  "wearing simple peasant tunic",
-  "bare chest muscular scarred no shirt"
+  "wearing leather vest",
+  "wearing torn rags",
+  "wearing cloth tunic",
+  "wearing chain mail",
+  "wearing fur vest",
+  "wearing leather jerkin",
+  "wearing torn robes",
+  "wearing scale armor",
+  "wearing burlap tunic",
+  "wearing patchwork leather",
+  "wearing animal hide",
+  "wearing torn shirt",
+  "wearing iron armor",
+  "wearing torn cloak",
+  "wearing leather coat",
+  "wearing pirate vest",
+  "wearing prisoner rags",
+  "wearing leather apron",
+  "wearing stolen doublet",
+  "wearing monk robes",
+  "wearing bandit leather",
+  "wearing scrap armor",
+  "wearing bone armor",
+  "wearing sailor vest",
+  "bare chest"
 ];
 
-// ⛓️ Neck items (14 options)
+// ⛓️ Neck items (12 options)
 const NECK_ITEMS = [
-  "wearing bone skull necklace trophy",
-  "wearing rusty iron collar slave",
-  "wearing tooth necklace sharp fangs",
-  "wearing leather cord necklace",
-  "wearing stolen gold chain loot",
-  "wearing tribal bead necklace colorful",
-  "wearing rope around neck noose",
-  "wearing bronze medallion tarnished",
-  "wearing fur collar warm",
-  "wearing spiked iron collar punk",
-  "wearing skull charm pendant",
-  "wearing glowing amulet magical",
-  "wearing key ring necklace jangling",
-  "bare neck no accessory"
+  "wearing bone necklace",
+  "wearing iron collar",
+  "wearing tooth necklace",
+  "wearing leather cord",
+  "wearing gold chain",
+  "wearing bead necklace",
+  "wearing rope",
+  "wearing bronze medallion",
+  "wearing fur collar",
+  "wearing spiked collar",
+  "wearing skull pendant",
+  "bare neck"
 ];
 
-// 🗡️ Hand items (32 options)
+// 🗡️ Hand items (28 options)
 const HAND_ITEMS = [
-  "holding rusty curved dagger threatening",
-  "holding wooden club with nails spiked",
-  "holding bulging leather coin bag gold",
-  "holding cracked wooden shield small",
-  "holding primitive crossbow loaded",
-  "holding burning torch flame flickering",
-  "holding chipped battle axe blade",
-  "holding rusty shortsword bent blade",
-  "holding heavy iron mace crude",
-  "holding wooden spear pointed shaft",
-  "holding bow with arrow ready aimed",
-  "holding sack of loot stolen goods",
-  "holding oil lantern glowing dim",
-  "holding skull as drinking cup bone",
-  "holding bubbling potion vial glass",
-  "holding round bomb black powder",
-  "holding chain weapon with hook",
-  "holding mining pickaxe tool",
-  "holding coiled rope thick hemp",
-  "holding cooked meat leg eating",
-  "holding stolen chicken live bird",
-  "holding caught fish dead",
-  "holding large mushroom magical",
-  "holding small treasure chest wooden",
-  "holding key ring many keys",
-  "holding lockpick tools thief",
-  "holding parchment map scroll old",
-  "holding bottle of rum liquor",
-  "holding tankard ale beer mug",
-  "holding wooden wand carved magical",
-  "holding throwing knife blade sharp",
-  "making threatening clenched fist"
+  "holding rusty dagger",
+  "holding wooden club",
+  "holding coin bag",
+  "holding wooden shield",
+  "holding crossbow",
+  "holding torch",
+  "holding battle axe",
+  "holding shortsword",
+  "holding iron mace",
+  "holding wooden spear",
+  "holding bow and arrow",
+  "holding loot sack",
+  "holding lantern",
+  "holding skull cup",
+  "holding potion vial",
+  "holding bomb",
+  "holding chain weapon",
+  "holding pickaxe",
+  "holding rope",
+  "holding meat leg",
+  "holding chicken",
+  "holding fish",
+  "holding mushroom",
+  "holding treasure chest",
+  "holding keys",
+  "holding map scroll",
+  "holding bottle",
+  "clenched fist"
 ];
 
-// 🎨 Backgrounds (12 options)
+// 🎨 Background colors (10 options) - SOLID FLAT COLORS!
 const BACKGROUNDS = [
-  "dark dungeon stone wall background",
-  "murky swamp green foggy atmosphere",
-  "warm tavern wooden interior",
-  "misty dark forest trees background",
-  "rocky cave brown stone",
-  "gloomy castle gray stone wall",
-  "foggy graveyard eerie mood",
-  "torchlit corridor orange glow",
-  "mossy ruins ancient crumbling",
-  "dark alley cobblestone street",
-  "underground cavern shadowy",
-  "stormy gray sky clouds"
+  "solid bright green",
+  "solid dark green",
+  "solid brown",
+  "solid gray",
+  "solid dark blue",
+  "solid purple",
+  "solid orange",
+  "solid red",
+  "solid teal",
+  "solid olive"
 ];
 
-// 😠 Expressions (12 options)
+// 😠 Expressions (10 options)
 const EXPRESSIONS = [
-  "angry scowling fierce expression threatening",
-  "evil grinning sinister wicked smile menacing",
-  "grumpy frowning annoyed irritated look",
-  "cackling laughing maniacal crazy grin",
-  "sneaky scheming plotting mischievous smirk",
-  "confused puzzled stupid dumb expression",
-  "aggressive snarling teeth bared angry",
-  "greedy hungry drooling wanting",
-  "surprised shocked wide-eyed startled",
-  "tired exhausted weary worn out",
-  "proud confident smug arrogant",
-  "battle-hardened tough veteran warrior"
+  "angry scowling",
+  "evil grinning",
+  "grumpy frowning",
+  "crazy laughing",
+  "sneaky smirking",
+  "confused stupid",
+  "aggressive snarling",
+  "greedy drooling",
+  "surprised shocked",
+  "proud confident"
 ];
 
 function getRandomElement(arr: string[]) {
@@ -239,7 +200,6 @@ function getRandomElement(arr: string[]) {
 
 function buildPrompt() {
   const skinColor = getRandomElement(SKIN_COLORS);
-  const skinTexture = getRandomElement(SKIN_TEXTURES);
   const headItem = getRandomElement(HEAD_ITEMS);
   const eyeItem = getRandomElement(EYE_ITEMS);
   const mouthItem = getRandomElement(MOUTH_ITEMS);
@@ -250,37 +210,35 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    "flat 2D illustration, hand-painted digital art style, matte painting",
-    "traditional fantasy artwork, painterly illustration, visible brush strokes texture",
-    `detailed ${BASE_CHARACTER} ${skinColor} ${skinTexture}`,
-    `${expression}, large pointed ears, crooked sharp nose`,
-    "small hunched creature, thin wiry arms muscular",
+    "simple flat 2D cartoon illustration, clean vector art style",
+    `cute ${BASE_CHARACTER} with ${skinColor} smooth skin`,
+    `${expression} expression, large pointed ears`,
+    "small hunched posture, simple cartoon proportions",
     `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
-    "standing pose centered, full body visible front view",
-    "flat illustration style, traditional painted artwork aesthetic",
-    "textured matte finish, hand-painted look, artistic brush work visible",
-    "dramatic moody lighting with painted shadows, atmospheric depth",
-    `${background} painted backdrop`,
-    "Dungeons Dragons art style, Warhammer fantasy painting, storybook illustration",
-    "traditional fantasy book cover art, flat illustrated style, painterly technique"
+    "standing centered pose, full body front view",
+    "thick black outlines, bold lines, simple coloring",
+    "flat cartoon shading minimal, clean vector style",
+    "children's book illustration aesthetic, storybook art",
+    `${background} background flat color no details`,
+    "simple cartoon character design, mascot style, clean flat art"
   ].join(", ");
 
   const negative = [
-    "3D render, CGI, smooth 3D, Pixar, Disney style, glossy plastic look",
-    "polished smooth rendering, clean CGI, computer generated 3D model",
-    "photorealistic, photograph, realistic photo, hyperrealistic render",
-    "anime, manga, kawaii, cute, adorable, chibi, cartoon baby style",
-    "blurry, low quality, amateur, sketchy draft, messy unfinished",
-    "text, watermark, logo, signature, caption, words, letters, frame border",
-    "multiple characters, crowd scene, cropped incomplete, floating disconnected",
-    "modern clothing, contemporary, t-shirt, jeans, sneakers, modern items",
-    "bright colorful rainbow, happy cheerful, cute friendly, pastel soft",
-    "smooth gradient shading, airbrushed, vector art clean, digital polish"
+    "3D render, CGI, realistic, photorealistic, detailed rendering",
+    "complex shading, realistic lighting, dramatic shadows, atmospheric depth",
+    "detailed texture, realistic skin, fur detail, hair strands visible",
+    "cinematic lighting, studio lighting, professional photography",
+    "painted style, brush strokes, oil painting, watercolor, matte painting",
+    "blurry, low quality, messy, sketchy, unfinished",
+    "text, watermark, logo, signature, frame, border",
+    "multiple characters, cropped, background details, scenery",
+    "realistic proportions, human-like, detailed anatomy",
+    "gradient background, textured background, detailed environment"
   ].join(", ");
 
   return { prompt, negative };
@@ -298,7 +256,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🧌 Generating FLAT 2D PAINTED GOBLIN...");
+    console.log("🧌 Generating SIMPLE FLAT CARTOON GOBLIN...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -314,8 +272,8 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 45,
-            guidance_scale: 7.5,
+            num_inference_steps: 35,  // Lower steps = simpler style!
+            guidance_scale: 7.0,
             negative_prompt: negative,
           },
         });
@@ -323,7 +281,7 @@ export async function POST(req: Request) {
       } catch (e: any) {
         lastErr = e;
         if (i < 2) {
-          await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+          await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
         }
       }
     }
