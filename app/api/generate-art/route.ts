@@ -3,7 +3,6 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { HfInference } from "@huggingface/inference";
 
-// 🔥 FIXED: Changed to dev model for better quality
 const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
@@ -11,8 +10,7 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - EXACT MATCHING!
-// Standard (36) + Pastel (12) + Neon (12) + Metallic (12)
+// 🎨 72 COLOR SCHEMES (keeping all your colors)
 const GOBLIN_COLOR_SCHEMES = [
   // 💚 GREEN - STANDARD (8)
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
@@ -109,7 +107,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// 👒 HEAD ITEMS (30)
+// 👒 HEAD ITEMS (30) - ALL KEPT
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -128,7 +126,7 @@ const HEAD_ITEMS = [
   "santa hat red on head", "party hat cone on head"
 ];
 
-// 👀 EYE ITEMS (25)
+// 👀 EYE ITEMS (25) - ALL KEPT
 const EYE_ITEMS = [
   "small eye patch over one eye", "tiny goggles over eyes",
   "small monocle over one eye", "round glasses over eyes",
@@ -145,7 +143,7 @@ const EYE_ITEMS = [
   "X-ray specs over eyes"
 ];
 
-// 👄 MOUTH ITEMS (15)
+// 👄 MOUTH ITEMS (15) - ALL KEPT
 const MOUTH_ITEMS = [
   "huge wide grinning mouth showing many sharp fangs",
   "giant open mouth with rows of jagged fangs",
@@ -164,7 +162,7 @@ const MOUTH_ITEMS = [
   "tongue sticking out cheeky"
 ];
 
-// 👕 CLOTHING (35)
+// 👕 CLOTHING (35) - ALL KEPT
 const CLOTHING = [
   "small leather vest worn on torso", "tiny torn rags covering body",
   "simple cloth tunic on body", "small fur vest on torso",
@@ -186,7 +184,7 @@ const CLOTHING = [
   "poncho over shoulders"
 ];
 
-// ⛓️ NECK ITEMS (30)
+// ⛓️ NECK ITEMS (30) - ALL KEPT
 const NECK_ITEMS = [
   "small bone necklace around neck", "tiny iron collar around neck",
   "small tooth necklace on neck", "simple leather cord around neck",
@@ -205,7 +203,7 @@ const NECK_ITEMS = [
   "gemstone necklace colorful on neck", "choker tight around neck"
 ];
 
-// 🗡️ HAND ITEMS (40)
+// 🗡️ HAND ITEMS (40) - ALL KEPT
 const HAND_ITEMS = [
   "holding small rusty dagger in hand", "gripping tiny wooden club in hand",
   "holding small coin bag in hand", "holding tiny wooden shield in hand",
@@ -229,7 +227,7 @@ const HAND_ITEMS = [
   "holding gem crystal in hand", "gripping staff wooden in hand"
 ];
 
-// 😠 EXPRESSIONS (15)
+// 😠 EXPRESSIONS (15) - ALL KEPT
 const EXPRESSIONS = [
   "angry scowling", "evil grinning maniacally",
   "grumpy frowning", "crazy laughing wild",
@@ -259,7 +257,7 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
+    // 🔥 ULTRA-FLAT STYLE
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
@@ -269,11 +267,39 @@ function buildPrompt() {
     "vector graphic flat design, minimalist shading",
 
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
-    "round soft blob body, smooth chubby round belly",
-    "simple cute dumpy proportions, pudgy spherical torso",
-    "tiny short stubby legs, small rounded arms",
-    "no muscle definition, soft pillowy cuddly body",
-    "wide short squat stature, roly-poly blob build",
+    
+    // 🔥🔥🔥 EXTREME BODY CONSISTENCY (100% IDENTICAL!)
+    "EXACT BODY TEMPLATE: perfectly circular round blob torso",
+    "body is perfect sphere shape, width equals height exactly",
+    "soft round chubby belly, smooth spherical body shape",
+    "body proportions MUST be 1:1 ratio circular blob",
+    "torso is perfect circle with no variation allowed",
+    "dumpy roly-poly spherical pudgy body shape",
+    "wide short squat stature, spherical blob build",
+
+    // 🔥🔥🔥 EXTREME LEG CONSISTENCY (100% IDENTICAL!)
+    "EXACT LEG TEMPLATE: TWO short stubby legs identical twins",
+    "legs are EXACTLY 20% of body height, very short stubby",
+    "both legs SAME LENGTH EXACTLY, perfectly symmetrical legs",
+    "legs are thick rounded stumps, cylindrical short pillars",
+    "legs positioned directly under body center, evenly spaced",
+    "both legs perfectly parallel, standing straight down",
+    "tiny rounded feet at bottom of each leg, simple oval feet",
+    "NO variation in leg length or thickness allowed",
+    "legs MUST be identical mirror images of each other",
+    "stubby short legs, very minimal leg length",
+
+    // 🔥🔥🔥 EXTREME ARM CONSISTENCY (100% IDENTICAL!)
+    "EXACT ARM TEMPLATE: TWO small rounded arms identical twins",
+    "arms are EXACTLY 25% of body width, very short stumpy",
+    "both arms SAME LENGTH EXACTLY, perfectly symmetrical arms",
+    "arms are rounded noodle tubes, soft cylindrical limbs",
+    "arms positioned on sides of body, evenly spaced",
+    "both arms perfectly mirror each other in size and shape",
+    "tiny rounded hands at end of each arm, simple oval hands",
+    "NO variation in arm length or thickness allowed",
+    "arms MUST be identical mirror images of each other",
+    "short stubby arms, very minimal arm length",
 
     `${expression} facial expression`,
     "small pointed ears on sides of head",
@@ -295,7 +321,7 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
 
-    // 🔥 EXACT COLOR MATCHING (Triple reinforcement!)
+    // 🔥 EXACT COLOR MATCHING
     `entire background is ${skinColor}`,
     `flat solid ${background} background`,
     `${skinColor} fills entire background`,
@@ -314,7 +340,7 @@ function buildPrompt() {
   const negative = [
     "3D render, CGI, realistic, photorealistic, detailed",
 
-    // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
+    // 🔥 ANTI-SHADING
     "complex shading, dramatic lighting, shadows, depth",
     "gradient shading, soft shading, ambient occlusion",
     "drop shadow, cast shadow, shadow under character",
@@ -325,6 +351,22 @@ function buildPrompt() {
     "dimensional shading, spherical shading, rounded shading",
     "ambient shadows, contact shadows, soft shadows",
     "radial gradient, color gradient in background",
+
+    // 🔥🔥🔥 ANTI-VARIATION (Force consistency!)
+    "different body proportions, varying body sizes",
+    "inconsistent body shape, different torso sizes",
+    "long legs, tall legs, stretched legs, extended legs",
+    "thin legs, skinny legs, slender legs, slim legs",
+    "uneven leg length, asymmetrical legs, different leg sizes",
+    "long arms, extended arms, stretched arms, lanky arms",
+    "thin arms, skinny arms, slender arms, slim arms",
+    "uneven arm length, asymmetrical arms, different arm sizes",
+    "muscular legs, defined legs, athletic legs",
+    "muscular arms, defined arms, athletic arms",
+    "human proportions, realistic anatomy, correct anatomy",
+    "tall character, stretched character, elongated character",
+    "variation in limb length, limb size differences",
+    "asymmetrical body, unbalanced proportions",
 
     "detailed texture, fur strands, hair detail, realistic skin",
     "cinematic lighting, photography, studio lighting",
@@ -339,14 +381,13 @@ function buildPrompt() {
 
     "muscular, athletic, fit, toned, abs visible",
     "muscle definition, biceps, six pack, defined",
-    "tall, long limbs, stretched, slender, lanky",
     "thin, skinny, slim, lean, human proportions",
 
     "cigar, pipe, smoking, cigarette, tobacco",
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
 
-    // 🔥 ULTRA-STRONG BACKGROUND NEGATIVES
+    // 🔥 BACKGROUND NEGATIVES
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
     "different background color, mismatched colors",
@@ -382,7 +423,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin...");
+    console.log("🎨 Generating LOCKED-ANATOMY NFT Goblin...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -398,8 +439,8 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 40,      // 🔥 FIXED: Was 35, now 40 for dev model
-            guidance_scale: 10.0,         // 🔥 IMPROVED: Was 7.5, now 10.0 for better consistency
+            num_inference_steps: 40,
+            guidance_scale: 12.0,     // 🔥 INCREASED from 10.0 to 12.0 for MAXIMUM consistency!
             negative_prompt: negative,
           },
         });
