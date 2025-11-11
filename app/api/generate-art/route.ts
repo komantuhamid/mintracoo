@@ -4,12 +4,12 @@ import { NextResponse } from "next/server";
 import { HfInference } from "@huggingface/inference";
 
 const MODEL_ID = "black-forest-labs/FLUX.1-dev";
-const PROVIDER = "replicate";
+const PROVIDER: "fal-ai" | "hf-inference" = "fal-ai";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 const BASE_CHARACTER = "cute round blob goblin creature";
 
-// 🎨 72 COLOR SCHEMES (unchanged)
+// 🎨 72 COLOR SCHEMES (same as before)
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -103,14 +103,13 @@ const HEAD_ITEMS = [
   "santa hat red on head", "party hat cone on head"
 ];
 
-// 👀 EYE ITEMS - 🔥 REMOVED "3D glasses" - REPLACED WITH FLAT ALTERNATIVES!
 const EYE_ITEMS = [
   "small eye patch over one eye", "tiny goggles over eyes",
   "small monocle over one eye", "round glasses over eyes",
   "bandage covering one eye", "tiny aviator goggles over eyes",
   "large round yellow eyes", "small beady eyes glowing",
   "wide crazy eyes bulging", "squinting menacing eyes",
-  "sunglasses cool over eyes", "retro cinema glasses red-blue over eyes", // 🔥 CHANGED!
+  "sunglasses cool over eyes", "retro cinema glasses red-blue over eyes",
   "steampunk goggles brass over eyes", "cyclops single giant eye",
   "heart-shaped glasses over eyes", "ski goggles over eyes",
   "swimming goggles over eyes", "VR headset over eyes",
@@ -229,162 +228,123 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    // 🔥🔥🔥 MAXIMUM ULTRA-FLAT STYLE ENFORCEMENT!
-    "ULTRA FLAT 2D illustration style, completely flat cartoon art",
-    "simple flat vector art, clean 2D design, sticker style",
-    "thick black outlines, bold solid colors, zero shading",
-    "ABSOLUTELY FLAT with NO depth, NO dimension, NO effects",
-    "pure 2D flat coloring, single solid colors only",
-    "flat cartoon style like emoji or icon design",
-    "children's storybook illustration, simple clean art",
-    "zero shadows anywhere, zero gradients anywhere",
-    "completely flat background, no texture, no patterns",
+    // 🔥🔥🔥 EXTREME NUCLEAR FLAT CARTOON STYLE!
+    "COMIC BOOK ILLUSTRATION STYLE",
+    "THICK BLACK INK OUTLINES like drawn with marker pen",
+    "FLAT CARTOON COLORING with cel-shading style",
+    "simple 2D vector art, clean line art, bold outlines",
+    "STICKER DESIGN style, EMOJI style, ICON design",
+    "children's cartoon illustration, Saturday morning cartoon style",
+    "ZERO depth, ZERO dimension, completely FLAT 2D art",
+    "NO shading, NO shadows, NO gradients, NO lighting effects",
+    "solid flat colors only, uniform color fill, no color variation",
+    "drawn with black pen and filled with single color",
+    "comic strip art style, graphic novel illustration",
     
-    // 🔥 CONSISTENT BODY STRUCTURE
+    // 🔥 ANTI-REALISM
+    "NOT realistic, NOT photography, NOT render",
+    "stylized cartoon, simplified shapes, basic forms",
+    "hand-drawn cartoon look, vector graphics style",
+    
+    // 🔥 BODY CONSISTENCY
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
-    "EXACT same body proportions every time always",
-    "perfectly round spherical blob body identical shape",
-    "uniform circular torso same size every generation",
-    "consistent chubby round belly standard template",
-    "fixed dumpy pudgy blob build proportions",
-    "short stubby legs same length always",
-    "small rounded arms same size always",
-    "no body size variation whatsoever",
-    "standardized blob creature dimensions fixed",
+    "EXACT same body proportions always",
+    "perfectly round circular blob body shape",
+    "uniform spherical torso same size",
+    "consistent round chubby belly",
+    "short stubby legs identical",
+    "small rounded arms same size",
+    "standardized blob proportions",
     
-    // 🔥🔥🔥 NUCLEAR ANTI-SHADOW & ANTI-GRADIENT!
-    "character floating in void with NO ground NO floor",
-    "ZERO shadows under character, NO ground shadow",
-    "NO shadow beneath feet, NO shadow anywhere",
-    "floating character with zero contact shadows",
-    "absolutely NO shadows on body, NO shading on body",
-    "NO gradient on belly, NO darker areas, NO lighter areas",
+    // 🔥🔥🔥 MAXIMUM ANTI-SHADOW & ANTI-GRADIENT!
+    "floating in void NO ground NO floor NO surface",
+    "ZERO shadows anywhere on character or ground",
+    "NO shadow under feet, NO contact shadows",
+    "NO gradient shading on belly or body",
+    "NO darker bottom, NO lighter top",
     "uniform single flat color across entire body",
-    "character and background EXACT same flat color",
-    "zero dimensional effects, completely flat rendering",
-    "NO depth perception, NO appearance whatsoever",
+    "character and background SAME flat color",
+    "NO depth effects, completely 2D flat",
     
     // 🔥 CHARACTER FEATURES
     `${expression} facial expression`,
-    "small pointed ears on sides of head",
+    "small pointed ears on sides",
     `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
-    "mouth showing fangs teeth clearly visible",
+    "fangs teeth visible",
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
     
-    // 🔥 POSE & COMPOSITION
-    "facing directly forward centered symmetrical composition",
-    "front view straight ahead toward camera",
-    "standing upright full body visible completely",
-    "looking straight at viewer eye contact",
-    "stubby legs visible standing pose",
-    "centered in frame composition",
+    // 🔥 POSE
+    "facing forward centered",
+    "front view straight ahead",
+    "standing upright full body",
+    "centered composition",
     
-    // 🔥 COLOR MATCHING
-    `entire background is ${skinColor} completely`,
-    `flat solid ${background} background uniform color`,
-    `${skinColor} fills entire background edge to edge`,
-    "background identical color to character skin exactly",
-    "character blends perfectly into background color",
-    "perfect monochromatic single-color artwork",
-    "ZERO color variation between character and background",
-    "simple cute blob mascot character design"
+    // 🔥 BACKGROUND
+    `entire background is ${skinColor}`,
+    `flat solid ${background} background`,
+    `${skinColor} fills background completely`,
+    "background same color as character",
+    "monochromatic color scheme",
+    "simple cartoon mascot"
   ].join(", ");
 
   const negative = [
-    // 🔥🔥🔥 MAXIMUM ANTI-DIMENSIONAL & ANTI-SHADOW NEGATIVES!
-    "three dimensional, render, model, CGI, realistic",
-    "photorealistic, photo, photography, depth",
-    "dimensional, volume, volumetric, perspective",
-    "foreshortening, vanishing point, horizon line",
+    // 🔥🔥🔥 NUCLEAR ANTI-3D & ANTI-REALISTIC!
+    "realistic, photorealistic, photo, photography, render",
+    "3d render, cgi, unreal engine, blender",
+    "depth, dimension, volume, perspective",
+    "realistic lighting, studio lighting, dramatic lighting",
+    "cinematic, movie quality, high detail, hyperrealistic",
     
-    // SHADOWS (NUCLEAR STRENGTH!)
-    "shadow, shadows, shadowing, shadowed",
-    "ground shadow, floor shadow, drop shadow, cast shadow",
-    "shadow under character, shadow beneath feet",
-    "shadow on ground, shadow below character",
-    "contact shadow, ambient shadow, soft shadow, hard shadow",
-    "any shadow of any kind anywhere",
-    "dark area beneath character, darkness at bottom",
-    "ground beneath character, floor under feet",
-    "standing on surface, standing on ground, on floor",
+    // ANTI-SHADOW (MAXIMUM!)
+    "shadow, shadows, shadowing, drop shadow, cast shadow",
+    "ground shadow, floor shadow, character shadow",
+    "shadow under feet, shadow beneath character",
+    "contact shadow, ambient shadow, any shadow",
+    "dark area beneath, darkness at bottom",
+    "standing on ground, on floor, on surface",
     
-    // GRADIENTS & SHADING (NUCLEAR STRENGTH!)
-    "gradient, gradient shading, color gradient, gradient fill",
-    "shading, shaded, cell shading, toon shading",
-    "darker at bottom, lighter at top, color fade",
-    "gradient on belly, gradient on body, gradient on torso",
-    "shading on stomach, shading on torso, body shading",
-    "darker lower half, brighter upper half, lighter top",
-    "two-tone body, multi-tone coloring, color variation",
-    "belly shading, stomach gradient, torso gradient",
-    "spherical shading, rounded shading, dimensional shading",
-    "depth shading, volume shading, lighting effects",
+    // ANTI-GRADIENT & SHADING (MAXIMUM!)
+    "gradient, gradient shading, color gradient",
+    "shading, shaded, cel shading, toon shading",
+    "darker at bottom, lighter at top",
+    "gradient on belly, gradient on body",
+    "body shading, torso shading, stomach shading",
+    "two-tone, multi-tone, color fade",
+    "spherical shading, rounded shading",
+    "3d shading, depth shading, volume shading",
     "ambient occlusion, subsurface scattering",
     
-    // LIGHTING EFFECTS
-    "dramatic lighting, cinematic lighting, studio lighting",
+    // ANTI-LIGHTING
     "volumetric lighting, rim lighting, edge lighting",
-    "god rays, light rays, lighting effects",
-    "highlights, specular highlights, shine highlights",
-    "depth of field, bokeh, blur, blurry background",
-    "atmospheric perspective, aerial perspective",
+    "god rays, light rays, highlights",
+    "specular, shine, reflections",
+    "depth of field, bokeh, blur",
     
-    // BODY VARIATION
-    "different body sizes, varying proportions, size variation",
-    "tall character, short character, height difference",
-    "muscular, athletic, fit, toned, defined muscles",
-    "inconsistent body shape, different dimensions",
-    "long legs, tall stature, stretched body",
-    "slim build, lean body, thin character, skinny",
-    "large character, small character, giant, tiny",
-    "human proportions, realistic proportions",
-    
-    // TEXTURE & DETAIL
+    // ANTI-TEXTURE & DETAIL
     "detailed texture, fur texture, skin texture",
-    "fur strands, hair detail, hair strands",
-    "wrinkles, creases, folds in clothing",
-    "fabric texture, leather texture, material texture",
-    "rough texture, smooth gradients, textured surface",
+    "wrinkles, pores, detailed surface",
+    "painted, painting, brush strokes",
+    "oil painting, watercolor, airbrush",
     
-    // ART STYLE
-    "painted, painting, brush strokes, brushwork",
-    "oil painting, watercolor, acrylic painting",
-    "sketch, sketchy, pencil drawing, hand drawn look",
-    "airbrush, airbrushed, spray paint effect",
+    // ANTI-VARIATION
+    "different body sizes, varying proportions",
+    "tall, short, muscular, slim, lean",
+    "inconsistent shape, different dimensions",
     
-    // QUALITY & ARTIFACTS
-    "blurry, low quality, messy, unfinished",
-    "distorted, deformed, mutated, ugly",
-    "text, watermark, logo, signature, artist name",
-    "frame, border, vignette, edges darkened",
-    
-    // COMPOSITION
-    "multiple characters, several characters, crowd",
-    "cropped, cut off, partially visible",
-    "background scenery, background objects, environment",
-    "side view, profile, turned sideways, angled view",
-    "three quarter view, diagonal view",
-    "back view, rear view, from behind, turned around",
-    "looking sideways, facing left, facing right",
-    
-    // ACCESSORIES
-    "cigar, pipe, smoking, cigarette, tobacco",
-    "floating accessories, floating items, levitating objects",
-    "misplaced items, wrong positions, incorrect placement",
-    "hat floating above head, clothing floating",
-    
-    // BACKGROUND
-    "gradient background, textured backdrop, patterned background",
-    "background scenery, background details, complex background",
-    "different background color, mismatched colors",
-    "contrasting background, complementary color scheme",
-    "background with depth, layered background",
-    "background variation, background gradient",
-    "two-color background, multi-color background"
+    // GENERAL NEGATIVES
+    "blurry, low quality, distorted, deformed",
+    "text, watermark, signature, logo",
+    "multiple characters, cropped, partial",
+    "side view, profile, angled, back view",
+    "smoking, cigar, cigarette",
+    "floating objects, misplaced items",
+    "gradient background, textured background",
+    "different background color, mismatched colors"
   ].join(", ");
 
   return { prompt, negative };
@@ -402,7 +362,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating ULTRA-FLAT ZERO-DIMENSIONAL NFT Goblin...");
+    console.log("🎨 Generating EXTREME FLAT CARTOON NFT...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -418,8 +378,8 @@ export async function POST(req: Request) {
           parameters: {
             width: 1024,
             height: 1024,
-            num_inference_steps: 40,
-            guidance_scale: 9.0,
+            num_inference_steps: 45,        // 🔥 INCREASED for better control
+            guidance_scale: 10.0,           // 🔥 MAXIMUM guidance!
             negative_prompt: negative,
           },
         });
