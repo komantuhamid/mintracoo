@@ -7,13 +7,12 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🧌 BASE CHARACTER
-const BASE_CHARACTER = "cute round blob goblin creature monster";
+// 🧌 BASE CHARACTER (ULTRA-SPECIFIC FOR CONSISTENCY!)
+const BASE_CHARACTER = "cute round blob goblin creature";
 
-// 🎨 72 COLOR SCHEMES - EXACT MATCHING!
-// Standard (36) + Pastel (12) + Neon (12) + Metallic (12)
+// 🎨 72 COLOR SCHEMES
 const GOBLIN_COLOR_SCHEMES = [
-  // 💚 GREEN - STANDARD (8)
+  // 💚 GREEN (8)
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
   { skin: "mint green pastel light", bg: "mint green pastel light" },
@@ -23,7 +22,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
   { skin: "jade green medium", bg: "jade green medium" },
   
-  // 💙 BLUE - STANDARD (6)
+  // 💙 BLUE (6)
   { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
   { skin: "navy blue dark deep", bg: "navy blue dark deep" },
   { skin: "cyan blue light bright", bg: "cyan blue light bright" },
@@ -31,41 +30,41 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "sky blue pastel light", bg: "sky blue pastel light" },
   { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
   
-  // 💜 PURPLE - STANDARD (5)
+  // 💜 PURPLE (5)
   { skin: "violet purple bright", bg: "violet purple bright" },
   { skin: "deep purple dark rich", bg: "deep purple dark rich" },
   { skin: "lavender purple pastel", bg: "lavender purple pastel" },
   { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
   { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
   
-  // ❤️ RED/ORANGE - STANDARD (5)
+  // ❤️ RED/ORANGE (5)
   { skin: "crimson red bright", bg: "crimson red bright" },
   { skin: "dark red maroon deep", bg: "dark red maroon deep" },
   { skin: "orange bright vibrant", bg: "orange bright vibrant" },
   { skin: "coral orange-pink", bg: "coral orange-pink" },
   { skin: "rust orange-brown", bg: "rust orange-brown" },
   
-  // 🩶 GRAY/BLACK/WHITE - STANDARD (4)
+  // 🩶 GRAY/BLACK/WHITE (4)
   { skin: "charcoal gray dark", bg: "charcoal gray dark" },
   { skin: "slate gray medium", bg: "slate gray medium" },
   { skin: "bone white pale cream", bg: "bone white pale cream" },
   { skin: "jet black dark", bg: "jet black dark" },
   
-  // 💛 YELLOW/GOLD - STANDARD (3)
+  // 💛 YELLOW/GOLD (3)
   { skin: "golden yellow bright", bg: "golden yellow bright" },
   { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
   { skin: "lemon yellow pale", bg: "lemon yellow pale" },
   
-  // 🤎 BROWN - STANDARD (3)
+  // 🤎 BROWN (3)
   { skin: "chocolate brown dark", bg: "chocolate brown dark" },
   { skin: "tan brown light", bg: "tan brown light" },
   { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
   
-  // 🩷 PINK - STANDARD (2)
+  // 🩷 PINK (2)
   { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
   { skin: "rose pink soft", bg: "rose pink soft" },
 
-  // 🌸 PASTEL COLORS (12)
+  // 🌸 PASTEL (12)
   { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light" },
   { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light" },
   { skin: "pastel mint green soft light", bg: "pastel mint green soft light" },
@@ -79,7 +78,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light" },
   { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light" },
 
-  // ⚡ NEON COLORS (12)
+  // ⚡ NEON (12)
   { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric" },
   { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric" },
   { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric" },
@@ -93,7 +92,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
   { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
 
-  // 💎 METALLIC COLORS (12)
+  // 💎 METALLIC (12)
   { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
   { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming" },
   { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny" },
@@ -258,7 +257,7 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
+    // 🔥 ULTRA-FLAT STYLE
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
@@ -267,13 +266,23 @@ function buildPrompt() {
     "children's book art style, cute storybook character",
     "vector graphic flat design, minimalist shading",
     
-    // 🔥 CONSISTENT BODY SIZE (Same proportions every time!)
+    // 🔥🔥🔥 ULTRA-ENFORCED BODY CONSISTENCY (MAXIMUM!)
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
-    "round soft blob body, smooth chubby round belly",
-    "simple cute dumpy proportions, pudgy spherical torso",
-    "tiny short stubby legs, small rounded arms",
-    "no muscle definition, soft pillowy cuddly body",
-    "wide short squat stature, roly-poly blob build",
+    "EXACT same body proportions every time",
+    "perfectly round spherical blob body shape",
+    "identical circular torso dimensions",
+    "uniform chubby round belly size",
+    "standard blob proportions template",
+    "consistent dumpy pudgy build",
+    "fixed short stubby leg length",
+    "uniform small rounded arm size",
+    "standardized blob creature dimensions",
+    "no variation in body size or shape",
+    "identical body structure for all characters",
+    "perfectly consistent round blob form",
+    "same sized spherical torso always",
+    "uniform width and height proportions",
+    "fixed scale blob body template",
     
     `${expression} facial expression`,
     "small pointed ears on sides of head",
@@ -293,7 +302,7 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
     
-    // 🔥 EXACT COLOR MATCHING (Triple reinforcement!)
+    // 🔥 COLOR MATCHING
     `entire background is ${skinColor}`,
     `flat solid ${background} background`,
     `${skinColor} fills entire background`,
@@ -311,7 +320,18 @@ function buildPrompt() {
   const negative = [
     "3D render, CGI, realistic, photorealistic, detailed",
     
-    // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
+    // 🔥🔥🔥 ULTRA-STRONG ANTI-VARIATION (NEW!)
+    "different body sizes, varying proportions, size variation",
+    "tall character, short character, fat character, skinny character",
+    "inconsistent body shape, different dimensions",
+    "variable torso size, changing body proportions",
+    "non-uniform blob shape, irregular body size",
+    "muscular body, athletic build, human proportions",
+    "long legs, tall stature, slim build, lean body",
+    "large character, small character, giant, tiny",
+    "stretched body, compressed body, distorted proportions",
+    
+    // 🔥 ANTI-SHADING
     "complex shading, dramatic lighting, shadows, depth",
     "gradient shading, soft shading, ambient occlusion",
     "drop shadow, cast shadow, shadow under character",
@@ -332,15 +352,11 @@ function buildPrompt() {
     "side view, profile, turned sideways, angled",
     "3/4 view, looking sideways, facing left or right",
     "back view, rear view, turned around, rotated",
-    "muscular, athletic, fit, toned, abs visible",
-    "muscle definition, biceps, six pack, defined",
-    "tall, long limbs, stretched, slender, lanky",
-    "thin, skinny, slim, lean, human proportions",
     "cigar, pipe, smoking, cigarette, tobacco",
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
     
-    // 🔥 ULTRA-STRONG BACKGROUND NEGATIVES
+    // 🔥 BACKGROUND NEGATIVES
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
     "different background color, mismatched colors",
@@ -376,7 +392,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin with CONSISTENT SIZE...");
+    console.log("🎨 Generating ULTRA-CONSISTENT NFT Goblin...");
     
     const hf = new HfInference(HF_TOKEN);
 
