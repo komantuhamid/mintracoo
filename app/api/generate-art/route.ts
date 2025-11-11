@@ -10,23 +10,62 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🧌 Goblin skin colors (12 options)
+// 🎨 MEGA SKIN COLORS (30+ options!) - MAXIMUM VARIETY!
 const SKIN_COLORS = [
-  "bright green",
-  "dark green",
-  "lime green",
-  "olive green",
-  "yellow-green",
-  "gray-green",
-  "orange",
-  "red",
-  "purple",
-  "blue",
-  "gray",
-  "brown"
+  // 💚 GREEN FAMILY (8 shades)
+  "bright neon lime green glowing",
+  "dark forest green deep",
+  "mint green pastel light",
+  "olive green earthy",
+  "emerald green rich vibrant",
+  "sage green muted soft",
+  "chartreuse yellow-green bright",
+  "jade green medium",
+  
+  // 💙 BLUE FAMILY (6 shades)
+  "cobalt blue bright electric",
+  "navy blue dark deep",
+  "cyan blue light bright",
+  "teal turquoise blue-green",
+  "sky blue pastel light",
+  "royal blue rich vibrant",
+  
+  // 💜 PURPLE FAMILY (5 shades)
+  "violet purple bright",
+  "deep purple dark rich",
+  "lavender purple pastel",
+  "magenta purple-pink bright",
+  "indigo purple-blue deep",
+  
+  // ❤️ RED/ORANGE FAMILY (5 shades)
+  "crimson red bright",
+  "dark red maroon deep",
+  "orange bright vibrant",
+  "coral orange-pink",
+  "rust orange-brown",
+  
+  // 🩶 GRAY/BLACK/WHITE FAMILY (4 shades)
+  "charcoal gray dark",
+  "slate gray medium",
+  "bone white pale cream",
+  "jet black dark",
+  
+  // 💛 YELLOW/GOLD FAMILY (3 shades)
+  "golden yellow bright",
+  "mustard yellow earthy",
+  "lemon yellow pale",
+  
+  // 🤎 BROWN FAMILY (3 shades)
+  "chocolate brown dark",
+  "tan brown light",
+  "mahogany red-brown deep",
+  
+  // 🩷 PINK FAMILY (2 shades)
+  "hot pink bright vibrant",
+  "rose pink soft"
 ];
 
-// 👒 Head items (20 options)
+// 👒 Head items (15 options)
 const HEAD_ITEMS = [
   "small leather cap on top of head",
   "tiny metal helmet on top of head",
@@ -34,58 +73,46 @@ const HEAD_ITEMS = [
   "small bandana on head",
   "bone helmet on top of head",
   "small iron crown on top of head",
-  "bucket hat on head",
   "wizard hat on top of head",
   "fur hat on head",
-  "wooden mask on face",
-  "mushroom cap on top of head",
   "small horned helmet on head",
-  "goggles on forehead",
   "skull cap on top of head",
   "straw hat on head",
-  "jester hat on top of head",
   "pointed hood covering head",
-  "war paint on face",
+  "war paint marks on face",
   "animal pelt on head",
   "bald head no hat"
 ];
 
-// 👀 Eye items (12 options)
+// 👀 Eye items (10 options)
 const EYE_ITEMS = [
   "small eye patch over one eye",
   "tiny goggles over eyes",
   "small monocle over one eye",
   "round glasses over eyes",
-  "small scrap goggles over eyes",
   "bandage covering one eye",
-  "face paint stripes on face",
-  "small mask covering upper face",
   "tiny aviator goggles over eyes",
-  "small blindfold over eyes",
   "large round yellow eyes",
-  "small beady eyes"
+  "small beady eyes glowing",
+  "wide crazy eyes bulging",
+  "squinting menacing eyes"
 ];
 
-// 👄 Mouth items (15 options)
+// 👄 Mouth items (10 options) - NO CIGARS!
 const MOUTH_ITEMS = [
-  "small cigar clenched in corner of mouth",
-  "wooden pipe held in mouth",
-  "small cigar in side of mouth",
-  "small clay pipe in corner of mouth",
-  "cigar clenched between teeth in mouth",
-  "huge wide grinning mouth showing sharp fangs",
-  "giant open mouth with jagged fangs",
-  "massive toothy grin showing fangs",
-  "enormous mouth with rows of sharp fangs",
-  "wide crazy smile showing sharp teeth",
-  "evil grinning mouth with visible fangs",
+  "huge wide grinning mouth showing many sharp fangs",
+  "giant open mouth with rows of jagged fangs",
+  "massive toothy grin showing pointed fangs",
+  "enormous mouth with multiple rows of sharp fangs",
+  "wide crazy smile showing all sharp teeth",
+  "evil grinning mouth with prominent fangs visible",
   "creepy smile with sharp jagged teeth",
   "menacing grin with big fangs",
   "wicked smile showing rows of teeth",
   "fierce grinning mouth with fangs"
 ];
 
-// 👕 Clothing (20 options)
+// 👕 Clothing (15 options)
 const CLOTHING = [
   "small leather vest worn on torso",
   "tiny torn rags covering body",
@@ -93,7 +120,6 @@ const CLOTHING = [
   "small fur vest on torso",
   "simple leather jerkin on body",
   "tiny torn robes on body",
-  "simple burlap tunic covering torso",
   "small patchwork leather on body",
   "tiny animal hide covering torso",
   "simple torn shirt on body",
@@ -101,10 +127,6 @@ const CLOTHING = [
   "tiny torn cloak over shoulders",
   "simple leather coat on body",
   "small pirate vest on torso",
-  "simple prisoner rags on body",
-  "tiny leather apron on torso",
-  "simple monk robes on body",
-  "small bandit leather on torso",
   "tiny sailor vest on body",
   "bare chest showing chubby belly"
 ];
@@ -117,13 +139,13 @@ const NECK_ITEMS = [
   "simple leather cord around neck",
   "tiny gold chain on neck",
   "small bead necklace around neck",
-  "simple rope around neck",
   "tiny medallion hanging on neck",
   "small skull pendant on neck",
+  "simple rope around neck",
   "bare neck no necklace"
 ];
 
-// 🗡️ Hand items (25 options)
+// 🗡️ Hand items (20 options)
 const HAND_ITEMS = [
   "holding small rusty dagger in hand",
   "gripping tiny wooden club in hand",
@@ -139,41 +161,36 @@ const HAND_ITEMS = [
   "holding tiny lantern in hand",
   "holding small skull cup in hand",
   "holding tiny potion vial in hand",
-  "holding small bomb in hand",
   "gripping tiny pickaxe in hand",
   "holding small meat leg in hand",
-  "holding tiny mushroom in hand",
   "holding small keys in hand",
   "holding small bottle in hand",
-  "holding tiny map scroll in hand",
-  "holding small crossbow in hand",
   "gripping tiny hammer in hand",
-  "holding small treasure chest in hands",
   "both hands clenched in small fists"
 ];
 
 // 🎨 Background colors (10 options)
 const BACKGROUNDS = [
   "solid bright green",
-  "solid dark green",
-  "solid brown",
-  "solid gray",
-  "solid dark blue",
-  "solid purple",
-  "solid orange",
-  "solid red",
-  "solid teal",
-  "solid olive"
+  "solid dark teal",
+  "solid warm brown",
+  "solid cool gray",
+  "solid deep navy blue",
+  "solid rich purple",
+  "solid bright orange",
+  "solid crimson red",
+  "solid sky blue",
+  "solid olive green"
 ];
 
 // 😠 Expressions (8 options)
 const EXPRESSIONS = [
   "angry scowling",
-  "evil grinning",
+  "evil grinning maniacally",
   "grumpy frowning",
-  "crazy laughing",
+  "crazy laughing wild",
   "sneaky smirking",
-  "confused stupid",
+  "confused dumb",
   "aggressive menacing",
   "proud confident"
 ];
@@ -196,96 +213,83 @@ function buildPrompt() {
   const prompt = [
     // 🎨 STYLE
     "simple flat 2D cartoon illustration, clean vector art style",
-    "thick black outlines, bold cartoon lines, simple flat coloring",
-    "minimal soft shading, clean vector illustration style",
-    "children's book art, storybook character design",
+    "thick black outlines, bold cartoon lines, simple coloring",
+    "soft minimal shading, smooth vector illustration",
+    "children's book art style, cute storybook character",
     
     // 🧌 BODY
-    `adorable ${BASE_CHARACTER} with ${skinColor} smooth soft skin`,
-    "round soft blob body shape, smooth chubby belly no abs",
-    "simple dumpy proportions, pudgy spherical torso",
-    "tiny short stubby legs, small rounded arms no muscles",
-    "no muscle definition, soft pillowy body, cuddly round shape",
-    "wide short stature, squat compact build, roly-poly body",
+    `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
+    "round soft blob body, smooth chubby round belly",
+    "simple cute dumpy proportions, pudgy spherical torso",
+    "tiny short stubby legs, small rounded arms",
+    "no muscle definition, soft pillowy cuddly body",
+    "wide short squat stature, roly-poly blob build",
     
     // 😠 FACE & EXPRESSION
     `${expression} facial expression`,
     "small pointed ears on sides of head",
     
-    // 👒 HEAD TRAIT (on top of head)
+    // 🔥 TRAITS IN CORRECT POSITIONS
     `${headItem}`,
-    
-    // 👀 EYE TRAIT (on face over eyes)
     `${eyeItem}`,
-    
-    // 👄 MOUTH TRAIT (in mouth on face)
     `${mouthItem}`,
-    
-    // 👕 CLOTHING TRAIT (on body/torso)
+    "mouth showing fangs teeth clearly visible",
     `${clothing}`,
-    
-    // ⛓️ NECK TRAIT (around neck)
     `${neckItem}`,
-    
-    // 🗡️ HAND TRAIT (in hands)
     `${handItem}`,
     
-    // 🔥 STRICT POSITIONING RULES
-    "each item in its correct anatomical position",
-    "hat on head not floating, eyes on face, mouth on face",
-    "clothing on body only, necklace on neck only, weapon in hands only",
-    "all accessories properly positioned on correct body parts",
+    // 🎯 POSITIONING RULES
+    "all accessories in correct anatomical positions",
+    "hat on head, eyes on face, mouth on face visible",
+    "clothing on body, necklace on neck, weapon in hands",
     
-    // 📐 POSE & DIRECTION
-    "facing directly forward toward camera, straight front view, symmetrical",
-    "standing upright centered, full body visible front-facing",
-    "looking straight ahead at viewer, direct forward pose",
-    "feet planted on ground, short stubby legs visible",
+    // 📐 POSE
+    "facing directly forward straight ahead toward camera",
+    "front view centered symmetrical pose",
+    "standing upright full body visible",
+    "looking straight at viewer, feet on ground",
+    "stubby legs visible, centered composition",
     
     // 🎨 BACKGROUND
-    `${background} background flat solid color no details`,
-    "simple cartoon mascot style, cute blob monster design"
+    `${background} background solid flat color no details`,
+    "simple cartoon mascot, cute blob monster character"
   ].join(", ");
 
   const negative = [
     // ❌ STYLE BLOCKS
-    "3D render, CGI, realistic, photorealistic, detailed rendering",
-    "complex shading, realistic lighting, dramatic shadows, depth",
-    "detailed texture, realistic skin, fur strands, hair detail",
-    "cinematic lighting, professional photography, studio setup",
-    "painted style, brush strokes, oil painting, watercolor, matte",
-    "blurry, low quality, messy, sketchy, unfinished, draft",
-    "text, watermark, logo, signature, caption, frame, border",
+    "3D render, CGI, realistic, photorealistic, detailed",
+    "complex shading, dramatic lighting, shadows, depth",
+    "detailed texture, fur strands, hair detail, realistic skin",
+    "cinematic lighting, photography, studio lighting",
+    "painted, brush strokes, oil painting, watercolor",
+    "blurry, low quality, messy, sketchy, unfinished",
+    "text, watermark, logo, signature, frame, border",
     
     // ❌ COMPOSITION BLOCKS
-    "multiple characters, cropped body, background scenery, objects",
-    "side view, profile, turned sideways, angled pose, diagonal",
-    "3/4 view, looking sideways, facing left, facing right",
-    "back view, rear, turned around, rotated, off-center",
+    "multiple characters, cropped, background scenery",
+    "side view, profile, turned sideways, angled",
+    "3/4 view, looking sideways, facing left or right",
+    "back view, rear view, turned around, rotated",
     
     // ❌ BODY BLOCKS
-    "muscular, athletic, fit, toned, ripped, abs visible",
-    "muscle definition, biceps, six pack, defined muscles",
-    "strong warrior, bodybuilder, athletic build, buff",
-    "tall, long limbs, stretched proportions, slender",
-    "thin, skinny, slim, lean body, lanky proportions",
-    "realistic proportions, human anatomy, detailed muscles",
+    "muscular, athletic, fit, toned, abs visible",
+    "muscle definition, biceps, six pack, defined",
+    "tall, long limbs, stretched, slender, lanky",
+    "thin, skinny, slim, lean, human proportions",
+    
+    // 🔥 NO SMOKING!
+    "cigar, pipe, smoking, cigarette, tobacco",
+    "cigar in mouth, pipe in mouth, smoking item",
+    "holding cigar, holding pipe, smoke, smoking",
+    
+    // 🔥 WRONG POSITIONING
+    "floating accessories, misplaced items",
+    "hat floating, clothing on wrong body part",
+    "accessories in wrong positions, jumbled traits",
+    "items overlapping incorrectly",
     
     // ❌ BACKGROUND BLOCKS
-    "gradient background, textured backdrop, complex environment",
-    
-    // 🔥 CRITICAL - WRONG POSITIONING BLOCKS
-    "hat floating in air not on head",
-    "clothing on head, hat on body, wrong placement",
-    "eyes floating away from face, misplaced eyes",
-    "mouth not on face, mouth floating away",
-    "necklace on head, necklace on hands, wrong position",
-    "weapon floating in air not in hands",
-    "accessories in wrong positions, misplaced items",
-    "traits overlapping incorrectly, jumbled accessories",
-    "cigar floating away from mouth disconnected",
-    "hat covering eyes completely, accessories blocking face",
-    "items in anatomically incorrect positions"
+    "gradient background, textured backdrop, complex scene"
   ].join(", ");
 
   return { prompt, negative };
@@ -303,7 +307,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🧌 Generating PROPERLY-POSITIONED GOBLIN...");
+    console.log("🧌 Generating MEGA-COLOR GOBLIN...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -320,7 +324,7 @@ export async function POST(req: Request) {
             width: 1024,
             height: 1024,
             num_inference_steps: 35,
-            guidance_scale: 8.0,  // ← Increased for BETTER control!
+            guidance_scale: 7.5,
             negative_prompt: negative,
           },
         });
