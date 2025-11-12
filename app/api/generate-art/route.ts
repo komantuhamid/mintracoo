@@ -218,19 +218,19 @@ async function analyzePFPImage(pfpUrl: string): Promise<{ skin: string; bg: stri
     
     const urlLower = pfpUrl.toLowerCase();
     
-    if (urlLower.includes('blue')) {
-      return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('blue')) || null;
-    } else if (urlLower.includes('green')) {
-      return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('green')) || null;
-    } else if (urlLower.includes('red') || urlLower.includes('pink')) {
-      return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('red') || s.skin.includes('pink')) || null;
-    } else if (urlLower.includes('purple') || urlLower.includes('violet')) {
-      return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('purple')) || null;
-    } else if (urlLower.includes('gold') || urlLower.includes('yellow')) {
-      return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('gold') || s.skin.includes('yellow')) || null;
-    } else if (urlLower.includes('orange')) {
-      return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('orange')) || null;
-    }
+ if (urlLower.includes('blue')) {
+  return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('blue')) || undefined;
+} else if (urlLower.includes('green')) {
+  return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('green')) || undefined;
+} else if (urlLower.includes('red') || urlLower.includes('pink')) {
+  return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('red') || s.skin.includes('pink')) || undefined;
+} else if (urlLower.includes('purple') || urlLower.includes('violet')) {
+  return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('purple')) || undefined;
+} else if (urlLower.includes('gold') || urlLower.includes('yellow')) {
+  return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('gold') || s.skin.includes('yellow')) || undefined;
+} else if (urlLower.includes('orange')) {
+  return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('orange')) || undefined;
+}
     
         return undefined;  // Instead of: return null;
   } catch (error) {
