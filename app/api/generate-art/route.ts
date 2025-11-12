@@ -7,7 +7,7 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-const BASE_CHARACTER = "round blob goblin creature monster";
+const BASE_CHARACTER = "goblin monster with a chubby body";
 
 // 🎨 72 COLOR SCHEMES (MONOCHROMATIC - MATCHING BACKGROUND)
 const GOBLIN_COLOR_SCHEMES = [
@@ -235,7 +235,7 @@ function buildPrompt() {
     "absolutely flat shading, NO gradients, NO depth",
     "completely flat illustration, zero dimension, pure 2D",
     "flat solid colors only, no shading variations",
-    "children's book art style,  storybook character",
+    "children's book art style, cute storybook character",
     "vector graphic flat design, minimalist shading",
 
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
@@ -243,7 +243,7 @@ function buildPrompt() {
     // 🔥 BODY SIZE - SLIGHTLY TALLER (400x450px)
     "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
     "body measures precisely 400px width by 450px height",
-    "body is gently oval shape 400x450 pixels maintaining  proportions",
+    "body is gently oval shape 400x450 pixels maintaining cute proportions",
     "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
     "body fills 45% of image height consistently",
     "oval torso measures 400 pixels wide by 450 pixels tall EXACT",
@@ -299,7 +299,7 @@ function buildPrompt() {
     "unified color scheme across entire composition",
     "seamless color integration background to foreground",
     
-    "simple cartoon mascot  blob monster character"
+    "simple cartoon mascot cute blob monster character"
   ].join(", ");
 
   const negative = [
