@@ -25,7 +25,8 @@ export default function MintPage() {
   const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState<string | null>(null);
+
   const [isAppReady, setIsAppReady] = useState(false);
 
   const shortAddr = useMemo(
