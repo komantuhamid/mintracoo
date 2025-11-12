@@ -22,7 +22,7 @@ export default function MintPage() {
     hash: txHash,
   });
 
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
