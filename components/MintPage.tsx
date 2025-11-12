@@ -153,42 +153,50 @@ export default function MintPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#242032] to-[#262024]">
       {/* Header avatar + username */}
-      {profile && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            background: "rgba(50,30,40,0.6)",
-            borderRadius: "16px",
-            padding: "12px 24px",
-            marginBottom: "18px",
-            gap: "12px",
-            width: "fit-content",
-            position: "relative",
-          }}
-        >
-          <img
-            src={profile.pfp_url || ""}
-            alt="pfp"
-            style={{
-              width: "50px",
-              height: "50px",
-              borderRadius: "12px",
-              border: "3px solid #E4196B",
-              background: "#101016"
-            }}
-          />
-          <div style={{ fontWeight: "bold", color: "#fff", fontSize: "18px" }}>
-            @{profile.username}
-          </div>
-          {/* badge verified */}
-          <img src="/verified-badge.svg" alt="verified"
-            style={{
-              position: "absolute", left: "38px", bottom: "8px", width: "23px", height: "23px"
-            }}
-          />
-        </div>
+{profile && (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      background: "rgba(50,30,40,0.6)",
+      borderRadius: "16px",
+      padding: "12px 24px",
+      marginBottom: "18px",
+      gap: "14px",
+      width: "fit-content",
+      position: "relative"
+    }}>
+    <img
+      src={profile.pfp_url || ""}
+      alt="pfp"
+      style={{
+        width: "54px",
+        height: "54px",
+        borderRadius: "12px",
+        border: "3px solid #E4196B",
+        background: "#101016",
+        objectFit: "cover"
+      }}
+    />
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <span style={{ color: "#fff", fontWeight: "bold", fontSize: "18px", lineHeight: 1.1 }}>
+        {profile.display_name || `@${profile.username}`}
+      </span>
+      {profile.display_name && (
+        <span style={{ color: "#DDD", fontSize: "14px" }}>
+          @{profile.username}
+        </span>
       )}
+    </div>
+    {/* badge verified */}
+    <img src="/verified-badge.svg" alt="verified"
+      style={{
+        position: "absolute", left: "43px", bottom: "-6px", width: "23px", height: "23px"
+      }}
+    />
+  </div>
+)}
+
 
       <div
         style={{
