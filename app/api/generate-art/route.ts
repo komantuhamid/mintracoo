@@ -236,32 +236,154 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
-  const prompt = [
-    // STYLE
-    "simple flat 2D cartoon illustration",
-    "thick black outlines, bold lines",
+ const prompt = [
+    // 🔥 ULTRA-FLAT STYLE
+    "simple flat 2D cartoon illustration, clean vector art style",
+    "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
+    "completely flat illustration, zero dimension, pure 2D",
+    "flat solid colors only, no shading variations",
+    "children's book art style,  storybook character",
+    "vector graphic flat design, minimalist shading",
+
+    `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
     
-    // CHARACTER with CONSISTENT COLOR THEME
-    `cute round blob goblin with ${skinColor} colored skin and body`,
-    `wearing ${headItem}`,
+    // 🔥 BODY SIZE - SLIGHTLY TALLER (400x450px)
+    "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
+    "body measures precisely 400px width by 450px height",
+    "body is gently oval shape 400x450 pixels maintaining  proportions",
+    "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
+    "body fills 45% of image height consistently",
+    "oval torso measures 400 pixels wide by 450 pixels tall EXACT",
+    "blob body is standard size 400x450px gentle oval ALWAYS",
+    "EXACTLY TWO short stubby legs identical size",
+    "each leg measures precisely 60 pixels tall 30 pixels wide",
+    "EXACTLY TWO small rounded arms identical size",
+    "each arm measures precisely 70 pixels long 25 pixels thick",
+    "head is round sphere attached to body top",
+    "head measures 180 pixels diameter exactly",
+    
+    "no muscle definition, soft pillowy cuddly body",
+    "wide short squat stature, roly-poly blob build",
+
+    `${expression} facial expression`,
+    "small pointed ears on sides of head",
+    `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
-    `wearing ${clothing}`,
+    "mouth showing fangs teeth clearly visible",
+    `${clothing}`,
     `${neckItem}`,
-    `holding ${handItem}`,
-    `${expression} expression`,
+    `${handItem}`,
+
+    "all accessories in correct anatomical positions",
+    "hat on head, eyes on face, mouth on face visible",
+    "clothing on body, necklace on neck, weapon in hands",
+    "facing directly forward straight ahead toward camera",
+    "front view centered symmetrical pose",
+    "standing upright full body visible",
+    "looking straight at viewer, feet on ground",
+    "stubby legs visible, centered composition",
+
+    // 🔥🔥🔥 ULTRA-ENFORCED BACKGROUND COLOR MATCHING
+    `THE ENTIRE BACKGROUND MUST BE ${skinColor}`,
+    `BACKGROUND COLOR IS EXACTLY ${background}`,
+    `${skinColor} FILLS THE COMPLETE BACKGROUND`,
+    `BACKGROUND IS ${background} SOLID COLOR`,
+    "CRITICAL: background is identical color to character skin",
+    "MANDATORY: character and background are SAME EXACT color",
+    "REQUIRED: perfect monochromatic single-color scheme",
+    "ENFORCED: zero color difference between character and background",
+    "ABSOLUTE: character blends into background color perfectly",
+    "STRICT: background is completely flat solid color",
+    "CRUCIAL: no background shading, no background gradient",
+    "ESSENTIAL: background has zero depth or dimension",
+    "background color matches character skin color 100%",
+    "background and character share identical color palette",
+    "monochromatic color scheme background equals character",
+    `solid ${background} backdrop fills entire image`,
+    `${skinColor} environment surrounds character completely`,
+    "background tone matches character tone perfectly",
+    "unified color scheme across entire composition",
+    "seamless color integration background to foreground",
     
-    // BACKGROUND
-    `solid ${background} background`,
-    
-    // COMPOSITION
-    "centered, front view, full body",
-    "sticker style, flat emoji design"
+    "simple cartoon mascot  blob monster character"
   ].join(", ");
 
   const negative = [
-    "3D, realistic, photo, gradient, shadows, depth, multiple characters, text, watermark"
+    "3D render, CGI, realistic, photorealistic, detailed",
+    
+    // 🔥 ULTRA-STRONG ANTI-SHADING
+    "complex shading, dramatic lighting, shadows, depth",
+    "gradient shading, soft shading, ambient occlusion",
+    "drop shadow, cast shadow, shadow under character",
+    "shading at bottom, darkening at edges, vignette",
+    "3D lighting, volumetric lighting, rim lighting",
+    "depth of field, blur, bokeh, atmospheric perspective",
+    "ground shadow, floor reflection, depth effect",
+    "dimensional shading, spherical shading, rounded shading",
+    "ambient shadows, contact shadows, soft shadows",
+    "radial gradient, color gradient in background",
+    "detailed texture, fur strands, hair detail, realistic skin",
+    "cinematic lighting, photography, studio lighting",
+    "painted, brush strokes, oil painting, watercolor",
+    "blurry, low quality, messy, sketchy, unfinished",
+    "text, watermark, logo, signature, frame, border",
+    "multiple characters, cropped, background scenery",
+    "side view, profile, turned sideways, angled",
+    "3/4 view, looking sideways, facing left or right",
+    "back view, rear view, turned around, rotated",
+    
+    // 🔥 ANTI-INCONSISTENT BODY SIZE
+    "different body sizes, varying body proportions",
+    "inconsistent body dimensions, irregular body size",
+    "body too large, body too small, wrong body size",
+    "oversized body, undersized body, mismatched proportions",
+    "body bigger than 450 pixels tall, body smaller than 400 pixels wide",
+    "body not oval, elongated body, stretched vertically too much",
+    "tall body, extremely stretched body, compressed body, squashed body",
+    "different leg sizes, uneven legs, asymmetrical legs",
+    "one leg bigger, one leg smaller, varying leg length",
+    "different arm sizes, uneven arms, asymmetrical arms",
+    "one arm bigger, one arm smaller, varying arm length",
+    "large head, tiny head, wrong head size, head too big",
+    
+    "muscular, athletic, fit, toned, abs visible",
+    "muscle definition, biceps, six pack, defined",
+    "tall, long limbs, stretched, slender, lanky",
+    "thin, skinny, slim, lean, human proportions",
+    "cigar, pipe, smoking, cigarette, tobacco",
+    "floating accessories, misplaced items",
+    "hat floating, clothing on wrong body part",
+
+    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES
+    "gradient background, textured backdrop, complex scene",
+    "background scenery, background objects, detailed background",
+    "WRONG: different background color, mismatched colors",
+    "WRONG: background different from character color",
+    "WRONG: background lighter than character",
+    "WRONG: background darker than character",
+    "WRONG: background brighter than character",
+    "WRONG: background duller than character",
+    "WRONG: contrasting background, complementary colors",
+    "WRONG: two-tone color scheme, multi-color palette",
+    "WRONG: color variation, color gradient, color difference",
+    "WRONG: background has different shade or tone",
+    "WRONG: wrong background color, incorrect background color",
+    "WRONG: background with depth, background with shadow",
+    "WRONG: background gradient from light to dark",
+    "WRONG: background shading, background vignette",
+    "WRONG: darker background at bottom, lighter at top",
+    "WRONG: any variation in background color",
+    "multicolored background, rainbow background, patterned background",
+    "background scenery, landscape, environment details",
+    "background elements, objects in background, props",
+    "colored borders, colored frames, colored edges",
+    "white background, black background when character is colored",
+    "gray background when character is colored",
+    "neutral background, plain background, blank background",
+    "different hue background, different saturation background",
+    "background color not matching character at all"
   ].join(", ");
 
   return { prompt, negative };
