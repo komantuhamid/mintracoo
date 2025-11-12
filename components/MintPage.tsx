@@ -1,160 +1,222 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { parseAbi, encodeFunctionData, parseEther } from 'viem';
+import sdk from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
-// Define a simple type for the Farcaster identity
-type FarcasterIdentity = {
-  fid: number;
-  pfpUrl: string;
-  username: string;
-};
-
-// Custom Hook to get Farcaster Identity (from your old game)
-const useFarcasterIdentity = () => {
-  const [identity, setIdentity] = useState<FarcasterIdentity | null>(null);
-  
-  useEffect(() => {
-    // The Farcaster client injects the identity into the window object
-    const fcIdentity = (window as any).farcaster?.identity;
-    if (fcIdentity) {
-      setIdentity({
-        fid: fcIdentity.fid,
-        pfpUrl: fcIdentity.pfp,
-        username: fcIdentity.displayName,
-      });
-    }
-
-    // Also listen for messages from the client, which is a more reliable way
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'identity' && event.data.identity) {
-        setIdentity({
-            fid: event.data.identity.fid,
-            pfpUrl: event.data.identity.pfp,
-            username: event.data.identity.displayName,
-        });
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, []);
-
-  return identity;
-};
-
-
-// Main Mint Page Component
+// ✅ YOUR CONTRACT ADDRESS
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
-const MINT_ABI = parseAbi(['function mint(string memory tokenURI_) payable']);
+
+// ✅ CORRECT ABI FOR YOUR NEW CONTRACT
+const MINT_ABI = parseAbi([
+  'function mint(string memory tokenURI_) payable',
+]);
 
 export default function MintPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { sendTransaction, isPending, data: txHash } = useSendTransaction();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
-  const fcIdentity = useFarcasterIdentity(); // Use the custom hook
-
+  const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isAppReady, setIsAppReady] = useState(false);
 
-  const generateGoblin = async () => {
+  const shortAddr = useMemo(
+    () => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : ''),
+    [address]
+  );
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await sdk.actions.ready();
+        setIsAppReady(true);
+      } catch (e) {
+        setIsAppReady(true);
+      }
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    const autoConnect = async () => {
+      if (!isAppReady || isConnected) return;
+      try {
+        const context = await sdk.context;
+        if (context?.user && connectors.length > 0) {
+          await connect({ connector: connectors[0] });
+        }
+      } catch (e) {
+        console.log('Auto-connect error:', e);
+      }
+    };
+    autoConnect();
+  }, [isAppReady, isConnected, connectors, connect]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const context = await sdk.context;
+        const fid = context?.user?.fid;
+        if (!fid) return;
+        const r = await fetch('/api/fetch-pfp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fid }),
+        });
+        const j = await r.json();
+        setProfile({
+          display_name: j.display_name || '',
+          username: j.username || '',
+          pfp_url: j.pfp_url || null,
+          fid,
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (isPending) {
+      setMessage('⏳ Confirm in wallet...');
+    } else if (isConfirming) {
+      setMessage('⏳ Confirming...');
+    } else if (isConfirmed) {
+      setMessage('🎉 NFT Minted Successfully!');
+    }
+  }, [isPending, isConfirming, isConfirmed]);
+
+  const generateRaccoon = async () => {
     setLoading(true);
-    setError(null);
-    setGeneratedImage(null);
+    setMessage('🎨 Generating...');
     try {
-      const res = await fetch('/api/generate-art', { method: 'POST' });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
-      setGeneratedImage(data.imageUrl);
+      const res = await fetch('/api/generate-art', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ style: 'pixel raccoon' }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || 'Failed');
+      setGeneratedImage(j.generated_image_url || j.imageUrl);
+      setMessage('✅ Ready to mint!');
     } catch (e: any) {
-      setError(e.message);
+      setMessage(`❌ ${e?.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMint = async () => {
-    if (!address || !generatedImage) return;
+  const performMint = async () => {
+    if (!address) return setMessage('❌ Connect wallet');
+    if (!generatedImage) return setMessage('❌ Generate image first');
+    
+    setMessage('📝 Uploading to IPFS...');
 
     try {
-      const res = await fetch('/api/create-signed-mint', {
+      // 1. Upload metadata to IPFS
+      const uploadRes = await fetch('/api/create-signed-mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           address,
           imageUrl: generatedImage,
-          username: fcIdentity?.username,
-          fid: fcIdentity?.fid,
+          username: profile?.username,
+          fid: profile?.fid,
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to create signed mint');
-      const { metadataUri } = await res.json();
+      const uploadData = await uploadRes.json();
+      if (uploadData.error) throw new Error(uploadData.error);
 
+      const { metadataUri } = uploadData;
+      console.log('✅ Metadata URI:', metadataUri);
+
+      setMessage('🔐 Confirm in wallet...');
+
+      // 2. Encode mint(string) call - CORRECT!
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
-        args: [metadataUri],
+        args: [metadataUri], // ← Only metadataUri, no address!
       });
 
-      sendTransaction({ to: CONTRACT_ADDRESS, data, value: parseEther('0.00069') });
+      console.log('✅ Encoded data:', data);
+
+      // 3. Send transaction with payment
+      sendTransaction({
+        to: CONTRACT_ADDRESS,
+        data,
+        value: parseEther('0.0001'),
+        gas: 300000n,
+      });
+
     } catch (e: any) {
-      setError(e.message);
+      console.error('❌ Mint error:', e);
+      setMessage(`❌ ${e?.message || 'Failed'}`);
     }
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', backgroundColor: '#0d0d0d', color: '#fff', minHeight: '100vh' }}>
-      <h1 style={{ textAlign: 'center', color: '#4CAF50' }}>👺 Goblin Mint</h1>
-      
-      {isConnected && address ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: '1px solid #333', borderRadius: '8px', backgroundColor: '#1a1a1a' }}>
-            {fcIdentity?.pfpUrl && (
-              <img src={fcIdentity.pfpUrl} alt="Farcaster PFP" style={{ width: 40, height: 40, borderRadius: '50%' }} />
-            )}
-            <span>{address.slice(0, 6)}...{address.slice(-4)}</span>
-            <button onClick={() => disconnect()} style={{ padding: '8px 12px', borderRadius: '4px', border: 'none', background: '#f44336', color: 'white', cursor: 'pointer' }}>Disconnect</button>
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900 p-4 flex items-center justify-center">
+      <div className="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-6">
+        <h1 className="text-3xl font-bold text-white mb-4 text-center">
+          🦝 Goblin Mint
+        </h1>
+
+        <div className="mb-4 bg-gray-700 rounded-lg p-4 min-h-64 flex items-center justify-center">
+          {generatedImage ? (
+            <img src={generatedImage} alt="Raccoon" className="w-full rounded-lg" />
+          ) : (
+            <p className="text-gray-400">No image generated</p>
+          )}
+        </div>
+
+        {profile && (
+          <p className="text-gray-300 text-sm mb-2">
+            👤 {profile.username || 'User'}
+          </p>
+        )}
+
+        <p className="text-gray-300 text-sm mb-4">
+          💼 {shortAddr || 'Not connected'}
+        </p>
+
+        <button
+          onClick={generateRaccoon}
+          disabled={loading || isPending || isConfirming}
+          className="w-full mt-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
+        >
+          {loading ? '⏳ Generating...' : '🎨 Generate Goblin'}
+        </button>
+
+        <button
+          onClick={performMint}
+          disabled={!address || !generatedImage || isPending || isConfirming}
+          className="w-full mt-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
+        >
+          {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
+        </button>
+
+        {message && (
+          <div className="mt-4 p-3 bg-gray-700 rounded text-gray-200 text-sm text-center">
+            {message}
           </div>
+        )}
 
-          {!generatedImage && (
-            <button onClick={generateGoblin} disabled={loading} style={{ padding: '12px 20px', fontSize: '16px', cursor: 'pointer', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '5px' }}>
-              {loading ? '⏳ Generating...' : '🎨 Generate Goblin'}
-            </button>
-          )}
-
-          {generatedImage && (
-            <div style={{ textAlign: 'center' }}>
-              <img src={generatedImage} alt="Generated Goblin" style={{ width: '256px', height: '256px', border: '2px solid #4CAF50', borderRadius: '10px' }} />
-              <button onClick={handleMint} disabled={isPending || isConfirming} style={{ marginTop: '20px', padding: '12px 20px', fontSize: '16px', cursor: 'pointer', background: '#2196F3', color: 'white', border: 'none', borderRadius: '5px' }}>
-                {isPending ? 'Confirming...' : isConfirming ? 'Minting...' : 'Mint NFT'}
-              </button>
-            </div>
-          )}
-          {isConfirmed && <p style={{ color: '#4CAF50' }}>Success! Your Goblin has been minted.</p>}
-          {txHash && (
-            <p><a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2196F3' }}>View on Basescan</a></p>
-          )}
-          {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-        </div>
-      ) : (
-        <div style={{ textAlign: 'center' }}>
-          <p>Connect your wallet to begin.</p>
-          {connectors.map((connector) => (
-            <button key={connector.uid} onClick={() => connect({ connector })} style={{ margin: '5px', padding: '10px 15px', cursor: 'pointer' }}>
-              {connector.name}
-            </button>
-          ))}
-        </div>
-      )}
+        {txHash && (
+          <div className="mt-2 p-2 bg-gray-700 rounded text-xs text-gray-300 break-all">
+            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
