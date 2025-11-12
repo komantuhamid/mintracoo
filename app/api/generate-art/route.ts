@@ -7,9 +7,9 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-const BASE_CHARACTER = "cute round blob goblin creature monster";
+const BASE_CHARACTER = "menacing scary goblin monster creature";
 
-// 🎨 72 COLOR SCHEMES (MONOCHROMATIC - MATCHING BACKGROUND)
+// 🎨 72 COLOR SCHEMES
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -85,7 +85,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// ALL ACCESSORIES (190 total)
+// ALL ACCESSORIES (Same as before)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -108,34 +108,34 @@ const EYE_ITEMS = [
   "small eye patch over one eye", "tiny goggles over eyes",
   "small monocle over one eye", "round glasses over eyes",
   "bandage covering one eye", "tiny aviator goggles over eyes",
-  "large round yellow eyes", "small beady eyes glowing",
-  "wide crazy eyes bulging", "squinting menacing eyes",
+  "large round yellow eyes menacing", "small beady eyes glowing red",
+  "wide crazy eyes bulging threatening", "squinting menacing evil eyes",
   "sunglasses cool over eyes", "3D glasses red-blue over eyes",
-  "steampunk goggles brass over eyes", "cyclops single giant eye",
+  "steampunk goggles brass over eyes", "cyclops single giant eye scary",
   "heart-shaped glasses over eyes", "ski goggles over eyes",
   "swimming goggles over eyes", "VR headset over eyes",
-  "laser eyes glowing red", "star-shaped sunglasses over eyes",
+  "laser eyes glowing red dangerous", "star-shaped sunglasses over eyes",
   "cat-eye glasses over eyes", "jeweled monocle over one eye",
-  "cracked monocle over eye", "glowing blue eyes bright",
+  "cracked monocle over eye", "glowing blue eyes bright intimidating",
   "X-ray specs over eyes"
 ];
 
 const MOUTH_ITEMS = [
-  "huge wide grinning mouth showing many sharp fangs",
-  "giant open mouth with rows of jagged fangs",
-  "massive toothy grin showing pointed fangs",
-  "enormous mouth with multiple rows of sharp fangs",
-  "wide crazy smile showing all sharp teeth",
-  "evil grinning mouth with prominent fangs visible",
-  "creepy smile with sharp jagged teeth",
-  "menacing grin with big fangs",
-  "wicked smile showing rows of teeth",
-  "fierce grinning mouth with fangs",
-  "vampire fangs protruding from mouth",
-  "single gold tooth shining in grin",
-  "missing front teeth gap in smile",
-  "braces on teeth metal visible",
-  "tongue sticking out cheeky"
+  "huge wide grinning mouth showing many sharp razor fangs terrifying",
+  "giant open mouth with rows of jagged dangerous fangs menacing",
+  "massive toothy evil grin showing pointed vicious fangs",
+  "enormous mouth with multiple rows of sharp deadly fangs",
+  "wide crazy sinister smile showing all sharp teeth frightening",
+  "evil grinning mouth with prominent threatening fangs visible",
+  "creepy menacing smile with sharp jagged teeth",
+  "menacing aggressive grin with big dangerous fangs",
+  "wicked evil smile showing rows of sharp teeth",
+  "fierce intimidating grinning mouth with fangs",
+  "vampire fangs protruding from mouth scary",
+  "single gold tooth shining in menacing grin",
+  "missing front teeth gap in threatening smile",
+  "braces on teeth metal visible with evil grin",
+  "tongue sticking out with sharp fangs showing"
 ];
 
 const CLOTHING = [
@@ -201,14 +201,14 @@ const HAND_ITEMS = [
 ];
 
 const EXPRESSIONS = [
-  "angry scowling", "evil grinning maniacally",
-  "grumpy frowning", "crazy laughing wild",
-  "sneaky smirking", "confused dumb",
-  "aggressive menacing", "proud confident",
+  "angry scowling menacing", "evil grinning maniacally threatening",
+  "grumpy frowning intimidating", "crazy laughing wild scary",
+  "sneaky smirking sinister", "confused dumb",
+  "aggressive menacing dangerous", "proud confident intimidating",
   "surprised shocked wide-eyed", "sleepy tired yawning",
-  "excited happy beaming", "nervous sweating worried",
-  "silly goofy derpy", "cool relaxed chill",
-  "mischievous plotting devious"
+  "excited maniacal", "nervous sweating worried",
+  "silly goofy", "cool relaxed chill",
+  "mischievous plotting devious threatening"
 ];
 
 function getRandomElement<T>(arr: T[]): T {
@@ -235,35 +235,106 @@ function buildPrompt() {
     "absolutely flat shading, NO gradients, NO depth",
     "completely flat illustration, zero dimension, pure 2D",
     "flat solid colors only, no shading variations",
-    "children's book art style, cute storybook character",
+    "children's book art style, storybook character",
     "vector graphic flat design, minimalist shading",
 
-    `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
+    `${BASE_CHARACTER} with ${skinColor} smooth skin`,
     
-    // 🔥 BODY SIZE - SLIGHTLY TALLER (400x450px)
+    // 🔥🔥🔥 40+ LINES - MAKE IT SCARY/MONSTER!
+    "SCARY MONSTER CHARACTER: intimidating menacing appearance",
+    "THREATENING PRESENCE: dangerous looking goblin creature",
+    "MONSTER FEATURES: sharp aggressive facial features",
+    "MENACING LOOK: evil sinister scary character design",
+    "DANGEROUS MONSTER: intimidating threatening blob goblin",
+    "SCARY CREATURE: menacing dangerous appearance overall",
+    "EVIL MONSTER: wicked sinister character vibe",
+    "THREATENING GOBLIN: aggressive intimidating posture",
+    "sharp pointed ears tilted back menacingly",
+    "menacing threatening facial expression overall",
+    "dangerous intimidating monster vibes",
+    "scary evil creature appearance",
+    "aggressive threatening posture stance",
+    "menacing sinister character design",
+    "intimidating dangerous monster look",
+    "evil wicked scary goblin features",
+    "threatening menacing blob monster",
+    "sharp fangs teeth prominent and visible always",
+    "pointed dangerous teeth showing clearly",
+    "razor sharp fangs displayed prominently",
+    "menacing toothy grin with sharp fangs",
+    "evil scary smile showing all teeth",
+    "threatening grin with fangs visible always",
+    "dangerous mouth full of sharp teeth",
+    "intimidating fangs protruding from mouth",
+    "sharp clawed hands with pointed claws visible",
+    "dangerous looking claws on fingers",
+    "menacing talons on hand edges",
+    "sharp claw tips showing clearly",
+    "pointed claws visible on hands always",
+    "wide stance aggressive posture",
+    "menacing threatening body language overall",
+    "intimidating presence through posture",
+    "aggressive stance with arms ready",
+    "dangerous looking pose threatening",
+    "evil monster character NOT cute NOT friendly",
+    "WRONG: adorable cute kawaii style",
+    "WRONG: friendly harmless looking",
+    "WRONG: innocent baby-like features",
+    "WRONG: round soft cuddly appearance only",
+    "WRONG: sweet gentle harmless vibe",
+    "WRONG: cute pet-like character design",
+    "NOT A CUTE MASCOT: scary monster instead",
+    "NOT ADORABLE: menacing and threatening instead",
+    "NOT FRIENDLY: evil and dangerous instead",
+    "NOT HARMLESS: intimidating and scary instead",
+    
+    // 🔥🔥🔥 ULTRA-ENFORCED BODY SIZE (400x450px)
+    "CRITICAL SIZE ENFORCEMENT: ALL CHARACTERS MUST BE IDENTICAL SIZE",
+    "MANDATORY: body dimensions are EXACTLY 400 pixels wide by 450 pixels tall",
+    "REQUIRED: every single character is 400x450 pixels NO EXCEPTIONS",
+    "ABSOLUTE: body size is LOCKED to 400 width 450 height ALWAYS",
+    "STRICT: character occupies precisely 400x450 pixel space",
+    "ENFORCED: body is standardized to 400px x 450px oval shape",
+    "NON-NEGOTIABLE: body measures exactly 400 wide 450 tall",
+    "FIXED: character body is 400 pixels horizontal 450 pixels vertical",
     "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
-    "body measures precisely 400px width by 450px height",
-    "body is gently oval shape 400x450 pixels maintaining cute proportions",
-    "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
-    "body fills 45% of image height consistently",
-    "oval torso measures 400 pixels wide by 450 pixels tall EXACT",
-    "blob body is standard size 400x450px gentle oval ALWAYS",
-    "EXACTLY TWO short stubby legs identical size",
-    "each leg measures precisely 60 pixels tall 30 pixels wide",
-    "EXACTLY TWO small rounded arms identical size",
-    "each arm measures precisely 70 pixels long 25 pixels thick",
+    "body measures precisely 400px width by 450px height EXACT",
+    "body is gently oval shape 400x450 pixels maintaining proportions EXACT",
+    "chubby belly is soft oval exactly 400 wide by 450 tall pixels EXACT",
+    "body fills 45% of image height consistently EXACT",
+    "oval torso measures 400 pixels wide by 450 pixels tall EXACT ALWAYS",
+    "blob body is standard size 400x450px gentle oval ALWAYS CONSISTENT",
+    "character width is locked at 400 pixels NEVER VARIES",
+    "character height is locked at 450 pixels NEVER VARIES",
+    "body proportions are 400:450 ratio STRICTLY MAINTAINED",
+    "torso occupies exactly 400x450 pixel bounding box FIXED",
+    "character scale is identical across all generations MANDATORY",
+    "body size consistency is CRITICAL do not deviate",
+    "standardized body dimensions 400 wide 450 tall REQUIRED",
+    "uniform character sizing 400x450 pixels ENFORCED",
+    "consistent body measurements 400 by 450 pixels ABSOLUTE",
+    "all characters share exact same 400x450px body size",
+    "body size variation is FORBIDDEN maintain 400x450",
+    "character must fit perfectly in 400x450 pixel space",
+    "body dimensions are non-variable fixed at 400x450",
+    "400 pixel width is the ONLY acceptable width",
+    "450 pixel height is the ONLY acceptable height",
+    "EXACTLY TWO short stubby legs identical size ALWAYS",
+    "each leg measures precisely 60 pixels tall 30 pixels wide EXACT",
+    "EXACTLY TWO small rounded arms identical size ALWAYS",
+    "each arm measures precisely 70 pixels long 25 pixels thick EXACT",
     "head is round sphere attached to body top",
-    "head measures 180 pixels diameter exactly",
+    "head measures 180 pixels diameter exactly ALWAYS",
     
-    "no muscle definition, soft pillowy cuddly body",
-    "wide short squat stature, roly-poly blob build",
+    "no muscle definition, soft blob body",
+    "wide short squat stature, round blob build",
 
     `${expression} facial expression`,
     "small pointed ears on sides of head",
     `${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
-    "mouth showing fangs teeth clearly visible",
+    "mouth showing fangs teeth clearly visible always",
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
@@ -277,7 +348,7 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
 
-    // 🔥🔥🔥 ULTRA-ENFORCED BACKGROUND COLOR MATCHING
+    // 🔥🔥🔥 100% ULTRA-ENFORCED BACKGROUND COLOR MATCHING (20+ MORE LINES!)
     `THE ENTIRE BACKGROUND MUST BE ${skinColor}`,
     `BACKGROUND COLOR IS EXACTLY ${background}`,
     `${skinColor} FILLS THE COMPLETE BACKGROUND`,
@@ -298,8 +369,19 @@ function buildPrompt() {
     "background tone matches character tone perfectly",
     "unified color scheme across entire composition",
     "seamless color integration background to foreground",
+    "ULTRA-CRITICAL: background is PERFECTLY FLAT no shading anywhere",
+    "ULTRA-MANDATORY: background color is UNIFORM across entire image",
+    "ULTRA-REQUIRED: NO gradient from top to bottom in background",
+    "ULTRA-ENFORCED: NO lighter color at top darker at bottom",
+    "ULTRA-ABSOLUTE: background is ONE SINGLE FLAT COLOR ONLY",
+    "ULTRA-STRICT: NO vignette effect NO darkening at edges",
+    "ULTRA-CRUCIAL: background has ZERO lighting variation",
+    "ULTRA-ESSENTIAL: background is COMPLETELY UNIFORM color",
+    "background must be EXACT same color top to bottom left to right",
+    "background color NEVER varies NEVER changes across image",
+    "background is PERFECTLY CONSISTENT single solid color everywhere",
     
-    "simple cartoon mascot cute blob monster character"
+    "simple cartoon monster scary goblin blob creature character"
   ].join(", ");
 
   const negative = [
@@ -326,14 +408,79 @@ function buildPrompt() {
     "3/4 view, looking sideways, facing left or right",
     "back view, rear view, turned around, rotated",
     
-    // 🔥 ANTI-INCONSISTENT BODY SIZE
-    "different body sizes, varying body proportions",
-    "inconsistent body dimensions, irregular body size",
-    "body too large, body too small, wrong body size",
-    "oversized body, undersized body, mismatched proportions",
-    "body bigger than 450 pixels tall, body smaller than 400 pixels wide",
-    "body not oval, elongated body, stretched vertically too much",
-    "tall body, extremely stretched body, compressed body, squashed body",
+    // 🔥🔥🔥 ANTI-CUTE FEATURES (40+ LINES!)
+    "WRONG: cute adorable kawaii style character",
+    "WRONG: friendly harmless innocent appearance",
+    "WRONG: sweet gentle soft features",
+    "WRONG: baby-like childish cute design",
+    "WRONG: round soft cuddly only",
+    "WRONG: big cute anime eyes sparkling",
+    "WRONG: sweet smile friendly grin happy",
+    "WRONG: harmless innocent looking",
+    "WRONG: pet-like mascot adorable",
+    "WRONG: kawaii Japanese cute style",
+    "WRONG: chibi cute small adorable",
+    "WRONG: fluffy soft cuddly appearance only",
+    "WRONG: pastel cute color scheme soft",
+    "WRONG: gentle harmless friendly vibes",
+    "WRONG: sweet innocent character design",
+    "cute, adorable, kawaii, sweet, innocent",
+    "friendly, harmless, gentle, soft, cuddly only",
+    "baby-like, childish, juvenile, young looking cute",
+    "pet-like, mascot cute, chibi style",
+    "fluffy, fuzzy, soft textured",
+    "big sparkling eyes anime cute",
+    "rosy cheeks blushing cute",
+    "small harmless looking cute",
+    "gentle expression friendly smile cute",
+    "adorable pose cute stance",
+    "sweet character design kawaii",
+    "innocent looking harmless cute",
+    "friendly approachable cute only",
+    "cuddly huggable appearance cute",
+    "soft round features cute only",
+    "pastel colors cute palette",
+    "cheerful happy cute expression",
+    "lovable adorable character cute",
+    "charming sweet cute features",
+    "endearing cute appearance",
+    "delightful cute design",
+    "pleasant cute character",
+    "winsome cute style",
+    "appealing cute only",
+    "attractive cute features only",
+    
+    // 🔥🔥🔥 ANTI-SIZE-VARIATION
+    "WRONG: different body sizes between characters",
+    "WRONG: varying body proportions inconsistent sizing",
+    "WRONG: inconsistent body dimensions irregular sizing",
+    "WRONG: body too large bigger than 400x450 pixels",
+    "WRONG: body too small smaller than 400x450 pixels",
+    "WRONG: oversized body larger than standard",
+    "WRONG: undersized body smaller than standard",
+    "WRONG: mismatched proportions wrong aspect ratio",
+    "WRONG: body wider than 400 pixels",
+    "WRONG: body narrower than 400 pixels",
+    "WRONG: body taller than 450 pixels",
+    "WRONG: body shorter than 450 pixels",
+    "WRONG: body not oval wrong shape",
+    "WRONG: elongated body stretched too much",
+    "WRONG: compressed body squashed too much",
+    "WRONG: tall body extremely stretched vertically",
+    "WRONG: wide body extremely stretched horizontally",
+    "WRONG: character scale variation size differences",
+    "WRONG: non-uniform sizing between generations",
+    "WRONG: body size inconsistency from image to image",
+    "variable body size, changing dimensions, fluctuating scale",
+    "uneven character sizing, non-standard dimensions",
+    "body size deviation, proportion inconsistency",
+    "different sized characters, varying scales",
+    "non-identical body measurements, size differences",
+    "body larger in some images smaller in others",
+    "inconsistent character scale across generations",
+    "body dimensions that vary from 400x450",
+    "non-standardized body size, irregular proportions",
+    "character sizing that changes between images",
     "different leg sizes, uneven legs, asymmetrical legs",
     "one leg bigger, one leg smaller, varying leg length",
     "different arm sizes, uneven arms, asymmetrical arms",
@@ -348,7 +495,7 @@ function buildPrompt() {
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
 
-    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES
+    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES (20+ MORE!)
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
     "WRONG: different background color, mismatched colors",
@@ -367,6 +514,16 @@ function buildPrompt() {
     "WRONG: background shading, background vignette",
     "WRONG: darker background at bottom, lighter at top",
     "WRONG: any variation in background color",
+    "WRONG: beige background when character is NOT beige",
+    "WRONG: cream background when character is NOT cream",
+    "WRONG: tan background when character is NOT tan",
+    "WRONG: neutral background when character is colored",
+    "WRONG: background lighter shade than character",
+    "WRONG: background darker shade than character",
+    "WRONG: background different hue than character",
+    "WRONG: background different saturation than character",
+    "WRONG: background different brightness than character",
+    "WRONG: background different tone than character",
     "multicolored background, rainbow background, patterned background",
     "background scenery, landscape, environment details",
     "background elements, objects in background, props",
@@ -393,7 +550,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating Slightly Taller Goblin NFT (400x450px)...");
+    console.log("🎨 Generating SCARY MONSTER Goblin NFT with PERFECT Background...");
     
     const hf = new HfInference(HF_TOKEN);
 
