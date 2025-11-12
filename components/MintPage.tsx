@@ -17,14 +17,15 @@ export default function MintPage() {
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   const [profile, setProfile] = useState<any>(null);
-  const [pfpUrl, setPfpUrl] = useState<string | null>(null); // State for the PFP URL
+  const [pfpUrl, setPfpUrl] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize the Farcaster SDK and get user profile
   useEffect(() => {
-    sdk.getProfile().then(setProfile).catch(console.error);
+    // ✅ CORRECTED: Use sdk.getUserData() instead of getProfile()
+    sdk.getUserData().then(setProfile).catch(console.error);
   }, []);
 
   // Fetch the PFP URL when the user profile is available
@@ -105,6 +106,7 @@ export default function MintPage() {
     }
   };
 
+  // The rest of the component remains the same...
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', backgroundColor: '#0d0d0d', color: '#fff', minHeight: '100vh' }}>
       <h1 style={{ textAlign: 'center', color: '#4CAF50' }}>👺 Goblin Mint</h1>
@@ -134,6 +136,13 @@ export default function MintPage() {
             </div>
           )}
           {isConfirmed && <p style={{ color: '#4CAF50' }}>Success! Your Goblin has been minted.</p>}
+          {txHash && (
+            <p>
+              <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2196F3' }}>
+                View on Basescan
+              </a>
+            </p>
+          )}
           {error && <p style={{ color: 'red' }}>Error: {error}</p>}
         </div>
       ) : (
