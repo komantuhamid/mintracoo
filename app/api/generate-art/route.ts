@@ -280,7 +280,6 @@ function buildPrompt() {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
   
-  \1
   BODY_LOCK,
 // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
     "simple flat 2D cartoon illustration, clean vector art style",
@@ -330,7 +329,6 @@ function buildPrompt() {
     "simple cartoon mascot cute blob monster character"
   ].join(", ");
 
-  \1
   NEGATIVE_BODY,
 "3D render, CGI, realistic, photorealistic, detailed",
     
@@ -389,7 +387,6 @@ function buildPrompt() {
 
 export async function POST(req: Request) {
   try {
-    \1
 const userSeed = typeof (body as any)?.seed === 'number' ? (body as any).seed : undefined;.catch(() => ({}));
 
     if (!HF_TOKEN) {
