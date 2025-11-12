@@ -60,28 +60,27 @@ export default function MintPage() {
     autoConnect();
   }, [isAppReady, isConnected, connectors, connect]);
 
-useEffect(() => {
-  (async () => {
-    try {
-      const context = await sdk.context;
-      const fid = context?.user?.fid;
-      const username = context?.user?.username;
-      const pfpUrl = context?.user?.pfpUrl;
-      
-      if (fid) {
-        setProfile({
-          display_name: username || '',
-          username: username || '',
-          pfp_url: pfpUrl || null,
-          fid,
-        });
+  useEffect(() => {
+    (async () => {
+      try {
+        const context = await sdk.context;
+        const fid = context?.user?.fid;
+        const username = context?.user?.username;
+        const pfpUrl = context?.user?.pfpUrl;
+        
+        if (fid) {
+          setProfile({
+            display_name: username || '',
+            username: username || '',
+            pfp_url: pfpUrl || null,
+            fid,
+          });
+        }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
-    }
-  })();
-}, []);
-
+    })();
+  }, []);
 
   useEffect(() => {
     if (isPending) {
@@ -95,12 +94,15 @@ useEffect(() => {
 
   const generateRaccoon = async () => {
     setLoading(true);
-    setMessage('🎨 Generating...');
+    setMessage('🎨 Generating personalized Goblin...');
     try {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ style: 'pixel raccoon' }),
+        body: JSON.stringify({ 
+          style: 'pixel raccoon',
+          pfpUrl: profile?.pfp_url  // ✅ Send PFP URL for personalization
+        }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Failed');
@@ -119,7 +121,6 @@ useEffect(() => {
     setMessage('📝 Uploading to IPFS...');
 
     try {
-      // 1. Upload metadata to IPFS
       const uploadRes = await fetch('/api/create-signed-mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -137,15 +138,13 @@ useEffect(() => {
       console.log('✅ Metadata URI:', metadataUri);
       setMessage('🔐 Confirm in wallet...');
 
-      // 2. Encode mint(string) call - CORRECT!
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
-        args: [metadataUri], // ← Only metadataUri, no address!
+        args: [metadataUri],
       });
       console.log('✅ Encoded data:', data);
 
-      // 3. Send transaction with payment
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
