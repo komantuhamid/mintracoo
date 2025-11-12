@@ -8,18 +8,19 @@ const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 // ✅ Penguin Portrait Logic
-const BASE_CHARACTER = "stylized chubby penguin, rounded white belly, small orange beak, minimal details, smooth body, clean cartoon mascot, NO visible arms, NO visible legs, NO full body";
+const BASE_CHARACTER =
+  "stylized chubby penguin, rounded white belly, small orange beak, minimal details, smooth body, clean cartoon mascot, NO visible arms, NO visible legs, NO full body";
 
 // Monochrome color schemes (pick for background)
 const PENGUIN_COLOR_SCHEMES = [
-  { bg: "orange" }, { bg: "yellow" }, { bg: "purple" }, { bg: "blue" }, { bg: "mint green" },
-  { bg: "ice blue" }, { bg: "pink" }, { bg: "pastel green" }, { bg: "pastel yellow" }, { bg: "beige" }
-  // Add more if needed!
+  { bg: "orange" }, { bg: "yellow" }, { bg: "purple" }, { bg: "blue" },
+  { bg: "mint green" }, { bg: "ice blue" }, { bg: "pink" }, { bg: "pastel green" },
+  { bg: "pastel yellow" }, { bg: "beige" }
 ];
 
 // Accessories (randomized)
 const HEAD_ITEMS = [
-  "small leather cap on head", "tiny metal helmet", "bandana", "mohawk", "beanie knit cap", 
+  "small leather cap on head", "tiny metal helmet", "bandana", "mohawk", "beanie knit cap",
   "beret tilted on head", "chef hat", "baseball cap", "bucket hat", "party hat cone",
   "helmet shaped like fish", "fur hat", "cowboy hat", "pirate hat", "top hat tall"
 ];
@@ -38,8 +39,8 @@ const NECK_ITEMS = [
   "small bead necklace", "bow tie", "scarf wrapped around neck", "diamond necklace", "bare neck"
 ];
 
-// Helper
-function getRandomElement(arr) {
+// Helper (TypeScript-safe)
+function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
@@ -82,8 +83,8 @@ export async function POST(req: Request) {
     console.log("🎨 Generating Penguin Portrait NFT...");
     const hf = new HfInference(HF_TOKEN);
 
-    let output = null;
-    let lastErr = null;
+    let output: any = null;
+    let lastErr: any = null;
     for (let i = 0; i < 3; i++) {
       try {
         output = await (hf.textToImage as any)({
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
           },
         });
         break;
-      } catch (e) {
+      } catch (e: any) {
         lastErr = e;
         if (i < 2) await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
       }
@@ -110,7 +111,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status });
     }
 
-    let imgBuf;
+    let imgBuf: Buffer;
     if (typeof output === "string") {
       if (output.startsWith("data:image")) {
         const b64 = output.split(",")[1] || "";
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
     return NextResponse.json({ generated_image_url: dataUrl, success: true });
 
-  } catch (e) {
+  } catch (e: any) {
     console.error("Route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
