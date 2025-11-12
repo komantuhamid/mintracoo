@@ -9,79 +9,80 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 const BASE_CHARACTER = "round blob goblin creature monster";
 
 // 🎨 72 COLOR SCHEMES (MONOCHROMATIC - MATCHING BACKGROUND)
+// 🎨 72 COLOR SCHEMES - VARIED SKIN with NEUTRAL BACKGROUNDS
 const GOBLIN_COLOR_SCHEMES = [
-  { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
-  { skin: "dark forest green deep", bg: "dark forest green deep" },
-  { skin: "mint green pastel light", bg: "mint green pastel light" },
-  { skin: "olive green earthy", bg: "olive green earthy" },
-  { skin: "emerald green rich vibrant", bg: "emerald green rich vibrant" },
-  { skin: "sage green muted soft", bg: "sage green muted soft" },
-  { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
-  { skin: "jade green medium", bg: "jade green medium" },
-  { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
-  { skin: "navy blue dark deep", bg: "navy blue dark deep" },
-  { skin: "cyan blue light bright", bg: "cyan blue light bright" },
-  { skin: "teal turquoise blue-green", bg: "teal turquoise blue-green" },
-  { skin: "sky blue pastel light", bg: "sky blue pastel light" },
-  { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
-  { skin: "violet purple bright", bg: "violet purple bright" },
-  { skin: "deep purple dark rich", bg: "deep purple dark rich" },
-  { skin: "lavender purple pastel", bg: "lavender purple pastel" },
-  { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
-  { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
-  { skin: "crimson red bright", bg: "crimson red bright" },
-  { skin: "dark red maroon deep", bg: "dark red maroon deep" },
-  { skin: "orange bright vibrant", bg: "orange bright vibrant" },
-  { skin: "coral orange-pink", bg: "coral orange-pink" },
-  { skin: "rust orange-brown", bg: "rust orange-brown" },
-  { skin: "charcoal gray dark", bg: "charcoal gray dark" },
-  { skin: "slate gray medium", bg: "slate gray medium" },
-  { skin: "bone white pale cream", bg: "bone white pale cream" },
-  { skin: "jet black dark", bg: "jet black dark" },
-  { skin: "golden yellow bright", bg: "golden yellow bright" },
-  { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
-  { skin: "lemon yellow pale", bg: "lemon yellow pale" },
-  { skin: "chocolate brown dark", bg: "chocolate brown dark" },
-  { skin: "tan brown light", bg: "tan brown light" },
-  { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
-  { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
-  { skin: "rose pink soft", bg: "rose pink soft" },
-  { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light" },
-  { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light" },
-  { skin: "pastel mint green soft light", bg: "pastel mint green soft light" },
-  { skin: "pastel lavender purple soft light", bg: "pastel lavender purple soft light" },
-  { skin: "pastel peach orange soft light", bg: "pastel peach orange soft light" },
-  { skin: "pastel lemon yellow soft light", bg: "pastel lemon yellow soft light" },
-  { skin: "pastel lilac purple soft light", bg: "pastel lilac purple soft light" },
-  { skin: "pastel aqua blue-green soft light", bg: "pastel aqua blue-green soft light" },
-  { skin: "pastel coral pink-orange soft light", bg: "pastel coral pink-orange soft light" },
-  { skin: "pastel sage green soft light", bg: "pastel sage green soft light" },
-  { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light" },
-  { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light" },
-  { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric" },
-  { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric" },
-  { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric" },
-  { skin: "neon yellow bright glowing electric", bg: "neon yellow bright glowing electric" },
-  { skin: "neon orange bright glowing electric", bg: "neon orange bright glowing electric" },
-  { skin: "neon purple bright glowing electric", bg: "neon purple bright glowing electric" },
-  { skin: "neon magenta bright glowing electric", bg: "neon magenta bright glowing electric" },
-  { skin: "neon turquoise bright glowing electric", bg: "neon turquoise bright glowing electric" },
-  { skin: "neon red bright glowing electric", bg: "neon red bright glowing electric" },
-  { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green glowing electric" },
-  { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
-  { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
-  { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
-  { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming" },
-  { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny" },
-  { skin: "metallic rose gold pink shiny", bg: "metallic rose gold pink shiny" },
-  { skin: "metallic platinum silver-white shiny", bg: "metallic platinum silver-white shiny" },
-  { skin: "metallic copper orange shiny", bg: "metallic copper orange shiny" },
-  { skin: "metallic chrome silver mirror shiny", bg: "metallic chrome silver mirror shiny" },
-  { skin: "metallic brass yellow shiny", bg: "metallic brass yellow shiny" },
-  { skin: "metallic titanium gray shiny", bg: "metallic titanium gray shiny" },
-  { skin: "metallic pearl white iridescent shiny", bg: "metallic pearl white iridescent shiny" },
-  { skin: "metallic gunmetal dark gray shiny", bg: "metallic gunmetal dark gray shiny" },
-  { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
+  { skin: "bright neon lime green glowing", bg: "soft cream beige light" },
+  { skin: "dark forest green deep", bg: "soft gray light neutral" },
+  { skin: "mint green pastel light", bg: "pale blue light soft" },
+  { skin: "olive green earthy", bg: "warm tan light" },
+  { skin: "emerald green rich vibrant", bg: "soft white off-white" },
+  { skin: "sage green muted soft", bg: "light lavender soft" },
+  { skin: "chartreuse yellow-green bright", bg: "pale pink soft light" },
+  { skin: "jade green medium", bg: "soft peach light" },
+  { skin: "cobalt blue bright electric", bg: "soft cream light" },
+  { skin: "navy blue dark deep", bg: "light gray soft" },
+  { skin: "cyan blue light bright", bg: "warm beige soft" },
+  { skin: "teal turquoise blue-green", bg: "soft yellow pale" },
+  { skin: "sky blue pastel light", bg: "soft gray warm" },
+  { skin: "royal blue rich vibrant", bg: "light cream soft" },
+  { skin: "violet purple bright", bg: "soft beige light" },
+  { skin: "deep purple dark rich", bg: "pale gray light" },
+  { skin: "lavender purple pastel", bg: "soft white warm" },
+  { skin: "magenta purple-pink bright", bg: "light tan soft" },
+  { skin: "indigo purple-blue deep", bg: "soft cream warm" },
+  { skin: "crimson red bright", bg: "soft gray light" },
+  { skin: "dark red maroon deep", bg: "warm beige light" },
+  { skin: "orange bright vibrant", bg: "soft cream light" },
+  { skin: "coral orange-pink", bg: "light blue soft pale" },
+  { skin: "rust orange-brown", bg: "soft gray warm" },
+  { skin: "charcoal gray dark", bg: "soft cream light" },
+  { skin: "slate gray medium", bg: "pale yellow soft" },
+  { skin: "bone white pale cream", bg: "soft gray medium" },
+  { skin: "jet black dark", bg: "soft white light" },
+  { skin: "golden yellow bright", bg: "soft gray light" },
+  { skin: "mustard yellow earthy", bg: "warm beige light" },
+  { skin: "lemon yellow pale", bg: "soft white cream" },
+  { skin: "chocolate brown dark", bg: "light tan soft" },
+  { skin: "tan brown light", bg: "soft gray warm" },
+  { skin: "mahogany red-brown deep", bg: "soft cream light" },
+  { skin: "hot pink bright vibrant", bg: "light gray soft" },
+  { skin: "rose pink soft", bg: "soft beige warm" },
+  { skin: "pastel pink soft baby light", bg: "soft white light" },
+  { skin: "pastel blue soft powder light", bg: "soft cream warm" },
+  { skin: "pastel mint green soft light", bg: "light tan soft" },
+  { skin: "pastel lavender purple soft light", bg: "soft gray light" },
+  { skin: "pastel peach orange soft light", bg: "soft white warm" },
+  { skin: "pastel lemon yellow soft light", bg: "light beige soft" },
+  { skin: "pastel lilac purple soft light", bg: "soft gray warm" },
+  { skin: "pastel aqua blue-green soft light", bg: "soft cream light" },
+  { skin: "pastel coral pink-orange soft light", bg: "pale gray soft" },
+  { skin: "pastel sage green soft light", bg: "soft white light" },
+  { skin: "pastel periwinkle blue-purple soft light", bg: "warm tan light" },
+  { skin: "pastel ivory cream soft light", bg: "soft gray medium" },
+  { skin: "neon pink hot bright glowing electric", bg: "dark charcoal gray" },
+  { skin: "neon green lime bright glowing electric", bg: "dark navy blue" },
+  { skin: "neon blue cyan bright glowing electric", bg: "dark purple deep" },
+  { skin: "neon yellow bright glowing electric", bg: "dark gray charcoal" },
+  { skin: "neon orange bright glowing electric", bg: "dark brown deep" },
+  { skin: "neon purple bright glowing electric", bg: "dark gray medium" },
+  { skin: "neon magenta bright glowing electric", bg: "dark blue navy" },
+  { skin: "neon turquoise bright glowing electric", bg: "dark charcoal" },
+  { skin: "neon red bright glowing electric", bg: "dark gray deep" },
+  { skin: "neon chartreuse yellow-green glowing electric", bg: "dark navy" },
+  { skin: "neon fuchsia pink-purple glowing electric", bg: "dark charcoal gray" },
+  { skin: "neon aqua blue-green glowing electric", bg: "dark gray medium" },
+  { skin: "metallic gold shiny gleaming", bg: "dark burgundy red" },
+  { skin: "metallic silver shiny gleaming", bg: "dark navy blue" },
+  { skin: "metallic bronze copper shiny", bg: "dark forest green" },
+  { skin: "metallic rose gold pink shiny", bg: "dark gray charcoal" },
+  { skin: "metallic platinum silver-white shiny", bg: "dark purple deep" },
+  { skin: "metallic copper orange shiny", bg: "dark teal blue" },
+  { skin: "metallic chrome silver mirror shiny", bg: "dark charcoal gray" },
+  { skin: "metallic brass yellow shiny", bg: "dark brown rich" },
+  { skin: "metallic titanium gray shiny", bg: "dark navy blue" },
+  { skin: "metallic pearl white iridescent shiny", bg: "dark gray deep" },
+  { skin: "metallic gunmetal dark gray shiny", bg: "dark burgundy red" },
+  { skin: "metallic champagne gold-beige shiny", bg: "dark forest green" }
 ];
 
 const HEAD_ITEMS = [
@@ -223,7 +224,6 @@ function getPersonalizedColor(fid: number): { skin: string; bg: string } {
 }
 
 
-
 function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const colorScheme = colorSchemeHint || getRandomElement(GOBLIN_COLOR_SCHEMES);
   const skinColor = colorScheme.skin;
@@ -237,22 +237,45 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const expression = getRandomElement(EXPRESSIONS);
 
   const prompt = [
+    // 🔥 ULTRA-FLAT STYLE
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
     "completely flat illustration, zero dimension, pure 2D design",
+    
+    // CHARACTER - SKIN COLOR
     `${BASE_CHARACTER} with ${skinColor} colored skin`,
-    `wearing ${headItem}`,
+    
+    // HEAD - MATCH SKIN COLOR
+    `wearing ${headItem} in ${skinColor} color matching skin`,
+    
+    // EYES
     `${eyeItem}`,
+    
+    // MOUTH
     `${mouthItem}`,
-    `wearing ${clothing}`,
-    `${neckItem}`,
-    `holding ${handItem}`,
+    
+    // BODY/CLOTHING - MATCH SKIN COLOR
+    `wearing ${clothing} in ${skinColor} color matching skin`,
+    
+    // NECK - MATCH SKIN COLOR
+    `${neckItem} in ${skinColor} color matching skin`,
+    
+    // HANDS/ITEMS - MATCH SKIN COLOR
+    `holding ${handItem} in ${skinColor} color matching skin`,
+    
+    // EXPRESSION
     `looking ${expression}`,
-    `solid ${background} background, monochromatic color scheme`,
-    `background color matches character color exactly`,
+    
+    // BACKGROUND - CONTRASTING
+    `solid ${background} background with contrasting color`,
+    `all clothing and accessories match the ${skinColor} of the character`,
+    
+    // COMPOSITION
     "centered character, front view, full body visible",
     "character fills most of frame",
+    
+    // STYLE ENFORCEMENT
     "NO shadows, NO lighting effects, NO depth, NO 3D",
     "pure flat design, sticker-like appearance",
     "clean simple cartoon, like a flat emoji or icon",
@@ -272,6 +295,7 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
 
   return { prompt, negative };
 }
+
 
 export async function POST(req: NextRequest) {
   try {
