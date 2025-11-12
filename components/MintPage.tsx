@@ -7,7 +7,6 @@ import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTr
 
 // ✅ YOUR CONTRACT ADDRESS
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
-
 // ✅ CORRECT ABI FOR YOUR NEW CONTRACT
 const MINT_ABI = parseAbi([
   'function mint(string memory tokenURI_) payable',
@@ -117,11 +116,8 @@ export default function MintPage() {
   const performMint = async () => {
     if (!address) return setMessage('❌ Connect wallet');
     if (!generatedImage) return setMessage('❌ Generate image first');
-    
     setMessage('📝 Uploading to IPFS...');
-
     try {
-      // 1. Upload metadata to IPFS
       const uploadRes = await fetch('/api/create-signed-mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,24 +128,16 @@ export default function MintPage() {
           fid: profile?.fid,
         }),
       });
-
       const uploadData = await uploadRes.json();
       if (uploadData.error) throw new Error(uploadData.error);
-
       const { metadataUri } = uploadData;
-      console.log('✅ Metadata URI:', metadataUri);
-
       setMessage('🔐 Confirm in wallet...');
-
       // 2. Encode mint(string) call - CORRECT!
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
         args: [metadataUri], // ← Only metadataUri, no address!
       });
-
-      console.log('✅ Encoded data:', data);
-
       // 3. Send transaction with payment
       sendTransaction({
         to: CONTRACT_ADDRESS,
@@ -157,62 +145,138 @@ export default function MintPage() {
         value: parseEther('0.0001'),
         gas: 300000n,
       });
-
     } catch (e: any) {
-      console.error('❌ Mint error:', e);
       setMessage(`❌ ${e?.message || 'Failed'}`);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900 p-4 flex items-center justify-center">
-      <div className="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-6">
-        <h1 className="text-3xl font-bold text-white mb-4 text-center">
-          🦝 Raccoon Mint
-        </h1>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#242032] to-[#262024]">
+      {/* Header avatar + username */}
+      {profile && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            background: "rgba(50,30,40,0.6)",
+            borderRadius: "16px",
+            padding: "12px 24px",
+            marginBottom: "18px",
+            gap: "12px",
+            width: "fit-content",
+            position: "relative",
+          }}
+        >
+          <img
+            src={profile.pfp_url || ""}
+            alt="pfp"
+            style={{
+              width: "50px",
+              height: "50px",
+              borderRadius: "12px",
+              border: "3px solid #E4196B",
+              background: "#101016"
+            }}
+          />
+          <div style={{ fontWeight: "bold", color: "#fff", fontSize: "18px" }}>
+            @{profile.username}
+          </div>
+          {/* badge verified */}
+          <img src="/verified-badge.svg" alt="verified"
+            style={{
+              position: "absolute", left: "38px", bottom: "8px", width: "23px", height: "23px"
+            }}
+          />
+        </div>
+      )}
 
-        <div className="mb-4 bg-gray-700 rounded-lg p-4 min-h-64 flex items-center justify-center">
+      <div
+        style={{
+          background: "#36303c",
+          borderRadius: "20px",
+          padding: "24px 22px 22px 22px",
+          boxShadow: "0 2px 22px 0 rgba(0,0,0,0.16)",
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          width: "350px"
+        }}
+      >
+        <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#fff", marginBottom: "21px" }}>
+          🦝 Raccoon Mint
+        </div>
+
+        {/* NFT image */}
+        <div style={{
+          width: "290px",
+          height: "290px",
+          borderRadius: "12px",
+          overflow: "hidden",
+          background: "#ebd164",
+          marginBottom: "17px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
           {generatedImage ? (
-            <img src={generatedImage} alt="Raccoon" className="w-full rounded-lg" />
+            <img src={generatedImage} alt="Raccoon NFT" style={{ width: '100%', height: '100%', objectFit: "contain" }} />
           ) : (
-            <p className="text-gray-400">No image generated</p>
+            <span style={{ color: "#aaa", fontSize: "1.3rem" }}>No image generated</span>
           )}
         </div>
 
-        {profile && (
-          <p className="text-gray-300 text-sm mb-2">
-            👤 {profile.username || 'User'}
-          </p>
-        )}
+        <div className="flex flex-col gap-1 text-gray-300 text-sm mb-2">
+          <div>💼 {shortAddr || 'Not connected'}</div>
+        </div>
 
-        <p className="text-gray-300 text-sm mb-4">
-          💼 {shortAddr || 'Not connected'}
-        </p>
-
+        {/* Buttons */}
         <button
+          disabled={loading}
           onClick={generateRaccoon}
-          disabled={loading || isPending || isConfirming}
-          className="w-full mt-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
+          style={{
+            marginBottom: "12px",
+            borderRadius: "8px",
+            padding: "10px 0",
+            background: "#23b168",
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: "1rem",
+            width: "100%",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
           {loading ? '⏳ Generating...' : '🎨 Generate Raccoon'}
         </button>
 
         <button
+          disabled={isPending || isConfirming}
           onClick={performMint}
-          disabled={!address || !generatedImage || isPending || isConfirming}
-          className="w-full mt-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
+          style={{
+            marginBottom: "12px",
+            borderRadius: "8px",
+            padding: "10px 0",
+            background: "#892adb",
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: "1rem",
+            width: "100%",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
           {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
         </button>
 
+        {/* Status message */}
         {message && (
-          <div className="mt-4 p-3 bg-gray-700 rounded text-gray-200 text-sm text-center">
+          <div style={{ fontSize: "1rem", color: "#fff", background: "#222", borderRadius: "8px", padding: "8px 14px", marginTop: "6px", width: "100%", textAlign: "center" }}>
             {message}
           </div>
         )}
-
+        {/* TX hash */}
         {txHash && (
-          <div className="mt-2 p-2 bg-gray-700 rounded text-xs text-gray-300 break-all">
+          <div style={{ fontSize: "0.95rem", color: "#bbb", marginTop: "7px" }}>
             TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </div>
         )}
