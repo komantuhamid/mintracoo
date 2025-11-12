@@ -3,24 +3,35 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { parseAbi, encodeFunctionData, parseEther } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
-import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import {
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+} from 'wagmi';
 
-// ✅ YOUR CONTRACT ADDRESS
+// ✅ Contract address
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
+const MINT_ABI = parseAbi(['function mint(string memory tokenURI_) payable']);
 
-// ✅ CORRECT ABI FOR YOUR NEW CONTRACT
-const MINT_ABI = parseAbi([
-  'function mint(string memory tokenURI_) payable',
-]);
+function normalizePfpUrl(url?: string | null) {
+  if (!url) return null;
+  let u = url.trim();
+  if (u.startsWith('ipfs://')) return `https://ipfs.io/ipfs/${u.slice(7)}`;
+  if (u.includes('/ipfs/')) return `https://ipfs.io${u.slice(u.indexOf('/ipfs/'))}`;
+  if (u.startsWith('http')) return u;
+  if (/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(u)) return `https://ipfs.io/ipfs/${u}`;
+  return null;
+}
 
 export default function MintPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { sendTransaction, isPending, data: txHash } = useSendTransaction();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({ hash: txHash });
 
   const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -37,10 +48,8 @@ export default function MintPage() {
     const init = async () => {
       try {
         await sdk.actions.ready();
-        setIsAppReady(true);
-      } catch (e) {
-        setIsAppReady(true);
-      }
+      } catch {}
+      setIsAppReady(true);
     };
     init();
   }, []);
@@ -60,6 +69,7 @@ export default function MintPage() {
     autoConnect();
   }, [isAppReady, isConnected, connectors, connect]);
 
+  // 🟣 Fetch Farcaster profile + PFP
   useEffect(() => {
     (async () => {
       try {
@@ -72,28 +82,26 @@ export default function MintPage() {
           body: JSON.stringify({ fid }),
         });
         const j = await r.json();
+        const pfp = normalizePfpUrl(j.pfp_url);
         setProfile({
           display_name: j.display_name || '',
           username: j.username || '',
-          pfp_url: j.pfp_url || null,
+          pfp_url: pfp,
           fid,
         });
       } catch (e) {
-        console.error(e);
+        console.error('Fetch PFP error', e);
       }
     })();
   }, []);
 
   useEffect(() => {
-    if (isPending) {
-      setMessage('⏳ Confirm in wallet...');
-    } else if (isConfirming) {
-      setMessage('⏳ Confirming...');
-    } else if (isConfirmed) {
-      setMessage('🎉 NFT Minted Successfully!');
-    }
+    if (isPending) setMessage('⏳ Confirm in wallet...');
+    else if (isConfirming) setMessage('⏳ Confirming...');
+    else if (isConfirmed) setMessage('🎉 NFT Minted Successfully!');
   }, [isPending, isConfirming, isConfirmed]);
 
+  // 🎨 Generate raccoon
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('🎨 Generating...');
@@ -114,14 +122,12 @@ export default function MintPage() {
     }
   };
 
+  // 🪙 Mint
   const performMint = async () => {
     if (!address) return setMessage('❌ Connect wallet');
     if (!generatedImage) return setMessage('❌ Generate image first');
-    
-    setMessage('📝 Uploading to IPFS...');
-
+    setMessage('📝 Uploading metadata...');
     try {
-      // 1. Upload metadata to IPFS
       const uploadRes = await fetch('/api/create-signed-mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,37 +138,28 @@ export default function MintPage() {
           fid: profile?.fid,
         }),
       });
-
       const uploadData = await uploadRes.json();
       if (uploadData.error) throw new Error(uploadData.error);
-
-      const { metadataUri } = uploadData;
-      console.log('✅ Metadata URI:', metadataUri);
-
-      setMessage('🔐 Confirm in wallet...');
-
-      // 2. Encode mint(string) call - CORRECT!
+      const metadataUri = uploadData.metadataUri;
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
-        args: [metadataUri], // ← Only metadataUri, no address!
+        args: [metadataUri],
       });
-
-      console.log('✅ Encoded data:', data);
-
-      // 3. Send transaction with payment
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
         value: parseEther('0.0001'),
         gas: 300000n,
       });
-
+      setMessage('🔐 Transaction submitted...');
     } catch (e: any) {
-      console.error('❌ Mint error:', e);
+      console.error(e);
       setMessage(`❌ ${e?.message || 'Failed'}`);
     }
   };
+
+  const pfpSrc = normalizePfpUrl(profile?.pfp_url);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900 p-4 flex items-center justify-center">
@@ -171,23 +168,33 @@ export default function MintPage() {
           🦝 Raccoon Mint
         </h1>
 
+        {pfpSrc && (
+          <div className="flex justify-center mb-4">
+            <img
+              src={pfpSrc}
+              alt="User PFP"
+              className="w-32 h-32 rounded-lg object-cover border-2 border-purple-500"
+            />
+          </div>
+        )}
+
+        {profile?.username && (
+          <p className="text-center text-gray-300 mb-2">
+            @{profile.username}
+          </p>
+        )}
+
         <div className="mb-4 bg-gray-700 rounded-lg p-4 min-h-64 flex items-center justify-center">
           {generatedImage ? (
-            <img src={generatedImage} alt="Raccoon" className="w-full rounded-lg" />
+            <img
+              src={generatedImage}
+              alt="Raccoon"
+              className="w-full rounded-lg object-cover"
+            />
           ) : (
             <p className="text-gray-400">No image generated</p>
           )}
         </div>
-
-        {profile && (
-          <p className="text-gray-300 text-sm mb-2">
-            👤 {profile.username || 'User'}
-          </p>
-        )}
-
-        <p className="text-gray-300 text-sm mb-4">
-          💼 {shortAddr || 'Not connected'}
-        </p>
 
         <button
           onClick={generateRaccoon}
