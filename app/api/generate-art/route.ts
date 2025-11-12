@@ -6,27 +6,6 @@ import { HfInference } from "@huggingface/inference";
 const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
-/* ===== BODY SIZE LOCK (added) ===== */
-const BODY_LOCK = [
-  "exact same body silhouette and size each time",
-  "very short and chubby plush mascot body",
-  "overall height fills ~72% of the canvas",
-  "head height is ~45% of total height (oversized round head)",
-  "torso is a round sphere, width ~55% of canvas width",
-  "tiny short stubby legs (each leg <15% of body height), small rounded arms",
-  "3 heads-tall proportion, squat stance, feet close together",
-  "front view, perfectly centered, symmetric, full body fully visible"
-].join(", ");
-
-const NEGATIVE_BODY = [
-  "tall body, slim body, skinny, athletic, muscular, defined muscles",
-  "long legs, long arms, elongated limbs, stretched or realistic proportions",
-  "different species body, realistic anatomy, human-like body",
-  "large hands, large feet, long fingers, extra limbs, tail, wings",
-  "cropped body, bust only, half body, side view, 3/4 view"
-].join(", ");
-/* =================================== */
-
 
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
@@ -43,7 +22,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "sage green muted soft", bg: "sage green muted soft" },
   { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
   { skin: "jade green medium", bg: "jade green medium" },
-  
+
   // 💙 BLUE - STANDARD (6)
   { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
   { skin: "navy blue dark deep", bg: "navy blue dark deep" },
@@ -51,37 +30,37 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "teal turquoise blue-green", bg: "teal turquoise blue-green" },
   { skin: "sky blue pastel light", bg: "sky blue pastel light" },
   { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
-  
+
   // 💜 PURPLE - STANDARD (5)
   { skin: "violet purple bright", bg: "violet purple bright" },
   { skin: "deep purple dark rich", bg: "deep purple dark rich" },
   { skin: "lavender purple pastel", bg: "lavender purple pastel" },
   { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
   { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
-  
+
   // ❤️ RED/ORANGE - STANDARD (5)
   { skin: "crimson red bright", bg: "crimson red bright" },
   { skin: "dark red maroon deep", bg: "dark red maroon deep" },
   { skin: "orange bright vibrant", bg: "orange bright vibrant" },
   { skin: "coral orange-pink", bg: "coral orange-pink" },
   { skin: "rust orange-brown", bg: "rust orange-brown" },
-  
+
   // 🩶 GRAY/BLACK/WHITE - STANDARD (4)
   { skin: "charcoal gray dark", bg: "charcoal gray dark" },
   { skin: "slate gray medium", bg: "slate gray medium" },
   { skin: "bone white pale cream", bg: "bone white pale cream" },
   { skin: "jet black dark", bg: "jet black dark" },
-  
+
   // 💛 YELLOW/GOLD - STANDARD (3)
   { skin: "golden yellow bright", bg: "golden yellow bright" },
   { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
   { skin: "lemon yellow pale", bg: "lemon yellow pale" },
-  
+
   // 🤎 BROWN - STANDARD (3)
   { skin: "chocolate brown dark", bg: "chocolate brown dark" },
   { skin: "tan brown light", bg: "tan brown light" },
   { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
-  
+
   // 🩷 PINK - STANDARD (2)
   { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
   { skin: "rose pink soft", bg: "rose pink soft" },
@@ -279,7 +258,6 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    BODY_LOCK,
     // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
@@ -288,13 +266,43 @@ function buildPrompt() {
     "flat solid colors only, no shading variations",
     "children's book art style, cute storybook character",
     "vector graphic flat design, minimalist shading",
-    
+
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
-    "round soft blob body, smooth chubby round belly",
-    "simple cute dumpy proportions, pudgy spherical torso",
-    "tiny short stubby legs, small rounded arms",
+    
+    // 🔥🔥🔥 NEW! EXACT BODY SIZE SPECIFICATIONS
+    "EXACT BODY DIMENSIONS: round blob body exactly 400 pixels diameter",
+    "body sphere measures precisely 400px width by 400px height",
+    "body is perfect circle 400 pixel diameter NO VARIATION",
+    "chubby belly is round sphere exactly 400x400 pixels",
+    "body fills 40% of image height consistently",
+    "spherical torso measures 400 pixels across EXACT",
+    "blob body is standard size 400px circle ALWAYS",
+    
+    // 🔥🔥🔥 NEW! EXACT LEG SIZE SPECIFICATIONS
+    "EXACTLY TWO short stubby legs identical size",
+    "each leg measures precisely 60 pixels tall 30 pixels wide",
+    "left leg 60px height 30px width right leg 60px height 30px width",
+    "both legs are stumpy 60 by 30 pixel rectangles",
+    "legs positioned symmetrically under body",
+    "NO variation in leg size both legs IDENTICAL",
+    
+    // 🔥🔥🔥 NEW! EXACT ARM SIZE SPECIFICATIONS
+    "EXACTLY TWO small rounded arms identical size",
+    "each arm measures precisely 70 pixels long 25 pixels thick",
+    "left arm 70px length 25px width right arm 70px length 25px width",
+    "both arms are short noodles 70 by 25 pixels",
+    "arms positioned symmetrically on body sides",
+    "NO variation in arm size both arms IDENTICAL",
+    
+    // 🔥🔥🔥 NEW! EXACT HEAD SIZE SPECIFICATIONS
+    "head is round sphere attached to body top",
+    "head measures 180 pixels diameter exactly",
+    "head is 45% of body size consistently",
+    "round head 180px diameter NO VARIATION",
+    
     "no muscle definition, soft pillowy cuddly body",
     "wide short squat stature, roly-poly blob build",
+
     `${expression} facial expression`,
     "small pointed ears on sides of head",
     `${headItem}`,
@@ -304,6 +312,7 @@ function buildPrompt() {
     `${clothing}`,
     `${neckItem}`,
     `${handItem}`,
+
     "all accessories in correct anatomical positions",
     "hat on head, eyes on face, mouth on face visible",
     "clothing on body, necklace on neck, weapon in hands",
@@ -312,7 +321,7 @@ function buildPrompt() {
     "standing upright full body visible",
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
-    
+
     // 🔥 EXACT COLOR MATCHING (Triple reinforcement!)
     `entire background is ${skinColor}`,
     `flat solid ${background} background`,
@@ -325,11 +334,11 @@ function buildPrompt() {
     "background is completely flat solid color",
     "no background shading, no background gradient",
     "background has zero depth or dimension",
+    
     "simple cartoon mascot cute blob monster character"
   ].join(", ");
 
   const negative = [
-    NEGATIVE_BODY,
     "3D render, CGI, realistic, photorealistic, detailed",
     
     // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
@@ -343,7 +352,6 @@ function buildPrompt() {
     "dimensional shading, spherical shading, rounded shading",
     "ambient shadows, contact shadows, soft shadows",
     "radial gradient, color gradient in background",
-    
     "detailed texture, fur strands, hair detail, realistic skin",
     "cinematic lighting, photography, studio lighting",
     "painted, brush strokes, oil painting, watercolor",
@@ -353,6 +361,21 @@ function buildPrompt() {
     "side view, profile, turned sideways, angled",
     "3/4 view, looking sideways, facing left or right",
     "back view, rear view, turned around, rotated",
+    
+    // 🔥🔥🔥 NEW! ANTI-INCONSISTENT BODY SIZE
+    "different body sizes, varying body proportions",
+    "inconsistent body dimensions, irregular body size",
+    "body too large, body too small, wrong body size",
+    "oversized body, undersized body, mismatched proportions",
+    "body bigger than 400 pixels, body smaller than 400 pixels",
+    "body not round, body not spherical, elongated body",
+    "tall body, stretched body, compressed body, squashed body",
+    "different leg sizes, uneven legs, asymmetrical legs",
+    "one leg bigger, one leg smaller, varying leg length",
+    "different arm sizes, uneven arms, asymmetrical arms",
+    "one arm bigger, one arm smaller, varying arm length",
+    "large head, tiny head, wrong head size, head too big",
+    
     "muscular, athletic, fit, toned, abs visible",
     "muscle definition, biceps, six pack, defined",
     "tall, long limbs, stretched, slender, lanky",
@@ -360,7 +383,7 @@ function buildPrompt() {
     "cigar, pipe, smoking, cigarette, tobacco",
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
-    
+
     // 🔥 ULTRA-STRONG BACKGROUND NEGATIVES
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
@@ -389,9 +412,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    
-    const userSeed = typeof (body as any)?.seed === \"number\" ? (body as any).seed : undefined;
-if (!HF_TOKEN) {
+    if (!HF_TOKEN) {
       return NextResponse.json(
         { error: "Missing HUGGINGFACE_API_TOKEN" },
         { status: 500 }
@@ -399,7 +420,7 @@ if (!HF_TOKEN) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin...");
+    console.log("🎨 Generating CONSISTENT-SIZE 72-COLOR Ultra-Flat NFT Goblin...");
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -418,7 +439,6 @@ if (!HF_TOKEN) {
             num_inference_steps: 35,
             guidance_scale: 7.5,
             negative_prompt: negative,
-          ...(userSeed !== undefined ? { seed: userSeed } : {}),
           },
         });
         break;
