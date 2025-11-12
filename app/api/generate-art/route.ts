@@ -212,7 +212,7 @@ function getRandomElement<T>(arr: T[]): T {
 }
 
 // ✅ NEW: Analyze PFP image and extract color
-async function analyzePFPImage(pfpUrl: string): Promise<{ skin: string; bg: string } | null> {
+async function analyzePFPImage(pfpUrl: string): Promise<{ skin: string; bg: string } | undefined> {
   try {
     console.log("🎨 Analyzing PFP:", pfpUrl);
     
@@ -232,7 +232,7 @@ async function analyzePFPImage(pfpUrl: string): Promise<{ skin: string; bg: stri
       return GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('orange')) || null;
     }
     
-    return null;
+        return undefined;  // Instead of: return null;
   } catch (error) {
     console.error("⚠️ PFP analysis error:", error);
     return null;
@@ -293,7 +293,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const pfpUrl = body?.pfpUrl;
     
-    let selectedColorScheme = null;
+    let selectedColorScheme: { skin: string; bg: string } | undefined = undefined;
+
+
     
     // ✅ NEW: If PFP URL provided, analyze it
     if (pfpUrl) {
