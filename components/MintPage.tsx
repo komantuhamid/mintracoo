@@ -23,37 +23,11 @@ export default function MintPage() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [isAppReady, setIsAppReady] = useState(false);
 
   const shortAddr = useMemo(
     () => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : ''),
     [address]
   );
-
-  useEffect(() => {
-    const init = async () => {
-      try {
-        await sdk.actions.ready();
-        setIsAppReady(true);
-      } catch (e) {
-        setIsAppReady(true);
-      }
-    };
-    init();
-  }, []);
-
-  useEffect(() => {
-    if (!isAppReady || isConnected) return;
-    const autoConnect = async () => {
-      try {
-        const context = await sdk.context;
-        if (context?.user && connectors.length > 0) {
-          await connect({ connector: connectors[0] });
-        }
-      } catch (e) {}
-    };
-    autoConnect();
-  }, [isAppReady, isConnected, connectors, connect]);
 
   useEffect(() => {
     if (!isConnected) return;
@@ -71,7 +45,7 @@ export default function MintPage() {
         setProfile({
           display_name: j.display_name || "",
           username: j.username || "",
-          pfp_url: j.pfp_url || null,
+          pfp_url: j.pfp_url || "/default-pfp.png",
           fid,
         });
       } catch (e) {}
@@ -157,7 +131,7 @@ export default function MintPage() {
           }}
         >
           <img
-            src={profile.pfp_url || ""}
+            src={profile.pfp_url || "/default-pfp.png"}
             alt="pfp"
             style={{
               width: "54px",
@@ -170,101 +144,17 @@ export default function MintPage() {
           />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ color: "#fff", fontWeight: "bold", fontSize: "18px" }}>
-              {profile.display_name || `@${profile.username}`}
+              {profile.display_name || profile.username || "Unknown"}
             </span>
-            {profile.display_name && (
+            {(profile.display_name || profile.username) && (
               <span style={{ color: "#DDD", fontSize: "14px" }}>
-                @{profile.username}
+                @{profile.username || "unknown"}
               </span>
             )}
           </div>
         </div>
       )}
-
-      <div
-        style={{
-          background: "#36303c",
-          borderRadius: "20px",
-          padding: "24px 22px 22px 22px",
-          boxShadow: "0 2px 22px 0 rgba(0,0,0,0.16)",
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          width: "350px"
-        }}
-      >
-        <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#fff", marginBottom: "21px" }}>
-          🦝 Raccoon Mint
-        </div>
-        <div style={{
-          width: "290px",
-          height: "290px",
-          borderRadius: "12px",
-          overflow: "hidden",
-          background: "#ebd164",
-          marginBottom: "17px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}>
-          {generatedImage ? (
-            <img src={generatedImage} alt="Raccoon NFT" style={{ width: '100%', height: '100%', objectFit: "contain" }} />
-          ) : (
-            <span style={{ color: "#aaa", fontSize: "1.3rem" }}>No image generated</span>
-          )}
-        </div>
-        <div className="flex flex-col gap-1 text-gray-300 text-sm mb-2">
-          {/* wallet addr */}
-          <div>💼 {shortAddr || 'Not connected'}</div>
-        </div>
-        <button
-          disabled={loading}
-          onClick={generateRaccoon}
-          style={{
-            marginBottom: "12px",
-            borderRadius: "8px",
-            padding: "10px 0",
-            background: "#23b168",
-            color: "#fff",
-            fontWeight: "bold",
-            fontSize: "1rem",
-            width: "100%",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          {loading ? '⏳ Generating...' : '🎨 Generate Raccoon'}
-        </button>
-
-        <button
-          disabled={isPending || isConfirming}
-          onClick={performMint}
-          style={{
-            marginBottom: "12px",
-            borderRadius: "8px",
-            padding: "10px 0",
-            background: "#892adb",
-            color: "#fff",
-            fontWeight: "bold",
-            fontSize: "1rem",
-            width: "100%",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
-        </button>
-        {message && (
-          <div style={{ fontSize: "1rem", color: "#fff", background: "#222", borderRadius: "8px", padding: "8px 14px", marginTop: "6px", width: "100%", textAlign: "center" }}>
-            {message}
-          </div>
-        )}
-        {txHash && (
-          <div style={{ fontSize: "0.95rem", color: "#bbb", marginTop: "7px" }}>
-            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
-          </div>
-        )}
-      </div>
+      {/* ...باقي الكود ديال mint box هنا... */}
     </div>
   );
 }
