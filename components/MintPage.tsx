@@ -3,132 +3,79 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { parseAbi, encodeFunctionData, parseEther } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
-import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-  useSendTransaction,
-  useWaitForTransactionReceipt,
-} from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
-// ✅ Contract address
+// Contract Address and ABI
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
 const MINT_ABI = parseAbi(['function mint(string memory tokenURI_) payable']);
-
-function normalizePfpUrl(url?: string | null) {
-  if (!url) return null;
-  let u = url.trim();
-  if (u.startsWith('ipfs://')) return `https://ipfs.io/ipfs/${u.slice(7)}`;
-  if (u.includes('/ipfs/')) return `https://ipfs.io${u.slice(u.indexOf('/ipfs/'))}`;
-  if (u.startsWith('http')) return u;
-  if (/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(u)) return `https://ipfs.io/ipfs/${u}`;
-  return null;
-}
 
 export default function MintPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { sendTransaction, isPending, data: txHash } = useSendTransaction();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   const [profile, setProfile] = useState<any>(null);
+  const [pfpUrl, setPfpUrl] = useState<string | null>(null); // State for the PFP URL
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [isAppReady, setIsAppReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const shortAddr = useMemo(
-    () => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : ''),
-    [address]
-  );
-
+  // Initialize the Farcaster SDK and get user profile
   useEffect(() => {
-    const init = async () => {
-      try {
-        await sdk.actions.ready();
-      } catch {}
-      setIsAppReady(true);
-    };
-    init();
+    sdk.getProfile().then(setProfile).catch(console.error);
   }, []);
 
+  // Fetch the PFP URL when the user profile is available
   useEffect(() => {
-    const autoConnect = async () => {
-      if (!isAppReady || isConnected) return;
-      try {
-        const context = await sdk.context;
-        if (context?.user && connectors.length > 0) {
-          await connect({ connector: connectors[0] });
+    if (profile && profile.fid) {
+      const fetchPfp = async () => {
+        try {
+          const res = await fetch('/api/fetch-pfp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fid: profile.fid }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setPfpUrl(data.pfpUrl);
+          }
+        } catch (error) {
+          console.error('Failed to fetch PFP:', error);
         }
-      } catch (e) {
-        console.log('Auto-connect error:', e);
-      }
-    };
-    autoConnect();
-  }, [isAppReady, isConnected, connectors, connect]);
+      };
 
-  // 🟣 Fetch Farcaster profile + PFP
-  useEffect(() => {
-    (async () => {
-      try {
-        const context = await sdk.context;
-        const fid = context?.user?.fid;
-        if (!fid) return;
-        const r = await fetch('/api/fetch-pfp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fid }),
-        });
-        const j = await r.json();
-        const pfp = normalizePfpUrl(j.pfp_url);
-        setProfile({
-          display_name: j.display_name || '',
-          username: j.username || '',
-          pfp_url: pfp,
-          fid,
-        });
-      } catch (e) {
-        console.error('Fetch PFP error', e);
-      }
-    })();
-  }, []);
+      fetchPfp();
+    }
+  }, [profile]);
 
-  useEffect(() => {
-    if (isPending) setMessage('⏳ Confirm in wallet...');
-    else if (isConfirming) setMessage('⏳ Confirming...');
-    else if (isConfirmed) setMessage('🎉 NFT Minted Successfully!');
-  }, [isPending, isConfirming, isConfirmed]);
-
-  // 🎨 Generate raccoon
-  const generateRaccoon = async () => {
+  // Generate the Goblin image
+  const generateGoblin = async () => {
     setLoading(true);
-    setMessage('🎨 Generating...');
+    setError(null);
+    setGeneratedImage(null);
     try {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ style: 'pixel raccoon' }),
       });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j?.error || 'Failed');
-      setGeneratedImage(j.generated_image_url || j.imageUrl);
-      setMessage('✅ Ready to mint!');
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
+      setGeneratedImage(data.imageUrl);
     } catch (e: any) {
-      setMessage(`❌ ${e?.message}`);
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🪙 Mint
-  const performMint = async () => {
-    if (!address) return setMessage('❌ Connect wallet');
-    if (!generatedImage) return setMessage('❌ Generate image first');
-    setMessage('📝 Uploading metadata...');
+  // Mint the NFT
+  const handleMint = async () => {
+    if (!address || !generatedImage) return;
+
     try {
-      const uploadRes = await fetch('/api/create-signed-mint', {
+      const res = await fetch('/api/create-signed-mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,92 +85,67 @@ export default function MintPage() {
           fid: profile?.fid,
         }),
       });
-      const uploadData = await uploadRes.json();
-      if (uploadData.error) throw new Error(uploadData.error);
-      const metadataUri = uploadData.metadataUri;
+
+      if (!res.ok) throw new Error('Failed to create signed mint');
+      const { metadataUri } = await res.json();
+
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
         args: [metadataUri],
       });
+
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
-        value: parseEther('0.0001'),
-        gas: 300000n,
+        value: parseEther('0.00069'), // Minting fee
       });
-      setMessage('🔐 Transaction submitted...');
     } catch (e: any) {
-      console.error(e);
-      setMessage(`❌ ${e?.message || 'Failed'}`);
+      setError(e.message);
     }
   };
 
-  const pfpSrc = normalizePfpUrl(profile?.pfp_url);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900 p-4 flex items-center justify-center">
-      <div className="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-6">
-        <h1 className="text-3xl font-bold text-white mb-4 text-center">
-          🦝 Raccoon Mint
-        </h1>
-
-        {pfpSrc && (
-          <div className="flex justify-center mb-4">
-            <img
-              src={pfpSrc}
-              alt="User PFP"
-              className="w-32 h-32 rounded-lg object-cover border-2 border-purple-500"
-            />
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', backgroundColor: '#0d0d0d', color: '#fff', minHeight: '100vh' }}>
+      <h1 style={{ textAlign: 'center', color: '#4CAF50' }}>👺 Goblin Mint</h1>
+      
+      {isConnected && address ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', border: '1px solid #333', borderRadius: '8px', backgroundColor: '#1a1a1a' }}>
+            {pfpUrl && (
+              <img src={pfpUrl} alt="Farcaster PFP" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+            )}
+            <span>{address.slice(0, 6)}...{address.slice(-4)}</span>
+            <button onClick={() => disconnect()} style={{ padding: '8px 12px', borderRadius: '4px', border: 'none', background: '#f44336', color: 'white', cursor: 'pointer' }}>Disconnect</button>
           </div>
-        )}
 
-        {profile?.username && (
-          <p className="text-center text-gray-300 mb-2">
-            @{profile.username}
-          </p>
-        )}
-
-        <div className="mb-4 bg-gray-700 rounded-lg p-4 min-h-64 flex items-center justify-center">
-          {generatedImage ? (
-            <img
-              src={generatedImage}
-              alt="Raccoon"
-              className="w-full rounded-lg object-cover"
-            />
-          ) : (
-            <p className="text-gray-400">No image generated</p>
+          {!generatedImage && (
+            <button onClick={generateGoblin} disabled={loading} style={{ padding: '12px 20px', fontSize: '16px', cursor: 'pointer', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '5px' }}>
+              {loading ? '⏳ Generating...' : '🎨 Generate Goblin'}
+            </button>
           )}
+
+          {generatedImage && (
+            <div style={{ textAlign: 'center' }}>
+              <img src={generatedImage} alt="Generated Goblin" style={{ width: '256px', height: '256px', border: '2px solid #4CAF50', borderRadius: '10px' }} />
+              <button onClick={handleMint} disabled={isPending || isConfirming} style={{ marginTop: '20px', padding: '12px 20px', fontSize: '16px', cursor: 'pointer', background: '#2196F3', color: 'white', border: 'none', borderRadius: '5px' }}>
+                {isPending ? 'Confirming...' : isConfirming ? 'Minting...' : 'Mint NFT'}
+              </button>
+            </div>
+          )}
+          {isConfirmed && <p style={{ color: '#4CAF50' }}>Success! Your Goblin has been minted.</p>}
+          {error && <p style={{ color: 'red' }}>Error: {error}</p>}
         </div>
-
-        <button
-          onClick={generateRaccoon}
-          disabled={loading || isPending || isConfirming}
-          className="w-full mt-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
-        >
-          {loading ? '⏳ Generating...' : '🎨 Generate Raccoon'}
-        </button>
-
-        <button
-          onClick={performMint}
-          disabled={!address || !generatedImage || isPending || isConfirming}
-          className="w-full mt-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
-        >
-          {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
-        </button>
-
-        {message && (
-          <div className="mt-4 p-3 bg-gray-700 rounded text-gray-200 text-sm text-center">
-            {message}
-          </div>
-        )}
-
-        {txHash && (
-          <div className="mt-2 p-2 bg-gray-700 rounded text-xs text-gray-300 break-all">
-            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
-          </div>
-        )}
-      </div>
+      ) : (
+        <div style={{ textAlign: 'center' }}>
+          <p>Connect your wallet to begin.</p>
+          {connectors.map((connector) => (
+            <button key={connector.uid} onClick={() => connect({ connector })} style={{ margin: '5px', padding: '10px 15px', cursor: 'pointer' }}>
+              {connector.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
