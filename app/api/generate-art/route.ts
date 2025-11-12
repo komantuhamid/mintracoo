@@ -6,19 +6,16 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// ستايل البطريق الرسمي فقط الوجه/bust (قاعدة صارمة)
+// فقط bust or head لبطريق minimal
 const BASE_CHARACTER =
-  "minimal cute cartoon penguin, big oval eyes, centered orange beak, rounded white face, bust only (shoulders and head), NO arms, NO legs, NO full body shown, flat solid color background";
+  "minimal cute cartoon penguin bust, big oval eyes, centered orange beak, rounded white face, bust only (shoulders and head), NO arms, NO legs, NO full body, flat solid color background";
 
 const PENGUIN_COLOR_SCHEMES = [
-  { bg: "orange" }, { bg: "yellow" }, { bg: "purple" }, { bg: "blue" },
-  { bg: "mint green" }, { bg: "ice blue" }, { bg: "pink" }, { bg: "pastel green" },
-  { bg: "pastel yellow" }, { bg: "beige" }
+  { bg: "orange" }, { bg: "yellow" }, { bg: "blue" }, { bg: "mint green" }, { bg: "pastel green" }, { bg: "lavender" }, { bg: "ice blue" }, { bg: "pink" }
 ];
 
 const HEAD_ITEMS = [
-  "small leather cap on top of head", "beanie knit cap on head",
-  "beret tilted on head", "simple blue flat cap on head"
+  "blue flat cap on head", "beanie cap on head", "beret on head"
 ];
 
 function getRandomElement<T>(arr: T[]): T {
@@ -27,16 +24,15 @@ function getRandomElement<T>(arr: T[]): T {
 
 function buildPrompt() {
   const background = getRandomElement(PENGUIN_COLOR_SCHEMES).bg;
-  const headItem = getRandomElement(HEAD_ITEMS); // قبعة اختيارية فقط
+  const headItem = getRandomElement(HEAD_ITEMS); // قبعة فقط إذا بغيت اكسسوار
   const prompt = [
     BASE_CHARACTER,
     headItem,
     `solid ${background} background`
-  ]
-    .filter(Boolean)
-    .join(", ");
+  ].filter(Boolean).join(", ");
+
   const negative = [
-    "arms, legs, feet, hands, full body, body, complex background, scene, objects, text, watermark, signature, clothing on body"
+    "arms, legs, feet, hands, body, clothing, full body, stand, shadow, objects under bust, torso, scene, accessories except head, all under bust"
   ].join(", ");
   return { prompt, negative };
 }
@@ -48,7 +44,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing HUGGINGFACE_API_TOKEN" }, { status: 500 });
     }
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating Penguin Bust NFT...");
     const hf = new HfInference(HF_TOKEN);
 
     let output: any = null;
@@ -70,9 +65,10 @@ export async function POST(req: Request) {
         break;
       } catch (e: any) {
         lastErr = e;
-        if (i < 2) await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+        if (i < 2) await new Promise((r) => setTimeout(r, 1300 * (i + 1)));
       }
     }
+
     if (!output) {
       const msg = lastErr?.message || "Inference error";
       const status = lastErr?.response?.status || 502;
@@ -106,7 +102,6 @@ export async function POST(req: Request) {
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
     return NextResponse.json({ generated_image_url: dataUrl, success: true });
   } catch (e: any) {
-    console.error("Route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
