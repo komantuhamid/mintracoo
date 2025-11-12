@@ -9,7 +9,7 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - MONOCHROMATIC (SAME COLOR FOR SKIN AND BACKGROUND)
+// 🎨 72 COLOR SCHEMES (MONOCHROMATIC - MATCHING BACKGROUND)
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -85,7 +85,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// ALL ACCESSORIES (SAME AS BEFORE - 190 total)
+// ALL ACCESSORIES (190 total)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -240,14 +240,14 @@ function buildPrompt() {
 
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
     
-    // 🔥 BODY SIZE CONSISTENCY
-    "EXACT BODY DIMENSIONS: round blob body exactly 400 pixels diameter",
-    "body sphere measures precisely 400px width by 400px height",
-    "body is perfect circle 400 pixel diameter NO VARIATION",
-    "chubby belly is round sphere exactly 400x400 pixels",
-    "body fills 40% of image height consistently",
-    "spherical torso measures 400 pixels across EXACT",
-    "blob body is standard size 400px circle ALWAYS",
+    // 🔥 BODY SIZE - SLIGHTLY TALLER (400x450px)
+    "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
+    "body measures precisely 400px width by 450px height",
+    "body is gently oval shape 400x450 pixels maintaining cute proportions",
+    "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
+    "body fills 45% of image height consistently",
+    "oval torso measures 400 pixels wide by 450 pixels tall EXACT",
+    "blob body is standard size 400x450px gentle oval ALWAYS",
     "EXACTLY TWO short stubby legs identical size",
     "each leg measures precisely 60 pixels tall 30 pixels wide",
     "EXACTLY TWO small rounded arms identical size",
@@ -277,7 +277,7 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
 
-    // 🔥🔥🔥 ULTRA-ENFORCED BACKGROUND COLOR MATCHING (10X STRONGER!)
+    // 🔥🔥🔥 ULTRA-ENFORCED BACKGROUND COLOR MATCHING
     `THE ENTIRE BACKGROUND MUST BE ${skinColor}`,
     `BACKGROUND COLOR IS EXACTLY ${background}`,
     `${skinColor} FILLS THE COMPLETE BACKGROUND`,
@@ -331,9 +331,9 @@ function buildPrompt() {
     "inconsistent body dimensions, irregular body size",
     "body too large, body too small, wrong body size",
     "oversized body, undersized body, mismatched proportions",
-    "body bigger than 400 pixels, body smaller than 400 pixels",
-    "body not round, body not spherical, elongated body",
-    "tall body, stretched body, compressed body, squashed body",
+    "body bigger than 450 pixels tall, body smaller than 400 pixels wide",
+    "body not oval, elongated body, stretched vertically too much",
+    "tall body, extremely stretched body, compressed body, squashed body",
     "different leg sizes, uneven legs, asymmetrical legs",
     "one leg bigger, one leg smaller, varying leg length",
     "different arm sizes, uneven arms, asymmetrical arms",
@@ -348,7 +348,7 @@ function buildPrompt() {
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
 
-    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES (10X STRONGER!)
+    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
     "WRONG: different background color, mismatched colors",
@@ -393,7 +393,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating ULTRA-ENFORCED Monochromatic NFT Goblin...");
+    console.log("🎨 Generating Slightly Taller Goblin NFT (400x450px)...");
     
     const hf = new HfInference(HF_TOKEN);
 
