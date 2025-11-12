@@ -235,7 +235,7 @@ async function analyzePFPImage(pfpUrl: string): Promise<{ skin: string; bg: stri
         return undefined;  // Instead of: return null;
   } catch (error) {
     console.error("⚠️ PFP analysis error:", error);
-    return null;
+    return undefined;
   }
 }
 
