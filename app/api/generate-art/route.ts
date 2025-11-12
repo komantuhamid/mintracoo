@@ -7,13 +7,10 @@ const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
-// 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - EXACT MATCHING!
-// Standard (36) + Pastel (12) + Neon (12) + Metallic (12)
+// 🎨 72 COLOR SCHEMES - MONOCHROMATIC (SAME COLOR FOR SKIN AND BACKGROUND)
 const GOBLIN_COLOR_SCHEMES = [
-  // 💚 GREEN - STANDARD (8)
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
   { skin: "mint green pastel light", bg: "mint green pastel light" },
@@ -22,50 +19,34 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "sage green muted soft", bg: "sage green muted soft" },
   { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
   { skin: "jade green medium", bg: "jade green medium" },
-
-  // 💙 BLUE - STANDARD (6)
   { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
   { skin: "navy blue dark deep", bg: "navy blue dark deep" },
   { skin: "cyan blue light bright", bg: "cyan blue light bright" },
   { skin: "teal turquoise blue-green", bg: "teal turquoise blue-green" },
   { skin: "sky blue pastel light", bg: "sky blue pastel light" },
   { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
-
-  // 💜 PURPLE - STANDARD (5)
   { skin: "violet purple bright", bg: "violet purple bright" },
   { skin: "deep purple dark rich", bg: "deep purple dark rich" },
   { skin: "lavender purple pastel", bg: "lavender purple pastel" },
   { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
   { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
-
-  // ❤️ RED/ORANGE - STANDARD (5)
   { skin: "crimson red bright", bg: "crimson red bright" },
   { skin: "dark red maroon deep", bg: "dark red maroon deep" },
   { skin: "orange bright vibrant", bg: "orange bright vibrant" },
   { skin: "coral orange-pink", bg: "coral orange-pink" },
   { skin: "rust orange-brown", bg: "rust orange-brown" },
-
-  // 🩶 GRAY/BLACK/WHITE - STANDARD (4)
   { skin: "charcoal gray dark", bg: "charcoal gray dark" },
   { skin: "slate gray medium", bg: "slate gray medium" },
   { skin: "bone white pale cream", bg: "bone white pale cream" },
   { skin: "jet black dark", bg: "jet black dark" },
-
-  // 💛 YELLOW/GOLD - STANDARD (3)
   { skin: "golden yellow bright", bg: "golden yellow bright" },
   { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
   { skin: "lemon yellow pale", bg: "lemon yellow pale" },
-
-  // 🤎 BROWN - STANDARD (3)
   { skin: "chocolate brown dark", bg: "chocolate brown dark" },
   { skin: "tan brown light", bg: "tan brown light" },
   { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
-
-  // 🩷 PINK - STANDARD (2)
   { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
   { skin: "rose pink soft", bg: "rose pink soft" },
-
-  // 🌸 PASTEL COLORS (12)
   { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light" },
   { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light" },
   { skin: "pastel mint green soft light", bg: "pastel mint green soft light" },
@@ -78,8 +59,6 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "pastel sage green soft light", bg: "pastel sage green soft light" },
   { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light" },
   { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light" },
-
-  // ⚡ NEON COLORS (12)
   { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric" },
   { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric" },
   { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric" },
@@ -92,8 +71,6 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green glowing electric" },
   { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
   { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
-
-  // 💎 METALLIC COLORS (12)
   { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
   { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming" },
   { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny" },
@@ -108,7 +85,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// 👒 HEAD ITEMS (30)
+// ALL ACCESSORIES (SAME AS BEFORE - 190 total)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -127,7 +104,6 @@ const HEAD_ITEMS = [
   "santa hat red on head", "party hat cone on head"
 ];
 
-// 👀 EYE ITEMS (25)
 const EYE_ITEMS = [
   "small eye patch over one eye", "tiny goggles over eyes",
   "small monocle over one eye", "round glasses over eyes",
@@ -144,7 +120,6 @@ const EYE_ITEMS = [
   "X-ray specs over eyes"
 ];
 
-// 👄 MOUTH ITEMS (15)
 const MOUTH_ITEMS = [
   "huge wide grinning mouth showing many sharp fangs",
   "giant open mouth with rows of jagged fangs",
@@ -163,7 +138,6 @@ const MOUTH_ITEMS = [
   "tongue sticking out cheeky"
 ];
 
-// 👕 CLOTHING (35)
 const CLOTHING = [
   "small leather vest worn on torso", "tiny torn rags covering body",
   "simple cloth tunic on body", "small fur vest on torso",
@@ -185,7 +159,6 @@ const CLOTHING = [
   "poncho over shoulders"
 ];
 
-// ⛓️ NECK ITEMS (30)
 const NECK_ITEMS = [
   "small bone necklace around neck", "tiny iron collar around neck",
   "small tooth necklace on neck", "simple leather cord around neck",
@@ -204,7 +177,6 @@ const NECK_ITEMS = [
   "gemstone necklace colorful on neck", "choker tight around neck"
 ];
 
-// 🗡️ HAND ITEMS (40)
 const HAND_ITEMS = [
   "holding small rusty dagger in hand", "gripping tiny wooden club in hand",
   "holding small coin bag in hand", "holding tiny wooden shield in hand",
@@ -228,7 +200,6 @@ const HAND_ITEMS = [
   "holding gem crystal in hand", "gripping staff wooden in hand"
 ];
 
-// 😠 EXPRESSIONS (15)
 const EXPRESSIONS = [
   "angry scowling", "evil grinning maniacally",
   "grumpy frowning", "crazy laughing wild",
@@ -258,7 +229,7 @@ function buildPrompt() {
   const expression = getRandomElement(EXPRESSIONS);
   
   const prompt = [
-    // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
+    // 🔥 ULTRA-FLAT STYLE
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
@@ -269,7 +240,7 @@ function buildPrompt() {
 
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
     
-    // 🔥🔥🔥 NEW! EXACT BODY SIZE SPECIFICATIONS
+    // 🔥 BODY SIZE CONSISTENCY
     "EXACT BODY DIMENSIONS: round blob body exactly 400 pixels diameter",
     "body sphere measures precisely 400px width by 400px height",
     "body is perfect circle 400 pixel diameter NO VARIATION",
@@ -277,28 +248,12 @@ function buildPrompt() {
     "body fills 40% of image height consistently",
     "spherical torso measures 400 pixels across EXACT",
     "blob body is standard size 400px circle ALWAYS",
-    
-    // 🔥🔥🔥 NEW! EXACT LEG SIZE SPECIFICATIONS
     "EXACTLY TWO short stubby legs identical size",
     "each leg measures precisely 60 pixels tall 30 pixels wide",
-    "left leg 60px height 30px width right leg 60px height 30px width",
-    "both legs are stumpy 60 by 30 pixel rectangles",
-    "legs positioned symmetrically under body",
-    "NO variation in leg size both legs IDENTICAL",
-    
-    // 🔥🔥🔥 NEW! EXACT ARM SIZE SPECIFICATIONS
     "EXACTLY TWO small rounded arms identical size",
     "each arm measures precisely 70 pixels long 25 pixels thick",
-    "left arm 70px length 25px width right arm 70px length 25px width",
-    "both arms are short noodles 70 by 25 pixels",
-    "arms positioned symmetrically on body sides",
-    "NO variation in arm size both arms IDENTICAL",
-    
-    // 🔥🔥🔥 NEW! EXACT HEAD SIZE SPECIFICATIONS
     "head is round sphere attached to body top",
     "head measures 180 pixels diameter exactly",
-    "head is 45% of body size consistently",
-    "round head 180px diameter NO VARIATION",
     
     "no muscle definition, soft pillowy cuddly body",
     "wide short squat stature, roly-poly blob build",
@@ -322,18 +277,27 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
 
-    // 🔥 EXACT COLOR MATCHING (Triple reinforcement!)
-    `entire background is ${skinColor}`,
-    `flat solid ${background} background`,
-    `${skinColor} fills entire background`,
-    "background is identical color to character skin",
-    "character and background are SAME EXACT color",
-    "perfect monochromatic single-color scheme",
-    "zero color difference between character and background",
-    "character blends into background color perfectly",
-    "background is completely flat solid color",
-    "no background shading, no background gradient",
-    "background has zero depth or dimension",
+    // 🔥🔥🔥 ULTRA-ENFORCED BACKGROUND COLOR MATCHING (10X STRONGER!)
+    `THE ENTIRE BACKGROUND MUST BE ${skinColor}`,
+    `BACKGROUND COLOR IS EXACTLY ${background}`,
+    `${skinColor} FILLS THE COMPLETE BACKGROUND`,
+    `BACKGROUND IS ${background} SOLID COLOR`,
+    "CRITICAL: background is identical color to character skin",
+    "MANDATORY: character and background are SAME EXACT color",
+    "REQUIRED: perfect monochromatic single-color scheme",
+    "ENFORCED: zero color difference between character and background",
+    "ABSOLUTE: character blends into background color perfectly",
+    "STRICT: background is completely flat solid color",
+    "CRUCIAL: no background shading, no background gradient",
+    "ESSENTIAL: background has zero depth or dimension",
+    "background color matches character skin color 100%",
+    "background and character share identical color palette",
+    "monochromatic color scheme background equals character",
+    `solid ${background} backdrop fills entire image`,
+    `${skinColor} environment surrounds character completely`,
+    "background tone matches character tone perfectly",
+    "unified color scheme across entire composition",
+    "seamless color integration background to foreground",
     
     "simple cartoon mascot cute blob monster character"
   ].join(", ");
@@ -341,7 +305,7 @@ function buildPrompt() {
   const negative = [
     "3D render, CGI, realistic, photorealistic, detailed",
     
-    // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
+    // 🔥 ULTRA-STRONG ANTI-SHADING
     "complex shading, dramatic lighting, shadows, depth",
     "gradient shading, soft shading, ambient occlusion",
     "drop shadow, cast shadow, shadow under character",
@@ -362,7 +326,7 @@ function buildPrompt() {
     "3/4 view, looking sideways, facing left or right",
     "back view, rear view, turned around, rotated",
     
-    // 🔥🔥🔥 NEW! ANTI-INCONSISTENT BODY SIZE
+    // 🔥 ANTI-INCONSISTENT BODY SIZE
     "different body sizes, varying body proportions",
     "inconsistent body dimensions, irregular body size",
     "body too large, body too small, wrong body size",
@@ -384,25 +348,34 @@ function buildPrompt() {
     "floating accessories, misplaced items",
     "hat floating, clothing on wrong body part",
 
-    // 🔥 ULTRA-STRONG BACKGROUND NEGATIVES
+    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES (10X STRONGER!)
     "gradient background, textured backdrop, complex scene",
     "background scenery, background objects, detailed background",
-    "different background color, mismatched colors",
-    "background different from character color",
-    "background lighter than character",
-    "background darker than character",
-    "background brighter than character",
-    "background duller than character",
-    "contrasting background, complementary colors",
-    "two-tone color scheme, multi-color palette",
-    "color variation, color gradient, color difference",
-    "background has different shade or tone",
-    "wrong background color, incorrect background color",
-    "background with depth, background with shadow",
-    "background gradient from light to dark",
-    "background shading, background vignette",
-    "darker background at bottom, lighter at top",
-    "any variation in background color"
+    "WRONG: different background color, mismatched colors",
+    "WRONG: background different from character color",
+    "WRONG: background lighter than character",
+    "WRONG: background darker than character",
+    "WRONG: background brighter than character",
+    "WRONG: background duller than character",
+    "WRONG: contrasting background, complementary colors",
+    "WRONG: two-tone color scheme, multi-color palette",
+    "WRONG: color variation, color gradient, color difference",
+    "WRONG: background has different shade or tone",
+    "WRONG: wrong background color, incorrect background color",
+    "WRONG: background with depth, background with shadow",
+    "WRONG: background gradient from light to dark",
+    "WRONG: background shading, background vignette",
+    "WRONG: darker background at bottom, lighter at top",
+    "WRONG: any variation in background color",
+    "multicolored background, rainbow background, patterned background",
+    "background scenery, landscape, environment details",
+    "background elements, objects in background, props",
+    "colored borders, colored frames, colored edges",
+    "white background, black background when character is colored",
+    "gray background when character is colored",
+    "neutral background, plain background, blank background",
+    "different hue background, different saturation background",
+    "background color not matching character at all"
   ].join(", ");
 
   return { prompt, negative };
@@ -420,7 +393,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating CONSISTENT-SIZE 72-COLOR Ultra-Flat NFT Goblin...");
+    console.log("🎨 Generating ULTRA-ENFORCED Monochromatic NFT Goblin...");
     
     const hf = new HfInference(HF_TOKEN);
 
