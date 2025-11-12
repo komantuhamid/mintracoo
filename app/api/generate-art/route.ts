@@ -3,12 +3,15 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { HfInference } from "@huggingface/inference";
 
-// ===== BODY SIZE LOCK (added) =====
+const MODEL_ID = "black-forest-labs/FLUX.1-dev";
+const PROVIDER = "replicate";
+const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
+/* ===== BODY SIZE LOCK (added) ===== */
 const BODY_LOCK = [
   "exact same body silhouette and size each time",
   "very short and chubby plush mascot body",
-  "overall height fills 72% of the canvas",
-  "head height is ~45% of total height, oversized round head",
+  "overall height fills ~72% of the canvas",
+  "head height is ~45% of total height (oversized round head)",
   "torso is a round sphere, width ~55% of canvas width",
   "tiny short stubby legs (each leg <15% of body height), small rounded arms",
   "3 heads-tall proportion, squat stance, feet close together",
@@ -22,13 +25,8 @@ const NEGATIVE_BODY = [
   "large hands, large feet, long fingers, extra limbs, tail, wings",
   "cropped body, bust only, half body, side view, 3/4 view"
 ].join(", ");
-// ===================================
+/* =================================== */
 
-
-
-const MODEL_ID = "black-forest-labs/FLUX.1-dev";
-const PROVIDER = "replicate";
-const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 // 🧌 BASE CHARACTER
 const BASE_CHARACTER = "cute round blob goblin creature monster";
@@ -280,8 +278,9 @@ function buildPrompt() {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
   
-  BODY_LOCK,
-// 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
+  const prompt = [
+    BODY_LOCK,
+    // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
@@ -331,7 +330,7 @@ function buildPrompt() {
 
   const negative = [
     NEGATIVE_BODY,
-"3D render, CGI, realistic, photorealistic, detailed",
+    "3D render, CGI, realistic, photorealistic, detailed",
     
     // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
     "complex shading, dramatic lighting, shadows, depth",
@@ -388,10 +387,11 @@ function buildPrompt() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({} as any));
-    const userSeed = typeof (body as any)?.seed === "number" ? (body as any).seed : undefined;
+    const body = await req.json().catch(() => ({}));
 
-    if (!HF_TOKEN) {
+    
+    const userSeed = typeof (body as any)?.seed === \"number\" ? (body as any).seed : undefined;
+if (!HF_TOKEN) {
       return NextResponse.json(
         { error: "Missing HUGGINGFACE_API_TOKEN" },
         { status: 500 }
@@ -399,6 +399,8 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
+    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin...");
+    
     const hf = new HfInference(HF_TOKEN);
 
     let output: any = null;
@@ -416,13 +418,15 @@ export async function POST(req: Request) {
             num_inference_steps: 35,
             guidance_scale: 7.5,
             negative_prompt: negative,
-            ...(userSeed !== undefined ? { seed: userSeed } : {}),
+          ...(userSeed !== undefined ? { seed: userSeed } : {}),
           },
         });
         break;
       } catch (e: any) {
         lastErr = e;
-        if (i < 2) await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+        if (i < 2) {
+          await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+        }
       }
     }
 
@@ -440,38 +444,41 @@ export async function POST(req: Request) {
       } else if (output.startsWith("http")) {
         const r = await fetch(output);
         if (!r.ok) {
-          const t = await r.text();
-          throw new Error(`Failed to fetch image: ${r.status} ${t}`);
+          return NextResponse.json(
+            { error: `Fetch image failed: ${r.status}` },
+            { status: 502 }
+          );
         }
-        const arrBuf = await r.arrayBuffer();
-        imgBuf = Buffer.from(arrBuf);
+        imgBuf = Buffer.from(await r.arrayBuffer());
       } else {
-        throw new Error("Unexpected output string format from provider");
+        return NextResponse.json(
+          { error: "Unexpected string output" },
+          { status: 500 }
+        );
       }
-    } else if (output?.blob) {
-      const arrBuf = await output.blob();
-      imgBuf = Buffer.from(arrBuf);
-    } else if (output?.image) {
-      imgBuf = Buffer.from(output.image);
+    } else if (output instanceof Blob) {
+      imgBuf = Buffer.from(await output.arrayBuffer());
     } else {
-      // Fallback: try to stringify
-      const s = JSON.stringify(output);
-      if (s.startsWith("data:image")) {
-        const b64 = s.split(",")[1] || "";
-        imgBuf = Buffer.from(b64, "base64");
+      const maybeBlob = output?.blob || output?.image || output?.output;
+      if (maybeBlob?.arrayBuffer) {
+        imgBuf = Buffer.from(await maybeBlob.arrayBuffer());
       } else {
-        throw new Error("Unknown output format from provider");
+        return NextResponse.json(
+          { error: "Unknown output format" },
+          { status: 500 }
+        );
       }
     }
 
-    return new NextResponse(imgBuf, {
-      headers: {
-        "Content-Type": "image/png",
-        "Cache-Control": "no-store",
-      },
+    const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
+
+    return NextResponse.json({
+      generated_image_url: dataUrl,
+      success: true
     });
-  } catch (err: any) {
-    const msg = err?.message || "Server error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+
+  } catch (e: any) {
+    console.error("Route error:", e);
+    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
