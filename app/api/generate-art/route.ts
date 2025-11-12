@@ -84,7 +84,6 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// ALL YOUR ACCESSORIES - KEEPING EVERYTHING AS IS
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -103,21 +102,7 @@ const HEAD_ITEMS = [
   "santa hat red on head", "party hat cone on head"
 ];
 
-const EYE_ITEMS = [
-  "small eye patch over one eye", "tiny goggles over eyes",
-  "small monocle over one eye", "round glasses over eyes",
-  "bandage covering one eye", "tiny aviator goggles over eyes",
-  "large round yellow eyes", "small beady eyes glowing",
-  "wide crazy eyes bulging", "squinting menacing eyes",
-  "sunglasses cool over eyes", "3D glasses red-blue over eyes",
-  "steampunk goggles brass over eyes", "cyclops single giant eye",
-  "heart-shaped glasses over eyes", "ski goggles over eyes",
-  "swimming goggles over eyes", "VR headset over eyes",
-  "laser eyes glowing red", "star-shaped sunglasses over eyes",
-  "cat-eye glasses over eyes", "jeweled monocle over one eye",
-  "cracked monocle over eye", "glowing blue eyes bright",
-  "X-ray specs over eyes"
-];
+// ✅ FIXED: Only ONE EYE_ITEMS declaration
 const EYE_ITEMS = [
   "small eye patch over one eye", "tiny goggles over eyes",
   "small monocle over one eye", "round glasses over eyes",
@@ -204,24 +189,21 @@ const HAND_ITEMS = [
   "gripping tiny hammer in hand", "both hands clenched in small fists",
   "holding smartphone in hand", "gripping game controller in hands",
   "holding coffee cup in hand", "gripping microphone in hand",
-  "holding pizza slice in hand", "gripping magic wand in hand",
-  "holding book open in hand", "gripping telescope in hand",
-  "holding magnifying glass in hand", "gripping fishing rod in hand",
-  "holding basketball in hands", "gripping baseball bat in hand",
-  "holding trophy golden in hand", "gripping drumsticks in hands",
-  "holding guitar small in hand", "gripping paintbrush in hand",
-  "holding camera in hand", "gripping sword katana in hand",
-  "holding gem crystal in hand", "gripping staff wooden in hand"
+  "holding pizza slice in hand", "holding burger in hand",
+  "gripping baseball bat in hand", "holding tennis racket in hand",
+  "gripping guitar in hands", "holding drumsticks in hands",
+  "holding book in hand", "gripping pen writing in hand",
+  "holding magnifying glass in hand", "gripping wrench tool in hand",
+  "empty hands nothing held"
 ];
 
 const EXPRESSIONS = [
-  "angry scowling", "evil grinning maniacally",
-  "grumpy frowning", "crazy laughing wild",
-  "sneaky smirking", "confused dumb",
-  "aggressive menacing", "proud confident",
-  "surprised shocked wide-eyed", "sleepy tired yawning",
-  "excited happy beaming", "nervous sweating worried",
-  "silly goofy derpy", "cool relaxed chill",
+  "happy smiling cheerful",
+  "angry grumpy mad",
+  "excited happy beaming",
+  "nervous sweating worried",
+  "silly goofy derpy",
+  "cool relaxed chill",
   "mischievous plotting devious"
 ];
 
@@ -234,7 +216,6 @@ async function analyzePFPImage(pfpUrl: string): Promise<{ skin: string; bg: stri
   try {
     console.log("🎨 Analyzing PFP:", pfpUrl);
     
-    // Simple URL-based color detection
     const urlLower = pfpUrl.toLowerCase();
     
     if (urlLower.includes('blue')) {
@@ -270,164 +251,47 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
-  // KEEP YOUR ENTIRE PROMPT EXACTLY AS IS - JUST USING THE COLOR SCHEME PARAMETER
- const prompt = [
-    // 🔥 ULTRA-FLAT STYLE
+  const prompt = [
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
-    "completely flat illustration, zero dimension, pure 2D",
-    "flat solid colors only, no shading variations",
-    "children's book art style,  storybook character",
-    "vector graphic flat design, minimalist shading",
-
-    `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
-    
-    // 🔥 BODY SIZE - SLIGHTLY TALLER (400x450px)
-    "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
-    "body measures precisely 400px width by 450px height",
-    "body is gently oval shape 400x450 pixels maintaining  proportions",
-    "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
-    "body fills 45% of image height consistently",
-    "oval torso measures 400 pixels wide by 450 pixels tall EXACT",
-    "blob body is standard size 400x450px gentle oval ALWAYS",
-    "EXACTLY TWO short stubby legs identical size",
-    "each leg measures precisely 60 pixels tall 30 pixels wide",
-    "EXACTLY TWO small rounded arms identical size",
-    "each arm measures precisely 70 pixels long 25 pixels thick",
-    "head is round sphere attached to body top",
-    "head measures 180 pixels diameter exactly",
-    
-    "no muscle definition, soft pillowy cuddly body",
-    "wide short squat stature, roly-poly blob build",
-
-    `${expression} facial expression`,
-    "small pointed ears on sides of head",
-    `${headItem}`,
+    "completely flat illustration, zero dimension, pure 2D design",
+    `${BASE_CHARACTER} with ${skinColor} colored skin`,
+    `wearing ${headItem}`,
     `${eyeItem}`,
     `${mouthItem}`,
-    "mouth showing fangs teeth clearly visible",
-    `${clothing}`,
+    `wearing ${clothing}`,
     `${neckItem}`,
-    `${handItem}`,
-
-    "all accessories in correct anatomical positions",
-    "hat on head, eyes on face, mouth on face visible",
-    "clothing on body, necklace on neck, weapon in hands",
-    "facing directly forward straight ahead toward camera",
-    "front view centered symmetrical pose",
-    "standing upright full body visible",
-    "looking straight at viewer, feet on ground",
-    "stubby legs visible, centered composition",
-
-    // 🔥🔥🔥 ULTRA-ENFORCED BACKGROUND COLOR MATCHING
-    `THE ENTIRE BACKGROUND MUST BE ${skinColor}`,
-    `BACKGROUND COLOR IS EXACTLY ${background}`,
-    `${skinColor} FILLS THE COMPLETE BACKGROUND`,
-    `BACKGROUND IS ${background} SOLID COLOR`,
-    "CRITICAL: background is identical color to character skin",
-    "MANDATORY: character and background are SAME EXACT color",
-    "REQUIRED: perfect monochromatic single-color scheme",
-    "ENFORCED: zero color difference between character and background",
-    "ABSOLUTE: character blends into background color perfectly",
-    "STRICT: background is completely flat solid color",
-    "CRUCIAL: no background shading, no background gradient",
-    "ESSENTIAL: background has zero depth or dimension",
-    "background color matches character skin color 100%",
-    "background and character share identical color palette",
-    "monochromatic color scheme background equals character",
-    `solid ${background} backdrop fills entire image`,
-    `${skinColor} environment surrounds character completely`,
-    "background tone matches character tone perfectly",
-    "unified color scheme across entire composition",
-    "seamless color integration background to foreground",
-    
-    "simple cartoon mascot  blob monster character"
+    `holding ${handItem}`,
+    `looking ${expression}`,
+    `solid ${background} background, monochromatic color scheme`,
+    `background color matches character color exactly`,
+    "centered character, front view, full body visible",
+    "character fills most of frame",
+    "NO shadows, NO lighting effects, NO depth, NO 3D",
+    "pure flat design, sticker-like appearance",
+    "clean simple cartoon, like a flat emoji or icon",
+    "minimal details, bold simple shapes only"
   ].join(", ");
 
   const negative = [
-    "3D render, CGI, realistic, photorealistic, detailed",
-    
-    // 🔥 ULTRA-STRONG ANTI-SHADING
-    "complex shading, dramatic lighting, shadows, depth",
-    "gradient shading, soft shading, ambient occlusion",
-    "drop shadow, cast shadow, shadow under character",
-    "shading at bottom, darkening at edges, vignette",
-    "3D lighting, volumetric lighting, rim lighting",
-    "depth of field, blur, bokeh, atmospheric perspective",
-    "ground shadow, floor reflection, depth effect",
-    "dimensional shading, spherical shading, rounded shading",
-    "ambient shadows, contact shadows, soft shadows",
-    "radial gradient, color gradient in background",
-    "detailed texture, fur strands, hair detail, realistic skin",
-    "cinematic lighting, photography, studio lighting",
-    "painted, brush strokes, oil painting, watercolor",
-    "blurry, low quality, messy, sketchy, unfinished",
-    "text, watermark, logo, signature, frame, border",
-    "multiple characters, cropped, background scenery",
-    "side view, profile, turned sideways, angled",
-    "3/4 view, looking sideways, facing left or right",
-    "back view, rear view, turned around, rotated",
-    
-    // 🔥 ANTI-INCONSISTENT BODY SIZE
-    "different body sizes, varying body proportions",
-    "inconsistent body dimensions, irregular body size",
-    "body too large, body too small, wrong body size",
-    "oversized body, undersized body, mismatched proportions",
-    "body bigger than 450 pixels tall, body smaller than 400 pixels wide",
-    "body not oval, elongated body, stretched vertically too much",
-    "tall body, extremely stretched body, compressed body, squashed body",
-    "different leg sizes, uneven legs, asymmetrical legs",
-    "one leg bigger, one leg smaller, varying leg length",
-    "different arm sizes, uneven arms, asymmetrical arms",
-    "one arm bigger, one arm smaller, varying arm length",
-    "large head, tiny head, wrong head size, head too big",
-    
-    "muscular, athletic, fit, toned, abs visible",
-    "muscle definition, biceps, six pack, defined",
-    "tall, long limbs, stretched, slender, lanky",
-    "thin, skinny, slim, lean, human proportions",
-    "cigar, pipe, smoking, cigarette, tobacco",
-    "floating accessories, misplaced items",
-    "hat floating, clothing on wrong body part",
-
-    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES
-    "gradient background, textured backdrop, complex scene",
-    "background scenery, background objects, detailed background",
-    "WRONG: different background color, mismatched colors",
-    "WRONG: background different from character color",
-    "WRONG: background lighter than character",
-    "WRONG: background darker than character",
-    "WRONG: background brighter than character",
-    "WRONG: background duller than character",
-    "WRONG: contrasting background, complementary colors",
-    "WRONG: two-tone color scheme, multi-color palette",
-    "WRONG: color variation, color gradient, color difference",
-    "WRONG: background has different shade or tone",
-    "WRONG: wrong background color, incorrect background color",
-    "WRONG: background with depth, background with shadow",
-    "WRONG: background gradient from light to dark",
-    "WRONG: background shading, background vignette",
-    "WRONG: darker background at bottom, lighter at top",
-    "WRONG: any variation in background color",
-    "multicolored background, rainbow background, patterned background",
-    "background scenery, landscape, environment details",
-    "background elements, objects in background, props",
-    "colored borders, colored frames, colored edges",
-    "white background, black background when character is colored",
-    "gray background when character is colored",
-    "neutral background, plain background, blank background",
-    "different hue background, different saturation background",
-    "background color not matching character at all"
+    "3D render, realistic, photo, CGI",
+    "gradient shading, soft shadows, depth",
+    "different background color, mismatched colors",
+    "background different from character color",
+    "gradient background, textured backdrop",
+    "multiple characters, cropped",
+    "side view, profile, angled",
+    "text, watermark, logo"
   ].join(", ");
 
-  return prompt;
+  return { prompt, negative };
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const pfpUrl = body?.pfpUrl;  // ✅ NEW: Get PFP URL from request
+    const body = await req.json().catch(() => ({}));
+    const pfpUrl = body?.pfpUrl;
     
     let selectedColorScheme = null;
     
@@ -441,32 +305,91 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const prompt = buildPrompt(selectedColorScheme);
-    console.log("📝 Final Prompt:", prompt);
-
     if (!HF_TOKEN) {
-      return NextResponse.json({ error: "Missing HUGGINGFACE_API_TOKEN" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Missing HUGGINGFACE_API_TOKEN" },
+        { status: 500 }
+      );
     }
 
+    const { prompt, negative } = buildPrompt(selectedColorScheme);
+    console.log("🎨 Generating Goblin NFT...");
+
     const hf = new HfInference(HF_TOKEN);
-    const imageBlob = await hf.textToImage({
-      model: MODEL_ID,
-      inputs: prompt,
-      parameters: {
-        width: 512,
-        height: 512,
-        num_inference_steps: 25,
-      },
-      provider: PROVIDER as any,
+    let output: any = null;
+    let lastErr: any = null;
+
+    for (let i = 0; i < 3; i++) {
+      try {
+        output = await (hf.textToImage as any)({
+          inputs: prompt,
+          model: MODEL_ID,
+          provider: PROVIDER,
+          parameters: {
+            width: 1024,
+            height: 1024,
+            num_inference_steps: 35,
+            guidance_scale: 7.5,
+            negative_prompt: negative,
+          },
+        });
+        break;
+      } catch (e: any) {
+        lastErr = e;
+        if (i < 2) {
+          await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+        }
+      }
+    }
+
+    if (!output) {
+      const msg = lastErr?.message || "Inference error";
+      const status = lastErr?.response?.status || 502;
+      return NextResponse.json({ error: msg }, { status });
+    }
+
+    let imgBuf: Buffer;
+    if (typeof output === "string") {
+      if (output.startsWith("data:image")) {
+        const b64 = output.split(",")[1] || "";
+        imgBuf = Buffer.from(b64, "base64");
+      } else if (output.startsWith("http")) {
+        const r = await fetch(output);
+        if (!r.ok) {
+          return NextResponse.json(
+            { error: `Fetch image failed: ${r.status}` },
+            { status: 502 }
+          );
+        }
+        imgBuf = Buffer.from(await r.arrayBuffer());
+      } else {
+        return NextResponse.json(
+          { error: "Unexpected string output" },
+          { status: 500 }
+        );
+      }
+    } else if (output instanceof Blob) {
+      imgBuf = Buffer.from(await output.arrayBuffer());
+    } else {
+      const maybeBlob = output?.blob || output?.image || output?.output;
+      if (maybeBlob?.arrayBuffer) {
+        imgBuf = Buffer.from(await maybeBlob.arrayBuffer());
+      } else {
+        return NextResponse.json(
+          { error: "Unknown output format" },
+          { status: 500 }
+        );
+      }
+    }
+
+    const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
+    return NextResponse.json({
+      generated_image_url: dataUrl,
+      imageUrl: dataUrl,
+      success: true
     });
-
-    const arrayBuffer = await imageBlob.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    const imageUrl = `data:image/png;base64,${base64}`;
-
-    return NextResponse.json({ imageUrl });
-  } catch (error: any) {
-    console.error("❌ Generation Error:", error);
-    return NextResponse.json({ error: error.message || "Generation failed" }, { status: 500 });
+  } catch (e: any) {
+    console.error("Route error:", e);
+    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
