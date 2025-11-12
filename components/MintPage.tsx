@@ -5,9 +5,7 @@ import { parseAbi, encodeFunctionData, parseEther } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
-// ✅ YOUR CONTRACT ADDRESS
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
-// ✅ CORRECT ABI FOR YOUR NEW CONTRACT
 const MINT_ABI = parseAbi([
   'function mint(string memory tokenURI_) payable',
 ]);
@@ -45,21 +43,20 @@ export default function MintPage() {
   }, []);
 
   useEffect(() => {
+    if (!isAppReady || isConnected) return;
     const autoConnect = async () => {
-      if (!isAppReady || isConnected) return;
       try {
         const context = await sdk.context;
         if (context?.user && connectors.length > 0) {
           await connect({ connector: connectors[0] });
         }
-      } catch (e) {
-        console.log('Auto-connect error:', e);
-      }
+      } catch (e) {}
     };
     autoConnect();
   }, [isAppReady, isConnected, connectors, connect]);
 
   useEffect(() => {
+    if (!isConnected) return;
     (async () => {
       try {
         const context = await sdk.context;
@@ -72,25 +69,19 @@ export default function MintPage() {
         });
         const j = await r.json();
         setProfile({
-          display_name: j.display_name || '',
-          username: j.username || '',
+          display_name: j.display_name || "",
+          username: j.username || "",
           pfp_url: j.pfp_url || null,
           fid,
         });
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) {}
     })();
-  }, []);
+  }, [isConnected]);
 
   useEffect(() => {
-    if (isPending) {
-      setMessage('⏳ Confirm in wallet...');
-    } else if (isConfirming) {
-      setMessage('⏳ Confirming...');
-    } else if (isConfirmed) {
-      setMessage('🎉 NFT Minted Successfully!');
-    }
+    if (isPending) setMessage('⏳ Confirm in wallet...');
+    else if (isConfirming) setMessage('⏳ Confirming...');
+    else if (isConfirmed) setMessage('🎉 NFT Minted Successfully!');
   }, [isPending, isConfirming, isConfirmed]);
 
   const generateRaccoon = async () => {
@@ -132,13 +123,11 @@ export default function MintPage() {
       if (uploadData.error) throw new Error(uploadData.error);
       const { metadataUri } = uploadData;
       setMessage('🔐 Confirm in wallet...');
-      // 2. Encode mint(string) call - CORRECT!
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
-        args: [metadataUri], // ← Only metadataUri, no address!
+        args: [metadataUri],
       });
-      // 3. Send transaction with payment
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
@@ -152,51 +141,45 @@ export default function MintPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#242032] to-[#262024]">
-      {/* Header avatar + username */}
-{profile && (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      background: "rgba(50,30,40,0.6)",
-      borderRadius: "16px",
-      padding: "12px 24px",
-      marginBottom: "18px",
-      gap: "14px",
-      width: "fit-content",
-      position: "relative"
-    }}>
-    <img
-      src={profile.pfp_url || ""}
-      alt="pfp"
-      style={{
-        width: "54px",
-        height: "54px",
-        borderRadius: "12px",
-        border: "3px solid #E4196B",
-        background: "#101016",
-        objectFit: "cover"
-      }}
-    />
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      <span style={{ color: "#fff", fontWeight: "bold", fontSize: "18px", lineHeight: 1.1 }}>
-        {profile.display_name || `@${profile.username}`}
-      </span>
-      {profile.display_name && (
-        <span style={{ color: "#DDD", fontSize: "14px" }}>
-          @{profile.username}
-        </span>
+      {/* Header Farcaster info */}
+      {isConnected && profile && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            background: "rgba(50,30,40,0.6)",
+            borderRadius: "16px",
+            padding: "12px 24px",
+            marginBottom: "18px",
+            gap: "14px",
+            width: "fit-content",
+            position: "relative"
+          }}
+        >
+          <img
+            src={profile.pfp_url || ""}
+            alt="pfp"
+            style={{
+              width: "54px",
+              height: "54px",
+              borderRadius: "12px",
+              border: "3px solid #E4196B",
+              background: "#101016",
+              objectFit: "cover"
+            }}
+          />
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ color: "#fff", fontWeight: "bold", fontSize: "18px" }}>
+              {profile.display_name || `@${profile.username}`}
+            </span>
+            {profile.display_name && (
+              <span style={{ color: "#DDD", fontSize: "14px" }}>
+                @{profile.username}
+              </span>
+            )}
+          </div>
+        </div>
       )}
-    </div>
-    {/* badge verified */}
-    <img src="/verified-badge.svg" alt="verified"
-      style={{
-        position: "absolute", left: "43px", bottom: "-6px", width: "23px", height: "23px"
-      }}
-    />
-  </div>
-)}
-
 
       <div
         style={{
@@ -213,8 +196,6 @@ export default function MintPage() {
         <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#fff", marginBottom: "21px" }}>
           🦝 Raccoon Mint
         </div>
-
-        {/* NFT image */}
         <div style={{
           width: "290px",
           height: "290px",
@@ -232,12 +213,10 @@ export default function MintPage() {
             <span style={{ color: "#aaa", fontSize: "1.3rem" }}>No image generated</span>
           )}
         </div>
-
         <div className="flex flex-col gap-1 text-gray-300 text-sm mb-2">
+          {/* wallet addr */}
           <div>💼 {shortAddr || 'Not connected'}</div>
         </div>
-
-        {/* Buttons */}
         <button
           disabled={loading}
           onClick={generateRaccoon}
@@ -275,14 +254,11 @@ export default function MintPage() {
         >
           {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
         </button>
-
-        {/* Status message */}
         {message && (
           <div style={{ fontSize: "1rem", color: "#fff", background: "#222", borderRadius: "8px", padding: "8px 14px", marginTop: "6px", width: "100%", textAlign: "center" }}>
             {message}
           </div>
         )}
-        {/* TX hash */}
         {txHash && (
           <div style={{ fontSize: "0.95rem", color: "#bbb", marginTop: "7px" }}>
             TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
