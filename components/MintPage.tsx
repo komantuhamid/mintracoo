@@ -23,10 +23,9 @@ export default function MintPage() {
   });
 
   const [profile, setProfile] = useState<any>(null);
-  const [generatedImage, setGeneratedImage] = useState(null);
+  const [generatedImage, setGeneratedImage] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-
   const [isAppReady, setIsAppReady] = useState(false);
 
   const shortAddr = useMemo(
@@ -169,6 +168,40 @@ export default function MintPage() {
           🦝 Goblin Mint
         </h1>
 
+        {/* User Profile Section */}
+        {profile && (
+          <div style={{ 
+            background: '#334155', 
+            borderRadius: '12px', 
+            padding: '16px', 
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            {profile.pfp_url && (
+              <img 
+                src={profile.pfp_url} 
+                alt="Profile" 
+                style={{ 
+                  width: '50px', 
+                  height: '50px', 
+                  borderRadius: '50%',
+                  border: '2px solid #10b981'
+                }} 
+              />
+            )}
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#fff', fontWeight: '600', fontSize: '16px' }}>
+                @{profile.username || 'User'}
+              </div>
+              <div style={{ color: '#94a3b8', fontSize: '13px', marginTop: '2px' }}>
+                FID: {profile.fid}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={{ background: '#334155', borderRadius: '12px', padding: '16px', marginBottom: '20px', minHeight: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {generatedImage ? (
             <img src={generatedImage} alt="Generated" style={{ maxWidth: '100%', borderRadius: '8px' }} />
@@ -176,12 +209,6 @@ export default function MintPage() {
             <p style={{ color: '#94a3b8', textAlign: 'center' }}>No image generated</p>
           )}
         </div>
-
-        {profile && (
-          <div style={{ textAlign: 'center', color: '#cbd5e1', marginBottom: '12px', fontSize: '14px' }}>
-            👤 {profile.username || 'User'}
-          </div>
-        )}
 
         <button
           onClick={generateRaccoon}
