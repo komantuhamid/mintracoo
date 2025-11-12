@@ -1,37 +1,50 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(req: Request) {
+export const dynamic = 'force-dynamic';
+
+export async function POST(req: NextRequest) {
   try {
     const { fid } = await req.json();
+
+    if (!fid) {
+      return NextResponse.json({ error: 'Missing FID' }, { status: 400 });
+    }
+
+    // Use Neynar API to get user info
+    const neynarApiKey = process.env.NEYNAR_API_KEY;
     
-    if (!Number.isInteger(fid)) {
-      return NextResponse.json({ error: 'bad fid' }, { status: 400 });
+    if (!neynarApiKey) {
+      return NextResponse.json({ error: 'NEYNAR_API_KEY not configured' }, { status: 500 });
     }
 
-    const resp = await fetch(
-      `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`,
-      {
-        headers: { 'api_key': process.env.NEYNAR_API_KEY as string },
-      }
-    );
+    const url = `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`;
+    const response = await fetch(url, {
+      headers: {
+        'accept': 'application/json',
+        'api_key': neynarApiKey,
+      },
+    });
 
-    if (!resp.ok) {
-      return NextResponse.json({ error: 'neynar failed' }, { status: 500 });
+    if (!response.ok) {
+      throw new Error('Failed to fetch from Neynar');
     }
 
-    const j = await resp.json();
-    const u = j.users?.[0];
+    const data = await response.json();
+    const user = data.users?.[0];
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     return NextResponse.json({
-      pfp_url: u?.pfp_url,
-      display_name: u?.display_name || u?.profile?.display_name,
-      username: u?.username,
-      fid: u?.fid,
+      username: user.username,
+      display_name: user.display_name,
+      pfp_url: user.pfp_url,
+      fid: user.fid,
     });
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'server error' },
-      { status: 500 }
-    );
+
+  } catch (error: any) {
+    console.error('fetch-pfp error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
