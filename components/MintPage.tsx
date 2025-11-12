@@ -101,7 +101,7 @@ export default function MintPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           style: 'pixel raccoon',
-          pfpUrl: profile?.pfp_url  // ✅ Send PFP URL for personalization
+          fid: profile?.fid  // ✅ Send FID for consistent personalization
         }),
       });
       const j = await res.json();
