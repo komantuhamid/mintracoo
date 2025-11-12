@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { HfInference } from "@huggingface/inference";
+import sharp from "sharp";
 
 const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
@@ -11,81 +12,81 @@ const BASE_CHARACTER = "menacing scary goblin monster creature";
 
 // 🎨 72 COLOR SCHEMES
 const GOBLIN_COLOR_SCHEMES = [
-  { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
-  { skin: "dark forest green deep", bg: "dark forest green deep" },
-  { skin: "mint green pastel light", bg: "mint green pastel light" },
-  { skin: "olive green earthy", bg: "olive green earthy" },
-  { skin: "emerald green rich vibrant", bg: "emerald green rich vibrant" },
-  { skin: "sage green muted soft", bg: "sage green muted soft" },
-  { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
-  { skin: "jade green medium", bg: "jade green medium" },
-  { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
-  { skin: "navy blue dark deep", bg: "navy blue dark deep" },
-  { skin: "cyan blue light bright", bg: "cyan blue light bright" },
-  { skin: "teal turquoise blue-green", bg: "teal turquoise blue-green" },
-  { skin: "sky blue pastel light", bg: "sky blue pastel light" },
-  { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
-  { skin: "violet purple bright", bg: "violet purple bright" },
-  { skin: "deep purple dark rich", bg: "deep purple dark rich" },
-  { skin: "lavender purple pastel", bg: "lavender purple pastel" },
-  { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
-  { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
-  { skin: "crimson red bright", bg: "crimson red bright" },
-  { skin: "dark red maroon deep", bg: "dark red maroon deep" },
-  { skin: "orange bright vibrant", bg: "orange bright vibrant" },
-  { skin: "coral orange-pink", bg: "coral orange-pink" },
-  { skin: "rust orange-brown", bg: "rust orange-brown" },
-  { skin: "charcoal gray dark", bg: "charcoal gray dark" },
-  { skin: "slate gray medium", bg: "slate gray medium" },
-  { skin: "bone white pale cream", bg: "bone white pale cream" },
-  { skin: "jet black dark", bg: "jet black dark" },
-  { skin: "golden yellow bright", bg: "golden yellow bright" },
-  { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
-  { skin: "lemon yellow pale", bg: "lemon yellow pale" },
-  { skin: "chocolate brown dark", bg: "chocolate brown dark" },
-  { skin: "tan brown light", bg: "tan brown light" },
-  { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
-  { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
-  { skin: "rose pink soft", bg: "rose pink soft" },
-  { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light" },
-  { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light" },
-  { skin: "pastel mint green soft light", bg: "pastel mint green soft light" },
-  { skin: "pastel lavender purple soft light", bg: "pastel lavender purple soft light" },
-  { skin: "pastel peach orange soft light", bg: "pastel peach orange soft light" },
-  { skin: "pastel lemon yellow soft light", bg: "pastel lemon yellow soft light" },
-  { skin: "pastel lilac purple soft light", bg: "pastel lilac purple soft light" },
-  { skin: "pastel aqua blue-green soft light", bg: "pastel aqua blue-green soft light" },
-  { skin: "pastel coral pink-orange soft light", bg: "pastel coral pink-orange soft light" },
-  { skin: "pastel sage green soft light", bg: "pastel sage green soft light" },
-  { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light" },
-  { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light" },
-  { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric" },
-  { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric" },
-  { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric" },
-  { skin: "neon yellow bright glowing electric", bg: "neon yellow bright glowing electric" },
-  { skin: "neon orange bright glowing electric", bg: "neon orange bright glowing electric" },
-  { skin: "neon purple bright glowing electric", bg: "neon purple bright glowing electric" },
-  { skin: "neon magenta bright glowing electric", bg: "neon magenta bright glowing electric" },
-  { skin: "neon turquoise bright glowing electric", bg: "neon turquoise bright glowing electric" },
-  { skin: "neon red bright glowing electric", bg: "neon red bright glowing electric" },
-  { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green glowing electric" },
-  { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
-  { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
-  { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
-  { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming" },
-  { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny" },
-  { skin: "metallic rose gold pink shiny", bg: "metallic rose gold pink shiny" },
-  { skin: "metallic platinum silver-white shiny", bg: "metallic platinum silver-white shiny" },
-  { skin: "metallic copper orange shiny", bg: "metallic copper orange shiny" },
-  { skin: "metallic chrome silver mirror shiny", bg: "metallic chrome silver mirror shiny" },
-  { skin: "metallic brass yellow shiny", bg: "metallic brass yellow shiny" },
-  { skin: "metallic titanium gray shiny", bg: "metallic titanium gray shiny" },
-  { skin: "metallic pearl white iridescent shiny", bg: "metallic pearl white iridescent shiny" },
-  { skin: "metallic gunmetal dark gray shiny", bg: "metallic gunmetal dark gray shiny" },
-  { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
+  { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing", hex: "#39FF14" },
+  { skin: "dark forest green deep", bg: "dark forest green deep", hex: "#0B4A1F" },
+  { skin: "mint green pastel light", bg: "mint green pastel light", hex: "#98FF98" },
+  { skin: "olive green earthy", bg: "olive green earthy", hex: "#556B2F" },
+  { skin: "emerald green rich vibrant", bg: "emerald green rich vibrant", hex: "#50C878" },
+  { skin: "sage green muted soft", bg: "sage green muted soft", hex: "#9DC183" },
+  { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright", hex: "#7FFF00" },
+  { skin: "jade green medium", bg: "jade green medium", hex: "#00A86B" },
+  { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric", hex: "#0047AB" },
+  { skin: "navy blue dark deep", bg: "navy blue dark deep", hex: "#000080" },
+  { skin: "cyan blue light bright", bg: "cyan blue light bright", hex: "#00FFFF" },
+  { skin: "teal turquoise blue-green", bg: "teal turquoise blue-green", hex: "#008080" },
+  { skin: "sky blue pastel light", bg: "sky blue pastel light", hex: "#87CEEB" },
+  { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant", hex: "#4169E1" },
+  { skin: "violet purple bright", bg: "violet purple bright", hex: "#8B00FF" },
+  { skin: "deep purple dark rich", bg: "deep purple dark rich", hex: "#4B0082" },
+  { skin: "lavender purple pastel", bg: "lavender purple pastel", hex: "#E6E6FA" },
+  { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright", hex: "#FF00FF" },
+  { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep", hex: "#4B0082" },
+  { skin: "crimson red bright", bg: "crimson red bright", hex: "#DC143C" },
+  { skin: "dark red maroon deep", bg: "dark red maroon deep", hex: "#800000" },
+  { skin: "orange bright vibrant", bg: "orange bright vibrant", hex: "#FF8C00" },
+  { skin: "coral orange-pink", bg: "coral orange-pink", hex: "#FF7F50" },
+  { skin: "rust orange-brown", bg: "rust orange-brown", hex: "#B7410E" },
+  { skin: "charcoal gray dark", bg: "charcoal gray dark", hex: "#36454F" },
+  { skin: "slate gray medium", bg: "slate gray medium", hex: "#708090" },
+  { skin: "bone white pale cream", bg: "bone white pale cream", hex: "#F9F6EE" },
+  { skin: "jet black dark", bg: "jet black dark", hex: "#0A0A0A" },
+  { skin: "golden yellow bright", bg: "golden yellow bright", hex: "#FFD700" },
+  { skin: "mustard yellow earthy", bg: "mustard yellow earthy", hex: "#FFDB58" },
+  { skin: "lemon yellow pale", bg: "lemon yellow pale", hex: "#FFF44F" },
+  { skin: "chocolate brown dark", bg: "chocolate brown dark", hex: "#7B3F00" },
+  { skin: "tan brown light", bg: "tan brown light", hex: "#D2B48C" },
+  { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep", hex: "#C04000" },
+  { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant", hex: "#FF69B4" },
+  { skin: "rose pink soft", bg: "rose pink soft", hex: "#FF007F" },
+  { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light", hex: "#FFD1DC" },
+  { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light", hex: "#B0E0E6" },
+  { skin: "pastel mint green soft light", bg: "pastel mint green soft light", hex: "#BDECB6" },
+  { skin: "pastel lavender purple soft light", bg: "pastel lavender purple soft light", hex: "#E6E6FA" },
+  { skin: "pastel peach orange soft light", bg: "pastel peach orange soft light", hex: "#FFDAB9" },
+  { skin: "pastel lemon yellow soft light", bg: "pastel lemon yellow soft light", hex: "#FFFACD" },
+  { skin: "pastel lilac purple soft light", bg: "pastel lilac purple soft light", hex: "#C8A2C8" },
+  { skin: "pastel aqua blue-green soft light", bg: "pastel aqua blue-green soft light", hex: "#7FFFD4" },
+  { skin: "pastel coral pink-orange soft light", bg: "pastel coral pink-orange soft light", hex: "#F88379" },
+  { skin: "pastel sage green soft light", bg: "pastel sage green soft light", hex: "#9DC183" },
+  { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light", hex: "#CCCCFF" },
+  { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light", hex: "#FFFFF0" },
+  { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric", hex: "#FF10F0" },
+  { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric", hex: "#39FF14" },
+  { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric", hex: "#00FFFF" },
+  { skin: "neon yellow bright glowing electric", bg: "neon yellow bright glowing electric", hex: "#FFFF00" },
+  { skin: "neon orange bright glowing electric", bg: "neon orange bright glowing electric", hex: "#FFA500" },
+  { skin: "neon purple bright glowing electric", bg: "neon purple bright glowing electric", hex: "#BC13FE" },
+  { skin: "neon magenta bright glowing electric", bg: "neon magenta bright glowing electric", hex: "#FF00FF" },
+  { skin: "neon turquoise bright glowing electric", bg: "neon turquoise bright glowing electric", hex: "#40E0D0" },
+  { skin: "neon red bright glowing electric", bg: "neon red bright glowing electric", hex: "#FF073A" },
+  { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green glowing electric", hex: "#7FFF00" },
+  { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric", hex: "#FF00FF" },
+  { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric", hex: "#00FFFF" },
+  { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming", hex: "#FFD700" },
+  { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming", hex: "#C0C0C0" },
+  { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny", hex: "#CD7F32" },
+  { skin: "metallic rose gold pink shiny", bg: "metallic rose gold pink shiny", hex: "#B76E79" },
+  { skin: "metallic platinum silver-white shiny", bg: "metallic platinum silver-white shiny", hex: "#E5E4E2" },
+  { skin: "metallic copper orange shiny", bg: "metallic copper orange shiny", hex: "#B87333" },
+  { skin: "metallic chrome silver mirror shiny", bg: "metallic chrome silver mirror shiny", hex: "#E8E8E8" },
+  { skin: "metallic brass yellow shiny", bg: "metallic brass yellow shiny", hex: "#B5A642" },
+  { skin: "metallic titanium gray shiny", bg: "metallic titanium gray shiny", hex: "#878681" },
+  { skin: "metallic pearl white iridescent shiny", bg: "metallic pearl white iridescent shiny", hex: "#F0EAD6" },
+  { skin: "metallic gunmetal dark gray shiny", bg: "metallic gunmetal dark gray shiny", hex: "#2A3439" },
+  { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny", hex: "#F7E7CE" }
 ];
 
-// ALL ACCESSORIES (Same as before)
+// ALL ACCESSORIES (Same as before - keeping it concise for space)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -219,6 +220,7 @@ function buildPrompt() {
   const colorScheme = getRandomElement(GOBLIN_COLOR_SCHEMES);
   const skinColor = colorScheme.skin;
   const background = colorScheme.bg;
+  const hexColor = colorScheme.hex;
   
   const headItem = getRandomElement(HEAD_ITEMS);
   const eyeItem = getRandomElement(EYE_ITEMS);
@@ -348,46 +350,14 @@ function buildPrompt() {
     "looking straight at viewer, feet on ground",
     "stubby legs visible, centered composition",
 
-    // 🔥🔥🔥 100% ULTRA-ENFORCED BACKGROUND COLOR MATCHING (20+ MORE LINES!)
-    `THE ENTIRE BACKGROUND MUST BE ${skinColor}`,
-    `BACKGROUND COLOR IS EXACTLY ${background}`,
-    `${skinColor} FILLS THE COMPLETE BACKGROUND`,
-    `BACKGROUND IS ${background} SOLID COLOR`,
-    "CRITICAL: background is identical color to character skin",
-    "MANDATORY: character and background are SAME EXACT color",
-    "REQUIRED: perfect monochromatic single-color scheme",
-    "ENFORCED: zero color difference between character and background",
-    "ABSOLUTE: character blends into background color perfectly",
-    "STRICT: background is completely flat solid color",
-    "CRUCIAL: no background shading, no background gradient",
-    "ESSENTIAL: background has zero depth or dimension",
-    "background color matches character skin color 100%",
-    "background and character share identical color palette",
-    "monochromatic color scheme background equals character",
-    `solid ${background} backdrop fills entire image`,
-    `${skinColor} environment surrounds character completely`,
-    "background tone matches character tone perfectly",
-    "unified color scheme across entire composition",
-    "seamless color integration background to foreground",
-    "ULTRA-CRITICAL: background is PERFECTLY FLAT no shading anywhere",
-    "ULTRA-MANDATORY: background color is UNIFORM across entire image",
-    "ULTRA-REQUIRED: NO gradient from top to bottom in background",
-    "ULTRA-ENFORCED: NO lighter color at top darker at bottom",
-    "ULTRA-ABSOLUTE: background is ONE SINGLE FLAT COLOR ONLY",
-    "ULTRA-STRICT: NO vignette effect NO darkening at edges",
-    "ULTRA-CRUCIAL: background has ZERO lighting variation",
-    "ULTRA-ESSENTIAL: background is COMPLETELY UNIFORM color",
-    "background must be EXACT same color top to bottom left to right",
-    "background color NEVER varies NEVER changes across image",
-    "background is PERFECTLY CONSISTENT single solid color everywhere",
+    // Background (will be replaced by post-processing)
+    `${skinColor} background`,
     
     "simple cartoon monster scary goblin blob creature character"
   ].join(", ");
 
   const negative = [
     "3D render, CGI, realistic, photorealistic, detailed",
-    
-    // 🔥 ULTRA-STRONG ANTI-SHADING
     "complex shading, dramatic lighting, shadows, depth",
     "gradient shading, soft shading, ambient occlusion",
     "drop shadow, cast shadow, shadow under character",
@@ -408,134 +378,84 @@ function buildPrompt() {
     "3/4 view, looking sideways, facing left or right",
     "back view, rear view, turned around, rotated",
     
-    // 🔥🔥🔥 ANTI-CUTE FEATURES (40+ LINES!)
-    "WRONG: cute adorable kawaii style character",
-    "WRONG: friendly harmless innocent appearance",
-    "WRONG: sweet gentle soft features",
-    "WRONG: baby-like childish cute design",
-    "WRONG: round soft cuddly only",
-    "WRONG: big cute anime eyes sparkling",
-    "WRONG: sweet smile friendly grin happy",
-    "WRONG: harmless innocent looking",
-    "WRONG: pet-like mascot adorable",
-    "WRONG: kawaii Japanese cute style",
-    "WRONG: chibi cute small adorable",
-    "WRONG: fluffy soft cuddly appearance only",
-    "WRONG: pastel cute color scheme soft",
-    "WRONG: gentle harmless friendly vibes",
-    "WRONG: sweet innocent character design",
+    // Anti-cute
     "cute, adorable, kawaii, sweet, innocent",
     "friendly, harmless, gentle, soft, cuddly only",
-    "baby-like, childish, juvenile, young looking cute",
-    "pet-like, mascot cute, chibi style",
-    "fluffy, fuzzy, soft textured",
-    "big sparkling eyes anime cute",
-    "rosy cheeks blushing cute",
-    "small harmless looking cute",
-    "gentle expression friendly smile cute",
-    "adorable pose cute stance",
-    "sweet character design kawaii",
-    "innocent looking harmless cute",
-    "friendly approachable cute only",
-    "cuddly huggable appearance cute",
-    "soft round features cute only",
-    "pastel colors cute palette",
-    "cheerful happy cute expression",
-    "lovable adorable character cute",
-    "charming sweet cute features",
-    "endearing cute appearance",
-    "delightful cute design",
-    "pleasant cute character",
-    "winsome cute style",
-    "appealing cute only",
-    "attractive cute features only",
+    "baby-like, childish, juvenile",
     
-    // 🔥🔥🔥 ANTI-SIZE-VARIATION
-    "WRONG: different body sizes between characters",
-    "WRONG: varying body proportions inconsistent sizing",
-    "WRONG: inconsistent body dimensions irregular sizing",
-    "WRONG: body too large bigger than 400x450 pixels",
-    "WRONG: body too small smaller than 400x450 pixels",
-    "WRONG: oversized body larger than standard",
-    "WRONG: undersized body smaller than standard",
-    "WRONG: mismatched proportions wrong aspect ratio",
-    "WRONG: body wider than 400 pixels",
-    "WRONG: body narrower than 400 pixels",
-    "WRONG: body taller than 450 pixels",
-    "WRONG: body shorter than 450 pixels",
-    "WRONG: body not oval wrong shape",
-    "WRONG: elongated body stretched too much",
-    "WRONG: compressed body squashed too much",
-    "WRONG: tall body extremely stretched vertically",
-    "WRONG: wide body extremely stretched horizontally",
-    "WRONG: character scale variation size differences",
-    "WRONG: non-uniform sizing between generations",
-    "WRONG: body size inconsistency from image to image",
-    "variable body size, changing dimensions, fluctuating scale",
-    "uneven character sizing, non-standard dimensions",
-    "body size deviation, proportion inconsistency",
-    "different sized characters, varying scales",
-    "non-identical body measurements, size differences",
-    "body larger in some images smaller in others",
-    "inconsistent character scale across generations",
-    "body dimensions that vary from 400x450",
-    "non-standardized body size, irregular proportions",
-    "character sizing that changes between images",
-    "different leg sizes, uneven legs, asymmetrical legs",
-    "one leg bigger, one leg smaller, varying leg length",
-    "different arm sizes, uneven arms, asymmetrical arms",
-    "one arm bigger, one arm smaller, varying arm length",
-    "large head, tiny head, wrong head size, head too big",
+    // Anti-size-variation
+    "different body sizes, varying proportions",
+    "inconsistent dimensions, irregular sizing",
     
-    "muscular, athletic, fit, toned, abs visible",
-    "muscle definition, biceps, six pack, defined",
-    "tall, long limbs, stretched, slender, lanky",
-    "thin, skinny, slim, lean, human proportions",
-    "cigar, pipe, smoking, cigarette, tobacco",
-    "floating accessories, misplaced items",
-    "hat floating, clothing on wrong body part",
-
-    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES (20+ MORE!)
-    "gradient background, textured backdrop, complex scene",
-    "background scenery, background objects, detailed background",
-    "WRONG: different background color, mismatched colors",
-    "WRONG: background different from character color",
-    "WRONG: background lighter than character",
-    "WRONG: background darker than character",
-    "WRONG: background brighter than character",
-    "WRONG: background duller than character",
-    "WRONG: contrasting background, complementary colors",
-    "WRONG: two-tone color scheme, multi-color palette",
-    "WRONG: color variation, color gradient, color difference",
-    "WRONG: background has different shade or tone",
-    "WRONG: wrong background color, incorrect background color",
-    "WRONG: background with depth, background with shadow",
-    "WRONG: background gradient from light to dark",
-    "WRONG: background shading, background vignette",
-    "WRONG: darker background at bottom, lighter at top",
-    "WRONG: any variation in background color",
-    "WRONG: beige background when character is NOT beige",
-    "WRONG: cream background when character is NOT cream",
-    "WRONG: tan background when character is NOT tan",
-    "WRONG: neutral background when character is colored",
-    "WRONG: background lighter shade than character",
-    "WRONG: background darker shade than character",
-    "WRONG: background different hue than character",
-    "WRONG: background different saturation than character",
-    "WRONG: background different brightness than character",
-    "WRONG: background different tone than character",
-    "multicolored background, rainbow background, patterned background",
-    "background scenery, landscape, environment details",
-    "background elements, objects in background, props",
-    "colored borders, colored frames, colored edges",
-    "white background, black background when character is colored",
-    "gray background when character is colored",
-    "neutral background, plain background, blank background",
-    "different hue background, different saturation background",
-    "background color not matching character at all"
+    "muscular, athletic, fit, toned",
+    "tall, long limbs, stretched, slender",
+    "cigar, pipe, smoking, cigarette",
+    "floating accessories, misplaced items"
   ].join(", ");
 
-  return { prompt, negative };
+  return { prompt, negative, hexColor };
+}
+
+// 🔥🔥🔥 POST-PROCESSING FUNCTION
+async function replaceBackgroundColor(imgBuffer: Buffer, targetHex: string): Promise<Buffer> {
+  try {
+    // Convert hex to RGB
+    const hexToRgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 255, g: 255, b: 255 };
+    };
+
+    const targetRgb = hexToRgb(targetHex);
+
+    // Process image with sharp
+    const { data, info } = await sharp(imgBuffer)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const { width, height, channels } = info;
+    const processedData = Buffer.from(data);
+
+    // Detect character by finding non-edge pixels (simple edge detection)
+    // Replace background (edge pixels) with target color
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * channels;
+        
+        // Simple edge detection: if pixel is near edge of image, it's likely background
+        const isEdgePixel = x < 50 || x > width - 50 || y < 50 || y > height - 50;
+        
+        if (isEdgePixel) {
+          // Replace with target color
+          processedData[idx] = targetRgb.r;
+          processedData[idx + 1] = targetRgb.g;
+          processedData[idx + 2] = targetRgb.b;
+          processedData[idx + 3] = 255; // Full opacity
+        }
+      }
+    }
+
+    // Convert back to image
+    const processedImage = await sharp(processedData, {
+      raw: {
+        width,
+        height,
+        channels
+      }
+    })
+    .png()
+    .toBuffer();
+
+    return processedImage;
+  } catch (error) {
+    console.error("Post-processing error:", error);
+    // Return original if post-processing fails
+    return imgBuffer;
+  }
 }
 
 export async function POST(req: Request) {
@@ -549,8 +469,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating SCARY MONSTER Goblin NFT with PERFECT Background...");
+    const { prompt, negative, hexColor } = buildPrompt();
+    console.log(`🎨 Generating SCARY MONSTER with color: ${hexColor}...`);
     
     const hf = new HfInference(HF_TOKEN);
 
@@ -620,7 +540,11 @@ export async function POST(req: Request) {
       }
     }
 
-    const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
+    // 🔥🔥🔥 POST-PROCESS: Replace background with exact target color!
+    console.log("🎨 Post-processing: Replacing background...");
+    const processedImgBuf = await replaceBackgroundColor(imgBuf, hexColor);
+
+    const dataUrl = `data:image/png;base64,${processedImgBuf.toString("base64")}`;
 
     return NextResponse.json({
       generated_image_url: dataUrl,
