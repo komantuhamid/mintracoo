@@ -211,102 +211,17 @@ function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// ✅ NEW: Analyze PFP image and extract color
-// ✅ IMPROVED: Analyze PFP image colors properly
-async function analyzePFPImage(pfpUrl: string): Promise<{ skin: string; bg: string } | undefined> {
-  try {
-    console.log("🎨 Analyzing PFP:", pfpUrl);
-    
-    // Fetch the PFP image
-    const response = await fetch(pfpUrl);
-    if (!response.ok) {
-      console.log("⚠️ Failed to fetch PFP");
-      return undefined;
-    }
-    
-    const blob = await response.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    // Simple color detection based on average RGB values
-    // Sample some bytes from the image to detect dominant colors
-    let r = 0, g = 0, b = 0, count = 0;
-    
-    // Sample every 100th byte to get a rough color profile
-    for (let i = 0; i < buffer.length - 3; i += 100) {
-      r += buffer[i];
-      g += buffer[i + 1];
-      b += buffer[i + 2];
-      count++;
-    }
-    
-    // Calculate average
-    r = Math.floor(r / count);
-    g = Math.floor(g / count);
-    b = Math.floor(b / count);
-    
-    console.log(`📊 Detected RGB: (${r}, ${g}, ${b})`);
-    
-    // Determine dominant color category
-    let selectedScheme: { skin: string; bg: string } | undefined;
-    
-    // Check which color channel is strongest
-    if (r > g && r > b) {
-      // Red/Orange/Pink dominant
-      if (r > 200 && g > 100 && b < 100) {
-        // Orange
-        selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('orange'));
-        console.log("🎨 Detected: ORANGE");
-      } else if (r > 200 && g < 150 && b > 100) {
-        // Pink
-        selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('pink'));
-        console.log("🎨 Detected: PINK");
-      } else {
-        // Red
-        selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('red'));
-        console.log("🎨 Detected: RED");
-      }
-    } else if (g > r && g > b) {
-      // Green dominant
-      selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('green'));
-      console.log("🎨 Detected: GREEN");
-    } else if (b > r && b > g) {
-      // Blue/Purple dominant
-      if (r > 150 && b > 150) {
-        // Purple
-        selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('purple'));
-        console.log("🎨 Detected: PURPLE");
-      } else {
-        // Blue
-        selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('blue'));
-        console.log("🎨 Detected: BLUE");
-      }
-    } else if (r > 180 && g > 180 && b > 180) {
-      // Light/White - use metallic
-      selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('silver'));
-      console.log("🎨 Detected: SILVER");
-    } else if (r < 80 && g < 80 && b < 80) {
-      // Dark/Black
-      selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('charcoal'));
-      console.log("🎨 Detected: CHARCOAL");
-    } else if (r > g - 30 && r > b && g > b) {
-      // Yellow/Gold (when red and green are close and higher than blue)
-      if (r > 200 && g > 200) {
-        selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('golden yellow'));
-        console.log("🎨 Detected: YELLOW");
-      } else if (r > 150 && g > 100) {
-        selectedScheme = GOBLIN_COLOR_SCHEMES.find(s => s.skin.includes('gold'));
-        console.log("🎨 Detected: GOLD");
-      }
-    }
-    
-    return selectedScheme || undefined;
-    
-  } catch (error) {
-    console.error("⚠️ PFP analysis error:", error);
-    return undefined;
-  }
+
+// ✅ USE FID FOR CONSISTENT PERSONALIZED COLORS
+function getPersonalizedColor(fid: number): { skin: string; bg: string } {
+  // Use FID as a seed to pick a consistent color for this user
+  const colorIndex = fid % GOBLIN_COLOR_SCHEMES.length;
+  const selectedScheme = GOBLIN_COLOR_SCHEMES[colorIndex];
+  
+  console.log(`🎨 FID ${fid} → Color Index ${colorIndex} → ${selectedScheme.skin}`);
+  return selectedScheme;
 }
+
 
 
 function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
@@ -360,22 +275,17 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const pfpUrl = body?.pfpUrl;
-    
-    let selectedColorScheme: { skin: string; bg: string } | undefined = undefined;
+const body = await req.json().catch(() => ({}));
+const fid = body?.fid;  // ✅ Get FID instead of pfpUrl
 
+let selectedColorScheme: { skin: string; bg: string } | undefined;
 
-    
-    // ✅ NEW: If PFP URL provided, analyze it
-    if (pfpUrl) {
-      selectedColorScheme = await analyzePFPImage(pfpUrl);
-      if (selectedColorScheme) {
-        console.log("✅ Using PFP-based colors:", selectedColorScheme.skin);
-      } else {
-        console.log("⚠️ Could not detect PFP colors, using random");
-      }
-    }
+// ✅ If FID provided, use it for consistent personalized colors
+if (fid && typeof fid === 'number') {
+  selectedColorScheme = getPersonalizedColor(fid);
+  console.log("✅ Using FID-based color:", selectedColorScheme.skin);
+}
+
 
     if (!HF_TOKEN) {
       return NextResponse.json(
