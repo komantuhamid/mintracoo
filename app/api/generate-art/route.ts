@@ -329,7 +329,8 @@ function buildPrompt() {
     "simple cartoon mascot cute blob monster character"
   ].join(", ");
 
-  NEGATIVE_BODY,
+  const negative = [
+    NEGATIVE_BODY,
 "3D render, CGI, realistic, photorealistic, detailed",
     
     // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
@@ -387,7 +388,8 @@ function buildPrompt() {
 
 export async function POST(req: Request) {
   try {
-const userSeed = typeof (body as any)?.seed === 'number' ? (body as any).seed : undefined;.catch(() => ({}));
+    const body = await req.json().catch(() => ({} as any));
+    const userSeed = typeof (body as any)?.seed === "number" ? (body as any).seed : undefined;
 
     if (!HF_TOKEN) {
       return NextResponse.json(
@@ -397,8 +399,6 @@ const userSeed = typeof (body as any)?.seed === 'number' ? (body as any).seed : 
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating 72-COLOR Ultra-Flat NFT Goblin...");
-    
     const hf = new HfInference(HF_TOKEN);
 
     let output: any = null;
@@ -410,16 +410,19 @@ const userSeed = typeof (body as any)?.seed === 'number' ? (body as any).seed : 
           inputs: prompt,
           model: MODEL_ID,
           provider: PROVIDER,
-          \1\2
-    ...(userSeed !== undefined ? { seed: userSeed } : {}),
-  \3,
+          parameters: {
+            width: 1024,
+            height: 1024,
+            num_inference_steps: 35,
+            guidance_scale: 7.5,
+            negative_prompt: negative,
+            ...(userSeed !== undefined ? { seed: userSeed } : {}),
+          },
         });
         break;
       } catch (e: any) {
         lastErr = e;
-        if (i < 2) {
-          await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
-        }
+        if (i < 2) await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
       }
     }
 
@@ -437,41 +440,38 @@ const userSeed = typeof (body as any)?.seed === 'number' ? (body as any).seed : 
       } else if (output.startsWith("http")) {
         const r = await fetch(output);
         if (!r.ok) {
-          return NextResponse.json(
-            { error: `Fetch image failed: ${r.status}` },
-            { status: 502 }
-          );
+          const t = await r.text();
+          throw new Error(`Failed to fetch image: ${r.status} ${t}`);
         }
-        imgBuf = Buffer.from(await r.arrayBuffer());
+        const arrBuf = await r.arrayBuffer();
+        imgBuf = Buffer.from(arrBuf);
       } else {
-        return NextResponse.json(
-          { error: "Unexpected string output" },
-          { status: 500 }
-        );
+        throw new Error("Unexpected output string format from provider");
       }
-    } else if (output instanceof Blob) {
-      imgBuf = Buffer.from(await output.arrayBuffer());
+    } else if (output?.blob) {
+      const arrBuf = await output.blob();
+      imgBuf = Buffer.from(arrBuf);
+    } else if (output?.image) {
+      imgBuf = Buffer.from(output.image);
     } else {
-      const maybeBlob = output?.blob || output?.image || output?.output;
-      if (maybeBlob?.arrayBuffer) {
-        imgBuf = Buffer.from(await maybeBlob.arrayBuffer());
+      // Fallback: try to stringify
+      const s = JSON.stringify(output);
+      if (s.startsWith("data:image")) {
+        const b64 = s.split(",")[1] || "";
+        imgBuf = Buffer.from(b64, "base64");
       } else {
-        return NextResponse.json(
-          { error: "Unknown output format" },
-          { status: 500 }
-        );
+        throw new Error("Unknown output format from provider");
       }
     }
 
-    const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
-
-    return NextResponse.json({
-      generated_image_url: dataUrl,
-      success: true
+    return new NextResponse(imgBuf, {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "no-store",
+      },
     });
-
-  } catch (e: any) {
-    console.error("Route error:", e);
-    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
+  } catch (err: any) {
+    const msg = err?.message || "Server error";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
