@@ -3,6 +3,29 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { HfInference } from "@huggingface/inference";
 
+// ===== BODY SIZE LOCK (added) =====
+const BODY_LOCK = [
+  "exact same body silhouette and size each time",
+  "very short and chubby plush mascot body",
+  "overall height fills 72% of the canvas",
+  "head height is ~45% of total height, oversized round head",
+  "torso is a round sphere, width ~55% of canvas width",
+  "tiny short stubby legs (each leg <15% of body height), small rounded arms",
+  "3 heads-tall proportion, squat stance, feet close together",
+  "front view, perfectly centered, symmetric, full body fully visible"
+].join(", ");
+
+const NEGATIVE_BODY = [
+  "tall body, slim body, skinny, athletic, muscular, defined muscles",
+  "long legs, long arms, elongated limbs, stretched or realistic proportions",
+  "different species body, realistic anatomy, human-like body",
+  "large hands, large feet, long fingers, extra limbs, tail, wings",
+  "cropped body, bust only, half body, side view, 3/4 view"
+].join(", ");
+// ===================================
+
+
+
 const MODEL_ID = "black-forest-labs/FLUX.1-dev";
 const PROVIDER = "replicate";
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
@@ -257,8 +280,9 @@ function buildPrompt() {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
   
-  const prompt = [
-    // 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
+  \1
+  BODY_LOCK,
+// 🔥 ULTRA-FLAT STYLE (Maximum enforcement!)
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
     "absolutely flat shading, NO gradients, NO depth",
@@ -306,8 +330,9 @@ function buildPrompt() {
     "simple cartoon mascot cute blob monster character"
   ].join(", ");
 
-  const negative = [
-    "3D render, CGI, realistic, photorealistic, detailed",
+  \1
+  NEGATIVE_BODY,
+"3D render, CGI, realistic, photorealistic, detailed",
     
     // 🔥 ULTRA-STRONG ANTI-SHADING (Maximum enforcement!)
     "complex shading, dramatic lighting, shadows, depth",
@@ -364,7 +389,8 @@ function buildPrompt() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    \1
+const userSeed = typeof (body as any)?.seed === 'number' ? (body as any).seed : undefined;.catch(() => ({}));
 
     if (!HF_TOKEN) {
       return NextResponse.json(
@@ -387,13 +413,9 @@ export async function POST(req: Request) {
           inputs: prompt,
           model: MODEL_ID,
           provider: PROVIDER,
-          parameters: {
-            width: 1024,
-            height: 1024,
-            num_inference_steps: 35,
-            guidance_scale: 7.5,
-            negative_prompt: negative,
-          },
+          \1\2
+    ...(userSeed !== undefined ? { seed: userSeed } : {}),
+  \3,
         });
         break;
       } catch (e: any) {
