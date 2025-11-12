@@ -1,294 +1,217 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  parseAbi,
-  encodeFunctionData,
-  toHex,
-  isAddress,
-  parseEther,
-} from 'viem';
-import { sdk } from '@farcaster/miniapp-sdk';
-import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-  useSendTransaction,
-  useWaitForTransactionReceipt,
-} from 'wagmi';
-import { useMiniEnv } from '@/hooks/useMiniEnv';
+import { parseAbi, encodeFunctionData, parseEther } from 'viem';
+import sdk from '@farcaster/miniapp-sdk';
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
-type AnyActions = any;
+// ✅ YOUR CONTRACT ADDRESS
+const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
 
-// ====== Clean and Validate ENV ======
-function normalizeAddress(input: string) {
-  const cleaned = input
-    .trim()
-    .replace(/^['"]|['"]$/g, '')
-    .replace(/\s+/g, '')
-    .replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
-  const with0x = cleaned.startsWith('0x') ? cleaned : `0x${cleaned}`;
-  return with0x;
-}
-
-const RAW_ENV = process.env.NEXT_PUBLIC_NFT_CONTRACT ?? '';
-const NORMALIZED_ADDR = normalizeAddress(RAW_ENV);
-
-const ENV_ADDRESS_VALID =
-  NORMALIZED_ADDR.length === 42 &&
-  /^0x[0-9a-fA-F]{40}$/.test(NORMALIZED_ADDR) &&
-  isAddress(NORMALIZED_ADDR);
-
-const CONTRACT_ADDRESS = (ENV_ADDRESS_VALID ? NORMALIZED_ADDR : '') as `0x${string}`;
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 8453);
-
-// ===== minimal ABI =====
+// ✅ CORRECT ABI FOR YOUR NEW CONTRACT
 const MINT_ABI = parseAbi([
-  'function mintWithSignature((address,address,uint256,address,string,uint256,address,uint128,uint128,bytes32), bytes) payable returns (uint256)',
+  'function mint(string memory tokenURI_) payable',
 ]);
 
 export default function MintPage() {
-  const { address: wagmiAddress, isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { sendTransaction, isPending, data: txHash } = useSendTransaction();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
-  const { data: txHash, sendTransactionAsync } = useSendTransaction();
-  const { isLoading: txPending } = useWaitForTransactionReceipt({ hash: txHash });
-
-  const { isMini, ctx } = useMiniEnv();
-
-  const [activeAddress, setActiveAddress] = useState<string | null>(null);
-  const [farcasterProfile, setFarcasterProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [minting, setMinting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-
-  // Pick wallet
-  useEffect(() => {
-    if (wagmiAddress) {
-      setActiveAddress(wagmiAddress);
-    } else if (isMini) {
-      setActiveAddress(ctx?.user?.ethAddress ?? ctx?.user?.address ?? null);
-    } else {
-      setActiveAddress(null);
-    }
-  }, [wagmiAddress, isMini, ctx?.user?.ethAddress, ctx?.user?.address]);
+  const [isAppReady, setIsAppReady] = useState(false);
 
   const shortAddr = useMemo(
-    () => (activeAddress ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}` : ''),
-    [activeAddress]
+    () => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : ''),
+    [address]
   );
 
-  // Farcaster profile
   useEffect(() => {
-    const fid = ctx?.user?.fid || ctx?.user?.id;
-    if (!fid) return;
+    const init = async () => {
+      try {
+        await sdk.actions.ready();
+        setIsAppReady(true);
+      } catch (e) {
+        setIsAppReady(true);
+      }
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    const autoConnect = async () => {
+      if (!isAppReady || isConnected) return;
+      try {
+        const context = await sdk.context;
+        if (context?.user && connectors.length > 0) {
+          await connect({ connector: connectors[0] });
+        }
+      } catch (e) {
+        console.log('Auto-connect error:', e);
+      }
+    };
+    autoConnect();
+  }, [isAppReady, isConnected, connectors, connect]);
+
+  useEffect(() => {
     (async () => {
       try {
+        const context = await sdk.context;
+        const fid = context?.user?.fid;
+        if (!fid) return;
         const r = await fetch('/api/fetch-pfp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fid }),
         });
         const j = await r.json();
-        setFarcasterProfile({
-          display_name:
-            j.display_name || j.name || ctx?.user?.displayName || ctx?.user?.name || '',
-          username: j.username || ctx?.user?.username || '',
-          pfp_url: j.pfp_url || ctx?.user?.pfpUrl || ctx?.user?.pfp || null,
+        setProfile({
+          display_name: j.display_name || '',
+          username: j.username || '',
+          pfp_url: j.pfp_url || null,
           fid,
         });
       } catch (e) {
-        console.error('Error fetching Farcaster profile:', e);
+        console.error(e);
       }
     })();
-  }, [ctx?.user]);
+  }, []);
 
-  // Auto-connect mini
   useEffect(() => {
-    (async () => {
-      try {
-        if (!isMini || activeAddress) return;
-        await (sdk as any).actions?.ready?.();
-        const farcaster = connectors.find(
-          (c) =>
-            c.id?.toLowerCase().includes('farcaster') ||
-            c.name?.toLowerCase().includes('farcaster')
-        );
-        if (farcaster) {
-          await connect({ connector: farcaster });
-          const acc =
-            (await (sdk as any).actions?.wallet_getAddresses?.({ chainId: CHAIN_ID }))?.[0];
-          if (acc) setActiveAddress(acc);
-          setMessage('Mini wallet connected');
-        }
-      } catch (e) {
-        console.log('Mini auto connect failed', e);
-      }
-    })();
-  }, [isMini, connectors, activeAddress]);
+    if (isPending) {
+      setMessage('⏳ Confirm in wallet...');
+    } else if (isConfirming) {
+      setMessage('⏳ Confirming...');
+    } else if (isConfirmed) {
+      setMessage('🎉 NFT Minted Successfully!');
+    }
+  }, [isPending, isConfirming, isConfirmed]);
 
-  // Generate art
   const generateRaccoon = async () => {
     setLoading(true);
-    setMessage('Generating raccoon pixel art…');
+    setMessage('🎨 Generating...');
     try {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ style: 'premium collectible raccoon pixel portrait' }),
+        body: JSON.stringify({ style: 'pixel raccoon' }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Generation failed');
-      setGeneratedImage(data.generated_image_url || data.imageUrl || data.url);
-      setMessage('Done! You can mint now.');
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || 'Failed');
+      setGeneratedImage(j.generated_image_url || j.imageUrl);
+      setMessage('✅ Ready to mint!');
     } catch (e: any) {
-      setMessage(e.message);
+      setMessage(`❌ ${e?.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const requestSignedMint = async () => {
-    const res = await fetch('/api/create-signed-mint', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        address: activeAddress,
-        imageUrl: generatedImage,
-        username: farcasterProfile?.username,
-        fid: farcasterProfile?.fid,
-      }),
-    });
-    const j = await res.json();
-    if (!res.ok || j.error) throw new Error(j.error || 'Sign mint failed');
-    return j as { mintRequest: any; signature: `0x${string}`; priceWei: string };
-  };
-
   const performMint = async () => {
-    if (!ENV_ADDRESS_VALID) {
-      return setMessage(
-        `Invalid contract address in env: ${
-          NORMALIZED_ADDR ? NORMALIZED_ADDR.slice(0, 6) + '…' + NORMALIZED_ADDR.slice(-4) : 'empty'
-        } (len=${NORMALIZED_ADDR.length})`
-      );
-    }
-    if (!activeAddress) return setMessage('Connect wallet first');
-    if (!generatedImage) return setMessage('Generate image first');
-
-    setMinting(true);
-    setMessage(null);
+    if (!address) return setMessage('❌ Connect wallet');
+    if (!generatedImage) return setMessage('❌ Generate image first');
+    
+    setMessage('📝 Uploading to IPFS...');
 
     try {
-      const { mintRequest, signature, priceWei } = await requestSignedMint();
-
-      const data = encodeFunctionData({
-        abi: MINT_ABI,
-        functionName: 'mintWithSignature',
-        args: [mintRequest, signature],
+      // 1. Upload metadata to IPFS
+      const uploadRes = await fetch('/api/create-signed-mint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address,
+          imageUrl: generatedImage,
+          username: profile?.username,
+          fid: profile?.fid,
+        }),
       });
 
-      const hexValue =
-        priceWei && priceWei !== '0' ? toHex(BigInt(String(priceWei))) : undefined;
+      const uploadData = await uploadRes.json();
+      if (uploadData.error) throw new Error(uploadData.error);
 
-      const call = { to: CONTRACT_ADDRESS, data, ...(hexValue ? { value: hexValue } : {}) };
+      const { metadataUri } = uploadData;
+      console.log('✅ Metadata URI:', metadataUri);
 
-      const actions: AnyActions = (sdk as any).actions;
-      if (isMini && actions?.wallet_sendCalls) {
-        await actions.wallet_sendCalls({ chainId: CHAIN_ID, calls: [call] });
-        setMessage('Transaction sent via Mini App wallet');
-      } else if (isMini && actions?.wallet_sendTransaction) {
-        await actions.wallet_sendTransaction({ chainId: CHAIN_ID, ...call });
-        setMessage('Transaction sent via Mini App wallet');
-      } else if (isConnected && sendTransactionAsync) {
-        await sendTransactionAsync({
-          to: CONTRACT_ADDRESS,
-          data: call.data as `0x${string}`,
-          ...(hexValue ? { value: parseEther((Number(priceWei) / 1e18).toString()) } : {}),
-        });
-        setMessage('Transaction submitted (wagmi)');
-      } else {
-        const txHash = await (window as any).ethereum?.request({
-          method: 'eth_sendTransaction',
-          params: [{ from: activeAddress, ...call }],
-        });
-        setMessage('Submitted: ' + txHash);
-      }
+      setMessage('🔐 Confirm in wallet...');
+
+      // 2. Encode mint(string) call - CORRECT!
+      const data = encodeFunctionData({
+        abi: MINT_ABI,
+        functionName: 'mint',
+        args: [metadataUri], // ← Only metadataUri, no address!
+      });
+
+      console.log('✅ Encoded data:', data);
+
+      // 3. Send transaction with payment
+      sendTransaction({
+        to: CONTRACT_ADDRESS,
+        data,
+        value: parseEther('0.0001'),
+        gas: 300000n,
+      });
+
     } catch (e: any) {
-      setMessage(e?.message || 'Mint failed');
-    } finally {
-      setMinting(false);
+      console.error('❌ Mint error:', e);
+      setMessage(`❌ ${e?.message || 'Failed'}`);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-black text-white p-6">
-      <div className="max-w-3xl mx-auto bg-slate-800/40 rounded-2xl p-6 shadow-xl">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-extrabold">Raccoon Pixel Art Mint</h1>
-          {activeAddress ? (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-slate-300">
-                {farcasterProfile?.username
-                  ? `@${farcasterProfile.username}`
-                  : shortAddr}
-              </span>
-              <button
-                onClick={() => (isMini ? setActiveAddress(null) : disconnect())}
-                className="px-3 py-1 bg-red-600 rounded hover:bg-red-500 text-sm"
-              >
-                Disconnect
-              </button>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900 p-4 flex items-center justify-center">
+      <div className="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-6">
+        <h1 className="text-3xl font-bold text-white mb-4 text-center">
+          🦝 Raccoon Mint
+        </h1>
+
+        <div className="mb-4 bg-gray-700 rounded-lg p-4 min-h-64 flex items-center justify-center">
+          {generatedImage ? (
+            <img src={generatedImage} alt="Raccoon" className="w-full rounded-lg" />
           ) : (
-            <button
-              onClick={() => connect({ connector: connectors[0] })}
-              className="px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-500"
-            >
-              Connect
-            </button>
+            <p className="text-gray-400">No image generated</p>
           )}
-        </header>
+        </div>
 
-        <main className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <section className="col-span-2 space-y-4">
-            <div className="bg-slate-900/30 rounded-lg p-4">
-              <div className="w-full aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
-                {generatedImage ? (
-                  <img
-                    src={generatedImage}
-                    alt="Generated"
-                    className="h-full w-full object-cover"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                ) : (
-                  <div className="text-slate-400">No image generated yet</div>
-                )}
-              </div>
-            </div>
+        {profile && (
+          <p className="text-gray-300 text-sm mb-2">
+            👤 {profile.username || 'User'}
+          </p>
+        )}
 
-            <div className="bg-slate-900/20 p-4 rounded-lg flex gap-3">
-              <button
-                onClick={generateRaccoon}
-                disabled={loading}
-                className="flex-1 px-4 py-3 bg-pink-600 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                {loading ? 'Generating…' : 'Generate Raccoon Pixel Art'}
-              </button>
-              <button
-                onClick={performMint}
-                disabled={minting || !activeAddress || !generatedImage}
-                className="px-4 py-3 bg-emerald-600 rounded-lg font-semibold disabled:opacity-50"
-              >
-                {minting || txPending ? 'Minting…' : 'Mint 0.0001 ETH'}
-              </button>
-            </div>
+        <p className="text-gray-300 text-sm mb-4">
+          💼 {shortAddr || 'Not connected'}
+        </p>
 
-            {message && <div className="mt-3 text-sm text-amber-200">{message}</div>}
-          </section>
+        <button
+          onClick={generateRaccoon}
+          disabled={loading || isPending || isConfirming}
+          className="w-full mt-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
+        >
+          {loading ? '⏳ Generating...' : '🎨 Generate Raccoon'}
+        </button>
 
-          <aside className="space-y-4">
+        <button
+          onClick={performMint}
+          disabled={!address || !generatedImage || isPending || isConfirming}
+          className="w-full mt-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition"
+        >
+          {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
+        </button>
+
+        {message && (
+          <div className="mt-4 p-3 bg-gray-700 rounded text-gray-200 text-sm text-center">
+            {message}
+          </div>
+        )}
+
+         <aside className="space-y-4">
             <div className="bg-slate-900/30 p-4 rounded-lg text-center">
               {farcasterProfile?.pfp_url && (
                 <img
@@ -303,13 +226,11 @@ export default function MintPage() {
               </div>
             </div>
 
-            <div className="bg-slate-900/30 p-4 rounded-lg text-sm text-slate-300">
-              <div className="font-semibold">Mint info</div>
-              <div className="mt-2">Price: 0.0001 ETH</div>
-              <div>Supply cap: 5000</div>
-            </div>
-          </aside>
-        </main>
+        {txHash && (
+          <div className="mt-2 p-2 bg-gray-700 rounded text-xs text-gray-300 break-all">
+            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </div>
+        )}
       </div>
     </div>
   );
