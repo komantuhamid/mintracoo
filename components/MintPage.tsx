@@ -9,6 +9,14 @@ import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTr
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
 const MINT_ABI = parseAbi(['function mint(string memory tokenURI_) payable']);
 
+// Define a type for the Farcaster user data for better type safety
+type FarcasterUser = {
+  fid: number;
+  username: string;
+  pfpUrl: string;
+  // Add other properties from the frame data as needed
+};
+
 export default function MintPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
@@ -16,27 +24,41 @@ export default function MintPage() {
   const { sendTransaction, isPending, data: txHash } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
-  const [profile, setProfile] = useState<any>(null);
+  const [fcUser, setFcUser] = useState<FarcasterUser | null>(null);
   const [pfpUrl, setPfpUrl] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize the Farcaster SDK and get user profile
+  // Get Farcaster user data from the SDK
   useEffect(() => {
-    // ✅ CORRECTED: Use sdk.getUserData() instead of getProfile()
-    sdk.getUserData().then(setProfile).catch(console.error);
+    // ✅ CORRECTED: Use sdk.getFrameData() which returns the user data synchronously
+    const frameData = sdk.getFrameData();
+    if (frameData) {
+      setFcUser({
+        fid: frameData.fid,
+        username: frameData.username,
+        pfpUrl: frameData.pfpUrl, // The pfpUrl is often included directly
+      });
+    }
   }, []);
 
-  // Fetch the PFP URL when the user profile is available
+  // Fetch PFP if it's not in the initial frame data
   useEffect(() => {
-    if (profile && profile.fid) {
+    if (fcUser) {
+      // If the pfpUrl is already in the user data, use it directly
+      if (fcUser.pfpUrl) {
+        setPfpUrl(fcUser.pfpUrl);
+        return;
+      }
+      
+      // If not, fetch it from the API as a fallback
       const fetchPfp = async () => {
         try {
           const res = await fetch('/api/fetch-pfp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fid: profile.fid }),
+            body: JSON.stringify({ fid: fcUser.fid }),
           });
 
           if (res.ok) {
@@ -50,9 +72,9 @@ export default function MintPage() {
 
       fetchPfp();
     }
-  }, [profile]);
+  }, [fcUser]);
 
-  // Generate the Goblin image
+
   const generateGoblin = async () => {
     setLoading(true);
     setError(null);
@@ -71,7 +93,6 @@ export default function MintPage() {
     }
   };
 
-  // Mint the NFT
   const handleMint = async () => {
     if (!address || !generatedImage) return;
 
@@ -82,8 +103,8 @@ export default function MintPage() {
         body: JSON.stringify({
           address,
           imageUrl: generatedImage,
-          username: profile?.username,
-          fid: profile?.fid,
+          username: fcUser?.username,
+          fid: fcUser?.fid,
         }),
       });
 
@@ -99,14 +120,13 @@ export default function MintPage() {
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
-        value: parseEther('0.00069'), // Minting fee
+        value: parseEther('0.00069'),
       });
     } catch (e: any) {
       setError(e.message);
     }
   };
 
-  // The rest of the component remains the same...
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', backgroundColor: '#0d0d0d', color: '#fff', minHeight: '100vh' }}>
       <h1 style={{ textAlign: 'center', color: '#4CAF50' }}>👺 Goblin Mint</h1>
