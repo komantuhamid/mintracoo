@@ -60,31 +60,28 @@ export default function MintPage() {
     autoConnect();
   }, [isAppReady, isConnected, connectors, connect]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const context = await sdk.context;
-        const fid = context?.user?.fid;
-        if (!fid) return;
-
-        const r = await fetch('/api/fetch-pfp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fid }),
-        });
-
-        const j = await r.json();
+useEffect(() => {
+  (async () => {
+    try {
+      const context = await sdk.context;
+      const fid = context?.user?.fid;
+      const username = context?.user?.username;
+      const pfpUrl = context?.user?.pfpUrl;
+      
+      if (fid) {
         setProfile({
-          display_name: j.display_name || '',
-          username: j.username || '',
-          pfp_url: j.pfp_url || null,
+          display_name: username || '',
+          username: username || '',
+          pfp_url: pfpUrl || null,
           fid,
         });
-      } catch (e) {
-        console.error(e);
       }
-    })();
-  }, []);
+    } catch (e) {
+      console.error(e);
+    }
+  })();
+}, []);
+
 
   useEffect(() => {
     if (isPending) {
