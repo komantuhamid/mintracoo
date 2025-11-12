@@ -9,7 +9,7 @@ const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
 
 const BASE_CHARACTER = "cute round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES (MONOCHROMATIC - MATCHING BACKGROUND)
+// 🎨 72 COLOR SCHEMES (MONOCHROMATIC)
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -85,7 +85,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// ALL ACCESSORIES (190 total)
+// ALL ACCESSORIES
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -240,20 +240,43 @@ function buildPrompt() {
 
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
     
-    // 🔥 BODY SIZE - SLIGHTLY TALLER (400x450px)
+    // 🔥🔥🔥 ULTRA-ENFORCED BODY SIZE (400x450px) - 30+ LINES!
+    "CRITICAL SIZE ENFORCEMENT: ALL CHARACTERS MUST BE IDENTICAL SIZE",
+    "MANDATORY: body dimensions are EXACTLY 400 pixels wide by 450 pixels tall",
+    "REQUIRED: every single character is 400x450 pixels NO EXCEPTIONS",
+    "ABSOLUTE: body size is LOCKED to 400 width 450 height ALWAYS",
+    "STRICT: character occupies precisely 400x450 pixel space",
+    "ENFORCED: body is standardized to 400px x 450px oval shape",
+    "NON-NEGOTIABLE: body measures exactly 400 wide 450 tall",
+    "FIXED: character body is 400 pixels horizontal 450 pixels vertical",
     "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
-    "body measures precisely 400px width by 450px height",
-    "body is gently oval shape 400x450 pixels maintaining cute proportions",
-    "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
-    "body fills 45% of image height consistently",
-    "oval torso measures 400 pixels wide by 450 pixels tall EXACT",
-    "blob body is standard size 400x450px gentle oval ALWAYS",
-    "EXACTLY TWO short stubby legs identical size",
-    "each leg measures precisely 60 pixels tall 30 pixels wide",
-    "EXACTLY TWO small rounded arms identical size",
-    "each arm measures precisely 70 pixels long 25 pixels thick",
+    "body measures precisely 400px width by 450px height EXACT",
+    "body is gently oval shape 400x450 pixels maintaining cute proportions EXACT",
+    "chubby belly is soft oval exactly 400 wide by 450 tall pixels EXACT",
+    "body fills 45% of image height consistently EXACT",
+    "oval torso measures 400 pixels wide by 450 pixels tall EXACT ALWAYS",
+    "blob body is standard size 400x450px gentle oval ALWAYS CONSISTENT",
+    "character width is locked at 400 pixels NEVER VARIES",
+    "character height is locked at 450 pixels NEVER VARIES",
+    "body proportions are 400:450 ratio STRICTLY MAINTAINED",
+    "torso occupies exactly 400x450 pixel bounding box FIXED",
+    "character scale is identical across all generations MANDATORY",
+    "body size consistency is CRITICAL do not deviate",
+    "standardized body dimensions 400 wide 450 tall REQUIRED",
+    "uniform character sizing 400x450 pixels ENFORCED",
+    "consistent body measurements 400 by 450 pixels ABSOLUTE",
+    "all characters share exact same 400x450px body size",
+    "body size variation is FORBIDDEN maintain 400x450",
+    "character must fit perfectly in 400x450 pixel space",
+    "body dimensions are non-variable fixed at 400x450",
+    "400 pixel width is the ONLY acceptable width",
+    "450 pixel height is the ONLY acceptable height",
+    "EXACTLY TWO short stubby legs identical size ALWAYS",
+    "each leg measures precisely 60 pixels tall 30 pixels wide EXACT",
+    "EXACTLY TWO small rounded arms identical size ALWAYS",
+    "each arm measures precisely 70 pixels long 25 pixels thick EXACT",
     "head is round sphere attached to body top",
-    "head measures 180 pixels diameter exactly",
+    "head measures 180 pixels diameter exactly ALWAYS",
     
     "no muscle definition, soft pillowy cuddly body",
     "wide short squat stature, roly-poly blob build",
@@ -326,14 +349,37 @@ function buildPrompt() {
     "3/4 view, looking sideways, facing left or right",
     "back view, rear view, turned around, rotated",
     
-    // 🔥 ANTI-INCONSISTENT BODY SIZE
-    "different body sizes, varying body proportions",
-    "inconsistent body dimensions, irregular body size",
-    "body too large, body too small, wrong body size",
-    "oversized body, undersized body, mismatched proportions",
-    "body bigger than 450 pixels tall, body smaller than 400 pixels wide",
-    "body not oval, elongated body, stretched vertically too much",
-    "tall body, extremely stretched body, compressed body, squashed body",
+    // 🔥🔥🔥 ULTRA-STRONG ANTI-SIZE-VARIATION (30+ LINES!)
+    "WRONG: different body sizes between characters",
+    "WRONG: varying body proportions inconsistent sizing",
+    "WRONG: inconsistent body dimensions irregular sizing",
+    "WRONG: body too large bigger than 400x450 pixels",
+    "WRONG: body too small smaller than 400x450 pixels",
+    "WRONG: oversized body larger than standard",
+    "WRONG: undersized body smaller than standard",
+    "WRONG: mismatched proportions wrong aspect ratio",
+    "WRONG: body wider than 400 pixels",
+    "WRONG: body narrower than 400 pixels",
+    "WRONG: body taller than 450 pixels",
+    "WRONG: body shorter than 450 pixels",
+    "WRONG: body not oval wrong shape",
+    "WRONG: elongated body stretched too much",
+    "WRONG: compressed body squashed too much",
+    "WRONG: tall body extremely stretched vertically",
+    "WRONG: wide body extremely stretched horizontally",
+    "WRONG: character scale variation size differences",
+    "WRONG: non-uniform sizing between generations",
+    "WRONG: body size inconsistency from image to image",
+    "variable body size, changing dimensions, fluctuating scale",
+    "uneven character sizing, non-standard dimensions",
+    "body size deviation, proportion inconsistency",
+    "different sized characters, varying scales",
+    "non-identical body measurements, size differences",
+    "body larger in some images smaller in others",
+    "inconsistent character scale across generations",
+    "body dimensions that vary from 400x450",
+    "non-standardized body size, irregular proportions",
+    "character sizing that changes between images",
     "different leg sizes, uneven legs, asymmetrical legs",
     "one leg bigger, one leg smaller, varying leg length",
     "different arm sizes, uneven arms, asymmetrical arms",
@@ -393,7 +439,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating Slightly Taller Goblin NFT (400x450px)...");
+    console.log("🎨 Generating ULTRA-CONSISTENT Size Goblin NFT (400x450px)...");
     
     const hf = new HfInference(HF_TOKEN);
 
