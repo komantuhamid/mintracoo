@@ -237,60 +237,31 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const expression = getRandomElement(EXPRESSIONS);
 
   const prompt = [
-    // 🔥 ULTRA-FLAT STYLE
-    "simple flat 2D cartoon illustration, clean vector art style",
-    "thick black outlines, bold cartoon lines, simple coloring",
+    // STYLE
+    "simple flat 2D cartoon illustration",
+    "thick black outlines, bold lines",
     "absolutely flat shading, NO gradients, NO depth",
-    "completely flat illustration, zero dimension, pure 2D design",
     
-    // CHARACTER - SKIN COLOR
-    `${BASE_CHARACTER} with ${skinColor} colored skin`,
-    
-    // HEAD - MATCH SKIN COLOR
-    `wearing ${headItem} in ${skinColor} color matching skin`,
-    
-    // EYES
+    // CHARACTER with CONSISTENT COLOR THEME
+    `cute round blob goblin with ${skinColor} colored skin and body`,
+    `wearing ${headItem}`,
     `${eyeItem}`,
-    
-    // MOUTH
     `${mouthItem}`,
+    `wearing ${clothing}`,
+    `${neckItem}`,
+    `holding ${handItem}`,
+    `${expression} expression`,
     
-    // BODY/CLOTHING - MATCH SKIN COLOR
-    `wearing ${clothing} in ${skinColor} color matching skin`,
-    
-    // NECK - MATCH SKIN COLOR
-    `${neckItem} in ${skinColor} color matching skin`,
-    
-    // HANDS/ITEMS - MATCH SKIN COLOR
-    `holding ${handItem} in ${skinColor} color matching skin`,
-    
-    // EXPRESSION
-    `looking ${expression}`,
-    
-    // BACKGROUND - CONTRASTING
-    `solid ${background} background with contrasting color`,
-    `all clothing and accessories match the ${skinColor} of the character`,
+    // BACKGROUND
+    `solid ${background} background`,
     
     // COMPOSITION
-    "centered character, front view, full body visible",
-    "character fills most of frame",
-    
-    // STYLE ENFORCEMENT
-    "NO shadows, NO lighting effects, NO depth, NO 3D",
-    "pure flat design, sticker-like appearance",
-    "clean simple cartoon, like a flat emoji or icon",
-    "minimal details, bold simple shapes only"
+    "centered, front view, full body",
+    "sticker style, flat emoji design"
   ].join(", ");
 
   const negative = [
-    "3D render, realistic, photo, CGI",
-    "gradient shading, soft shadows, depth",
-    "different background color, mismatched colors",
-    "background different from character color",
-    "gradient background, textured backdrop",
-    "multiple characters, cropped",
-    "side view, profile, angled",
-    "text, watermark, logo"
+    "3D, realistic, photo, gradient, shadows, depth, multiple characters, text, watermark"
   ].join(", ");
 
   return { prompt, negative };
