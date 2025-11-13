@@ -7,9 +7,10 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-const BASE_CHARACTER = "round blob goblin creature monster";
+// 🔥 CHANGED FROM "creature monster" to just "GOBLIN"
+const BASE_CHARACTER = "goblin";
 
-// 🎨 72 COLOR SCHEMES (SAME AS BEFORE)
+// 🎨 72 COLOR SCHEMES (SAME)
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -68,7 +69,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "neon magenta bright glowing electric", bg: "neon magenta bright glowing electric" },
   { skin: "neon turquoise bright glowing electric", bg: "neon turquoise bright glowing electric" },
   { skin: "neon red bright glowing electric", bg: "neon red bright glowing electric" },
-  { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green glowing electric" },
+  { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green electric" },
   { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
   { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
   { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
@@ -85,7 +86,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// 🎩 30 HEAD ITEMS
+// SAME TRAITS
 const HEAD_ITEMS = [
   "wizard hat", "party hat", "crown", "baseball cap", "beanie",
   "viking helmet with horns", "cowboy hat", "chef hat",
@@ -97,7 +98,6 @@ const HEAD_ITEMS = [
   "horned helmet", "iron crown", "leather cap", "metal helmet"
 ];
 
-// 👁️ 25 EYE ITEMS
 const EYE_ITEMS = [
   "eye patch", "goggles", "monocle", "round glasses",
   "bandage over eye", "aviator goggles", "large round eyes",
@@ -108,26 +108,24 @@ const EYE_ITEMS = [
   "cracked monocle", "glowing blue eyes", "X-ray specs"
 ];
 
-// 😁 15 MOUTH ITEMS - 🔥 NSFW-SAFE DESCRIPTIONS
 const MOUTH_ITEMS = [
-  "wide grin with small fangs",
-  "big smile with tiny fangs",
-  "happy grin with cute fangs",
-  "toothy smile with small fangs",
-  "cheerful grin showing fangs",
-  "friendly smile with fangs",
-  "cute grin with little fangs",
-  "big happy smile with fangs",
-  "playful grin with fangs",
-  "excited smile with tiny fangs",
+  "mischievous grin with small fangs",
+  "cheeky smile with tiny fangs",
+  "sneaky grin showing fangs",
+  "playful smile with fangs",
+  "impish grin with fangs",
+  "sly smile with small fangs",
+  "toothy grin with fangs",
+  "goblin smile with fangs",
+  "cunning grin showing fangs",
+  "devious smile with fangs",
   "gold tooth visible",
   "missing tooth gap",
   "braces visible",
-  "tongue out playfully",
-  "happy closed smile"
+  "tongue out",
+  "happy grin"
 ];
 
-// 👔 35 CLOTHING ITEMS - 🔥 REMOVED "BARE CHEST"
 const CLOTHING = [
   "leather vest", "torn rags", "cloth tunic", "fur vest",
   "leather jerkin", "torn robes", "patchwork leather", "animal hide",
@@ -140,7 +138,6 @@ const CLOTHING = [
   "monk robe", "kimono", "poncho"
 ];
 
-// 📿 30 NECK ITEMS
 const NECK_ITEMS = [
   "bone necklace", "iron collar", "tooth necklace", "leather cord",
   "gold chain", "bead necklace", "medallion", "skull pendant",
@@ -151,7 +148,6 @@ const NECK_ITEMS = [
   "scarf", "bandana", "silver chain", "gemstone necklace", "choker"
 ];
 
-// ✋ 40 HAND ITEMS
 const HAND_ITEMS = [
   "rusty dagger", "wooden club", "coin bag", "wooden shield",
   "torch", "battle axe", "shortsword", "iron mace",
@@ -165,15 +161,14 @@ const HAND_ITEMS = [
   "thumbs up", "pointing finger", "waving hand", "sword"
 ];
 
-// 🎭 7 EXPRESSIONS
 const EXPRESSIONS = [
-  "happy cheerful smiling",
-  "angry grumpy scowling",
+  "mischievous sneaky",
+  "devious cunning",
+  "playful cheeky",
+  "grumpy annoyed",
   "excited enthusiastic",
-  "nervous worried",
-  "silly goofy playful",
-  "cool confident",
-  "mischievous sneaky"
+  "confident smug",
+  "silly goofy"
 ];
 
 function getPersonalizedColor(fid: number): { skin: string; bg: string } {
@@ -196,11 +191,10 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
-  // 🔥 NSFW-SAFE PROFESSIONAL PROMPT
-  const prompt = `professional high quality NFT character artwork, adorable cute kawaii chibi ${BASE_CHARACTER} collectible, ${skinColor} smooth skin tone, round chubby blob body, prominent pointed goblin ears visible on sides of head, small goblin facial features, wearing ${headItem} on head, ${eyeItem} on face, ${mouthItem} mouth, wearing ${clothing} fitted on body, ${neckItem} around neck, holding ${handItem} in hands, ${expression} expression, thick bold black outlines, clean flat 2D cartoon style, solid flat colors with simple cel shading, sticker aesthetic, full body standing centered, front-facing view, monochromatic solid ${background} background, professional collectible NFT art, polished digital artwork`;
+  // 🔥 GOBLIN-FOCUSED PROMPT
+  const prompt = `professional NFT character artwork, cute chibi fantasy ${BASE_CHARACTER} character, ${skinColor} skin tone, round chubby body, LARGE POINTED GOBLIN EARS sticking out prominently from sides of head, small pointed nose, goblin facial features, mischievous character, wearing ${headItem} on head, ${eyeItem} on face, ${mouthItem} mouth, wearing ${clothing} on body, ${neckItem} around neck, holding ${handItem} in hands, ${expression} expression, thick black outlines, flat 2D cartoon style, solid colors with simple shading, full body standing, front view, solid ${background} background, collectible NFT art style, clean digital illustration`;
 
-  // 🔥 FAMILY-FRIENDLY NEGATIVE PROMPT
-  const negative = `realistic, photorealistic, 3D render, complex shading, dramatic lighting, gradient background, detailed background, scenery, multiple characters, text, watermark, side view, profile, muscular, tall, human proportions, messy, blurry, low quality, deformed, bad anatomy, no ears, ears missing, different background color, adult content, inappropriate, suggestive, revealing`;
+  const negative = `realistic, photorealistic, 3D render, alien, robot, android, cyborg, smooth featureless face, no ears, small ears, hidden ears, rounded ears, human ears, no nose, human features, realistic proportions, tall, muscular, complex shading, gradient background, detailed background, scenery, multiple characters, text, watermark, side view, messy, blurry, low quality, deformed, bad anatomy, different background color`;
 
   return { prompt, negative };
 }
@@ -226,7 +220,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { prompt, negative } = buildPrompt(selectedColorScheme);
-    console.log("🎨 Generating NSFW-Safe Professional Goblin NFT...");
+    console.log("🎨 Generating TRUE Goblin NFT...");
 
     let output: any;
 
@@ -240,13 +234,12 @@ export async function POST(req: NextRequest) {
             image: pfpUrl,
             prompt: prompt,
             negative_prompt: negative,
-            prompt_strength: 0.88,
+            prompt_strength: 0.85,
             num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 8.5,
+            guidance_scale: 8.0,
             scheduler: "K_EULER_ANCESTRAL",
-            disable_safety_checker: false,  // Keep safety on but prompt is safe
           }
         }
       );
@@ -262,9 +255,8 @@ export async function POST(req: NextRequest) {
             num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 8.0,
+            guidance_scale: 7.5,
             scheduler: "K_EULER_ANCESTRAL",
-            disable_safety_checker: false,
           }
         }
       );
@@ -294,16 +286,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     console.error("Route error:", e);
-    
-    // 🔥 HANDLE NSFW ERROR GRACEFULLY
-    if (e?.message?.includes("NSFW")) {
-      console.log("⚠️ NSFW false positive detected, retrying...");
-      return NextResponse.json(
-        { error: "Content filter triggered. Please try generating again." },
-        { status: 400 }
-      );
-    }
-    
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
