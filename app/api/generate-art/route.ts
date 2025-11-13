@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { Runware, IImageInference } from "@runware/sdk-js";
+import { Runware } from "@runware/sdk-js";
 
 const RUNWARE_API_KEY = process.env.RUNWARE_API_KEY || "";
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     const runware = new Runware({ apiKey: RUNWARE_API_KEY });
     await runware.connect();
 
-    const imageRequest: IImageInference = {
+    const images = await runware.imageInference({
       positivePrompt: prompt,
       model: "runware:100@1",
       width: 1024,
@@ -63,9 +63,7 @@ export async function POST(req: NextRequest) {
       numberResults: 1,
       outputFormat: "WEBP",
       outputType: "base64Data"
-    };
-
-    const images = await runware.requestImages(imageRequest);
+    });
     
     if (!images || images.length === 0) {
       throw new Error("No images generated");
@@ -89,4 +87,3 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
-
