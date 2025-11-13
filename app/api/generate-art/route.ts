@@ -7,9 +7,10 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-const STYLE_REFERENCE_URL =
-  "https://up6.cc/2025/10/176307007680191.png";
+// 🔥 REFERENCE IMAGE - Mad Lads style example
+const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 
+// 🎨 BACKGROUND COLORS - Textured vintage style
 const BACKGROUND_COLORS = [
   "coral red vintage textured",
   "sky blue vintage textured",
@@ -22,9 +23,10 @@ const BACKGROUND_COLORS = [
   "rose pink vintage textured",
   "sage green vintage textured",
   "peach orange vintage textured",
-  "turquoise blue vintage textured",
+  "turquoise blue vintage textured"
 ];
 
+// 👤 SKIN TONES
 const SKIN_TONES = [
   "fair light skin",
   "medium tan skin",
@@ -34,6 +36,7 @@ const SKIN_TONES = [
   "deep skin"
 ];
 
+// 👁️ EYE COLORS
 const EYE_COLORS = [
   "brown eyes",
   "blue eyes",
@@ -43,6 +46,7 @@ const EYE_COLORS = [
   "amber eyes"
 ];
 
+// 💇 HAIRSTYLES
 const HAIRSTYLES = [
   "short slicked back hair",
   "curly afro hair",
@@ -66,6 +70,7 @@ const HAIRSTYLES = [
   "vintage waves hair"
 ];
 
+// 🎩 HEADWEAR
 const HEADWEAR = [
   "no hat",
   "vintage fedora hat",
@@ -83,6 +88,7 @@ const HEADWEAR = [
   "cowboy hat"
 ];
 
+// 👓 EYEWEAR
 const EYEWEAR = [
   "no glasses",
   "round frame glasses",
@@ -97,6 +103,7 @@ const EYEWEAR = [
   "oversized sunglasses"
 ];
 
+// 👔 CLOTHING
 const CLOTHING = [
   "pinstripe suit jacket",
   "leather jacket",
@@ -118,6 +125,7 @@ const CLOTHING = [
   "flannel shirt"
 ];
 
+// 📿 ACCESSORIES
 const ACCESSORIES = [
   "no accessory",
   "necktie striped",
@@ -130,6 +138,7 @@ const ACCESSORIES = [
   "collar pin"
 ];
 
+// 🎨 SPECIAL FEATURES
 const SPECIAL_FEATURES = [
   "normal",
   "normal",
@@ -144,6 +153,7 @@ const SPECIAL_FEATURES = [
   "facial piercings multiple"
 ];
 
+// 😎 EXPRESSIONS
 const EXPRESSIONS = [
   "confident smirk",
   "serious intense look",
@@ -176,7 +186,7 @@ function buildPrompt(bgHint?: string) {
   const special = getRandomElement(SPECIAL_FEATURES);
   const expression = getRandomElement(EXPRESSIONS);
 
-  // 🔥 PROMPT: let art reference do the heavy lifting!
+  // 🔥 SIMPLIFIED PROMPT - Let reference image define the style!
   const prompt = `NFT character portrait, ${skinTone}, ${eyeColor}, ${hairstyle}, ${headwear !== "no hat" ? headwear : ""}, ${eyewear !== "no glasses" ? eyewear : ""}, ${expression}, wearing ${clothing}, ${accessory !== "no accessory" ? accessory : ""}, ${special !== "normal" ? special : ""}, ${background} background, exact same art style as reference image, same composition, same thick outlines, same cel shading, same texture, professional NFT artwork`;
 
   const negative = "full body, legs visible, feet showing, hands in frame, realistic photo, 3D render, blurry, low quality, deformed, multiple people, text, watermark, different art style, smooth cartoon, anime style, different composition, plain background, no texture";
@@ -188,9 +198,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const fid = body?.fid;
-
+    const pfpUrl = body?.pfpUrl;
+    
     let selectedBackground: string | undefined;
-
+    
     if (fid && typeof fid === 'number') {
       selectedBackground = getPersonalizedBackground(fid);
       console.log("✅ Using FID-based background:", selectedBackground);
@@ -204,18 +215,17 @@ export async function POST(req: NextRequest) {
     }
 
     const { prompt, negative } = buildPrompt(selectedBackground);
-
     console.log("🎨 Generating Mad Lads Style NFT with Reference Image...");
 
-    // 🔥 USE STYLE_REFERENCE_URL AS STYLE GUIDE
+    // 🔥 USE REFERENCE IMAGE FOR STYLE
     const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
-          image: STYLE_REFERENCE_URL, // 🔥 Always Mad Lads style!
+          image: STYLE_REFERENCE_URL,  // 🔥 This is the reference image!
           prompt: prompt,
           negative_prompt: negative,
-          prompt_strength: 0.60,
+          prompt_strength: 0.60,  // 🔥 Lower = follows reference style MORE closely
           num_inference_steps: 50,
           width: 1024,
           height: 1024,
@@ -245,7 +255,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
-      success: true,
+      success: true
     });
   } catch (e: any) {
     console.error("Route error:", e);
