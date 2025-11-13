@@ -9,7 +9,7 @@ const replicate = new Replicate({
 
 const BASE_CHARACTER = "round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - SAME AS BEFORE
+// 🎨 72 COLOR SCHEMES (SAME AS BEFORE)
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -85,7 +85,6 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-// SAME TRAITS AS BEFORE
 const HEAD_ITEMS = [
   "wizard hat", "party hat", "crown", "baseball cap", "beanie",
   "viking helmet with horns", "cowboy hat", "chef hat",
@@ -108,12 +107,18 @@ const EYE_ITEMS = [
 ];
 
 const MOUTH_ITEMS = [
-  "wide grin with fangs", "open mouth with fangs",
-  "toothy grin", "mouth with sharp fangs",
-  "crazy smile with teeth", "evil grin with fangs",
-  "creepy smile", "menacing grin", "wicked smile",
-  "fierce mouth", "vampire fangs", "gold tooth",
-  "missing teeth", "braces", "tongue out"
+  "wide grin showing sharp pointed fangs",
+  "huge open mouth with rows of jagged fangs",
+  "big toothy grin with vampire fangs",
+  "enormous gaping mouth with multiple sharp fangs",
+  "crazy smile showing all sharp teeth and fangs",
+  "evil grinning mouth with prominent fangs visible",
+  "creepy smile with sharp jagged fangs",
+  "menacing grin with big pointed fangs",
+  "wicked smile showing rows of sharp teeth",
+  "fierce grinning mouth with fangs",
+  "vampire fangs protruding", "gold tooth shining",
+  "missing teeth gap", "braces on teeth", "tongue sticking out"
 ];
 
 const CLOTHING = [
@@ -139,22 +144,26 @@ const NECK_ITEMS = [
 ];
 
 const HAND_ITEMS = [
-  "dagger", "wooden club", "coin bag", "wooden shield",
+  "rusty dagger", "wooden club", "coin bag", "wooden shield",
   "torch", "battle axe", "shortsword", "iron mace",
   "wooden spear", "bow", "loot sack", "lantern",
   "skull cup", "potion vial", "pickaxe", "meat leg",
-  "keys", "bottle", "hammer", "fists",
+  "keys", "bottle", "hammer", "clenched fists",
   "smartphone", "game controller", "coffee cup", "microphone",
   "pizza slice", "burger", "baseball bat", "tennis racket",
   "guitar", "drumsticks", "book", "pen",
   "magnifying glass", "wrench", "empty hands", "peace sign",
-  "thumbs up", "pointing", "waving"
+  "thumbs up", "pointing finger", "waving hand"
 ];
 
 const EXPRESSIONS = [
-  "happy cheerful", "angry grumpy", "excited",
-  "nervous worried", "silly goofy", "cool chill",
-  "mischievous devious"
+  "happy cheerful smiling",
+  "angry grumpy mad scowling",
+  "excited enthusiastic beaming",
+  "nervous sweating worried anxious",
+  "silly goofy derpy playful",
+  "cool relaxed chill confident",
+  "mischievous plotting devious sneaky"
 ];
 
 function getPersonalizedColor(fid: number): { skin: string; bg: string } {
@@ -178,11 +187,11 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
-  // 🔥 OPTIMIZED PROMPT - Short and effective!
-  const prompt = `cute chibi ${BASE_CHARACTER}, ${skinColor} smooth skin, round chubby blob body, small pointed ears, wearing ${headItem}, ${eyeItem}, ${mouthItem} showing small fangs, wearing ${clothing}, ${neckItem}, holding ${handItem}, ${expression} expression, thick black outlines, flat 2D cartoon style, solid colors, simple shading, sticker aesthetic, monochromatic ${background} solid background, centered full body standing, professional character design, kawaii cute style`;
+  // 🔥 ULTRA-DETAILED PROFESSIONAL NFT PROMPT
+  const prompt = `professional high quality NFT character artwork, adorable cute chibi ${BASE_CHARACTER}, ${skinColor} smooth clean skin tone, round chubby blob body shape, PROMINENT POINTED GOBLIN EARS clearly visible on sides of head, small goblin features, goblin-like appearance with monster traits, wearing ${headItem} on head, ${eyeItem} on face, ${mouthItem} clearly visible and prominent, wearing ${clothing} on body, ${neckItem} around neck area, holding ${handItem} in hands, ${expression} facial expression, thick bold black outlines, clean 2D flat cartoon illustration style, solid flat colors no complex shading, simple cel shading, sticker-like aesthetic, kawaii cute character design, full body standing centered composition, front-facing view looking at viewer, stubby short legs visible, small rounded arms visible, monochromatic solid ${background} background filling entire image, character and background same exact color tone, professional collectible NFT art quality, polished digital artwork, clean simple design`;
 
-  // 🔥 FOCUSED NEGATIVE - Only blocks bad stuff
-  const negative = `realistic, photorealistic, 3D render, CGI, complex shading, dramatic lighting, harsh shadows, gradient background, textured background, detailed background, scenery, landscape, buildings, multiple characters, text, watermark, logo, side view, profile, back view, angled, muscular, athletic, tall, long limbs, human proportions, messy, sketchy, blurry, low quality, deformed, bad anatomy, extra limbs, floating objects, smoking, violence, blood, different background color, contrasting background`;
+  // 🔥 COMPREHENSIVE NEGATIVE PROMPT
+  const negative = `realistic, photorealistic, photograph, 3D render, CGI, Unreal Engine, Blender render, overly complex shading, dramatic lighting, harsh shadows, volumetric lighting, ray tracing, depth of field, bokeh, blur, gradient background, textured background, patterned background, detailed background scenery, landscape, environment, buildings, objects in background, multiple characters, crowd, text, watermark, logo, signature, artist name, side view, profile view, back view, 3/4 view, angled view, turned sideways, looking away, muscular, athletic body, fit, toned, tall, long limbs, human proportions, stretched, elongated, thin, skinny, no ears visible, ears missing, hidden ears, ears covered completely, messy, sketchy, rough, unfinished, low quality, bad anatomy, deformed, mutated, extra limbs, missing limbs, floating accessories, misplaced items, smoking, cigarette, violence, blood, gore, inappropriate, different background color from character, contrasting background, wrong background color, background not matching character color`;
 
   return { prompt, negative };
 }
@@ -208,7 +217,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { prompt, negative } = buildPrompt(selectedColorScheme);
-    console.log("🎨 Generating Goblin NFT...");
+    console.log("🎨 Generating PROFESSIONAL Goblin NFT...");
 
     let output: any;
 
@@ -222,11 +231,11 @@ export async function POST(req: NextRequest) {
             image: pfpUrl,
             prompt: prompt,
             negative_prompt: negative,
-            prompt_strength: 0.85,  // Balanced for PFP transformation
+            prompt_strength: 0.88,  // Strong but balanced
             num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 8.0,  // Good balance
+            guidance_scale: 8.5,  // Strong guidance
           }
         }
       );
@@ -242,7 +251,7 @@ export async function POST(req: NextRequest) {
             num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 7.5,
+            guidance_scale: 8.0,
           }
         }
       );
