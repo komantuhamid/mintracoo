@@ -15,7 +15,7 @@
     "@farcaster/miniapp-sdk": "^0.2.0",
     "@farcaster/miniapp-wagmi-connector": "1.1.0",
     "@huggingface/inference": "^4.13.0",
-    "@runware/sdk-js": "^0.1.0",
+    "@runware/sdk-js": "^1.1.46",
     "@tanstack/react-query": "^5.81.5",
     "lucide-react": "^0.460.0",
     "next": "15.3.4",
