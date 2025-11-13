@@ -7,10 +7,9 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-// 🔥 REFERENCE IMAGE - Mad Lads style
-const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
+const STYLE_REFERENCE_URL =
+  "https://up6.cc/2025/10/176307007680191.png";
 
-// 🎨 BACKGROUND COLORS (random each time)
 const BACKGROUND_COLORS = [
   "coral red vintage textured",
   "sky blue vintage textured",
@@ -24,13 +23,49 @@ const BACKGROUND_COLORS = [
   "sage green vintage textured",
   "peach orange vintage textured",
   "turquoise blue vintage textured",
-  "sunset orange vintage textured",
-  "forest green vintage textured",
-  "royal purple vintage textured",
-  "salmon pink vintage textured"
 ];
 
-// 🎩 HEADWEAR (random each time)
+const SKIN_TONES = [
+  "fair light skin",
+  "medium tan skin",
+  "brown skin",
+  "dark brown skin",
+  "olive skin",
+  "deep skin"
+];
+
+const EYE_COLORS = [
+  "brown eyes",
+  "blue eyes",
+  "green eyes",
+  "hazel eyes",
+  "gray eyes",
+  "amber eyes"
+];
+
+const HAIRSTYLES = [
+  "short slicked back hair",
+  "curly afro hair",
+  "long flowing hair",
+  "wavy shoulder length hair",
+  "buzz cut short hair",
+  "dreadlocks hair",
+  "man bun hair",
+  "pompadour styled hair",
+  "messy textured hair",
+  "side part hair",
+  "undercut fade hair",
+  "mohawk styled hair",
+  "bald shaved head",
+  "short curly hair",
+  "long straight hair",
+  "bob cut hair",
+  "pixie cut short hair",
+  "braided hair",
+  "ponytail hair",
+  "vintage waves hair"
+];
+
 const HEADWEAR = [
   "no hat",
   "vintage fedora hat",
@@ -45,13 +80,9 @@ const HEADWEAR = [
   "bowler hat",
   "flat cap",
   "panama hat",
-  "cowboy hat",
-  "top hat",
-  "straw hat",
-  "bandana headband"
+  "cowboy hat"
 ];
 
-// 👓 EYEWEAR (random each time)
 const EYEWEAR = [
   "no glasses",
   "round frame glasses",
@@ -63,12 +94,9 @@ const EYEWEAR = [
   "steampunk goggles",
   "futuristic visor",
   "heart-shaped glasses",
-  "oversized sunglasses",
-  "rimless glasses",
-  "thick frame glasses"
+  "oversized sunglasses"
 ];
 
-// 👔 CLOTHING (random each time)
 const CLOTHING = [
   "pinstripe suit jacket",
   "leather jacket",
@@ -87,14 +115,9 @@ const CLOTHING = [
   "varsity jacket",
   "windbreaker",
   "track jacket",
-  "flannel shirt",
-  "dress shirt",
-  "hawaiian shirt",
-  "sweater vest",
-  "peacoat"
+  "flannel shirt"
 ];
 
-// 📿 ACCESSORIES (random each time)
 const ACCESSORIES = [
   "no accessory",
   "necktie striped",
@@ -104,16 +127,10 @@ const ACCESSORIES = [
   "pendant necklace",
   "choker necklace",
   "bandana",
-  "collar pin",
-  "pocket square",
-  "suspenders",
-  "tie clip"
+  "collar pin"
 ];
 
-// 🎨 SPECIAL FEATURES (random each time)
 const SPECIAL_FEATURES = [
-  "normal",
-  "normal",
   "normal",
   "normal",
   "normal",
@@ -124,53 +141,59 @@ const SPECIAL_FEATURES = [
   "septum piercing",
   "nose ring",
   "ear gauges",
-  "facial piercings multiple",
-  "beauty mark",
-  "freckles"
+  "facial piercings multiple"
 ];
 
-// 🔥 Fetch Farcaster PFP
-async function fetchFarcasterPFP(fid: number): Promise<string | null> {
-  try {
-    const response = await fetch(`https://client.warpcast.com/v2/user-by-fid?fid=${fid}`);
-    const data = await response.json();
-    return data?.result?.user?.pfp?.url || null;
-  } catch (error) {
-    console.error("Failed to fetch Farcaster PFP:", error);
-    return null;
-  }
+const EXPRESSIONS = [
+  "confident smirk",
+  "serious intense look",
+  "friendly smile",
+  "cool relaxed expression",
+  "smug grin",
+  "determined look",
+  "mysterious expression",
+  "playful smirk",
+  "contemplative look"
+];
+
+function getPersonalizedBackground(fid: number): string {
+  return BACKGROUND_COLORS[fid % BACKGROUND_COLORS.length];
 }
 
 function getRandomElement<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-function buildPrompt() {
-  // 🔥 RANDOM traits every time!
-  const background = getRandomElement(BACKGROUND_COLORS);
+function buildPrompt(bgHint?: string) {
+  const background = bgHint || getRandomElement(BACKGROUND_COLORS);
+  const skinTone = getRandomElement(SKIN_TONES);
+  const eyeColor = getRandomElement(EYE_COLORS);
+  const hairstyle = getRandomElement(HAIRSTYLES);
   const headwear = getRandomElement(HEADWEAR);
   const eyewear = getRandomElement(EYEWEAR);
   const clothing = getRandomElement(CLOTHING);
   const accessory = getRandomElement(ACCESSORIES);
   const special = getRandomElement(SPECIAL_FEATURES);
+  const expression = getRandomElement(EXPRESSIONS);
 
-  const prompt = `NFT portrait character in Mad Lads comic book art style, ${headwear !== "no hat" ? "wearing " + headwear : ""}, ${eyewear !== "no glasses" ? "wearing " + eyewear : ""}, wearing ${clothing}, ${accessory !== "no accessory" ? accessory : ""}, ${special !== "normal" ? special : ""}, ${background} background with vintage paper texture, thick black outlines, cel shaded illustration, head and shoulders portrait, front facing, professional NFT artwork`;
+  // 🔥 PROMPT: let art reference do the heavy lifting!
+  const prompt = `NFT character portrait, ${skinTone}, ${eyeColor}, ${hairstyle}, ${headwear !== "no hat" ? headwear : ""}, ${eyewear !== "no glasses" ? eyewear : ""}, ${expression}, wearing ${clothing}, ${accessory !== "no accessory" ? accessory : ""}, ${special !== "normal" ? special : ""}, ${background} background, exact same art style as reference image, same composition, same thick outlines, same cel shading, same texture, professional NFT artwork`;
 
-  const negative = "different face structure, different facial proportions, different bone structure, changing face shape, full body, legs visible, feet showing, hands in frame, realistic photo, 3D render, blurry, low quality, deformed, multiple people, text, watermark, different art style, smooth cartoon, plain background, no texture";
+  const negative = "full body, legs visible, feet showing, hands in frame, realistic photo, 3D render, blurry, low quality, deformed, multiple people, text, watermark, different art style, smooth cartoon, anime style, different composition, plain background, no texture";
 
-  return { prompt, negative, traits: { background, headwear, eyewear, clothing, accessory, special } };
+  return { prompt, negative };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const fid = body?.fid;
-    
-    if (!fid || typeof fid !== 'number') {
-      return NextResponse.json(
-        { error: "FID required" },
-        { status: 400 }
-      );
+
+    let selectedBackground: string | undefined;
+
+    if (fid && typeof fid === 'number') {
+      selectedBackground = getPersonalizedBackground(fid);
+      console.log("✅ Using FID-based background:", selectedBackground);
     }
 
     if (!process.env.REPLICATE_API_TOKEN) {
@@ -180,40 +203,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔥 AUTO-FETCH Farcaster PFP
-    console.log("📡 Fetching Farcaster PFP for FID:", fid);
-    const pfpUrl = await fetchFarcasterPFP(fid);
-    
-    if (!pfpUrl) {
-      return NextResponse.json(
-        { error: "Could not fetch Farcaster PFP" },
-        { status: 404 }
-      );
-    }
+    const { prompt, negative } = buildPrompt(selectedBackground);
 
-    console.log("✅ Got PFP:", pfpUrl);
+    console.log("🎨 Generating Mad Lads Style NFT with Reference Image...");
 
-    // 🔥 RANDOM traits each generation
-    const { prompt, negative, traits } = buildPrompt();
-
-    console.log("🎨 Generating Mad Lads NFT with random traits...");
-    console.log("Traits:", traits);
-
-    // 🔥 Use PFP to preserve FACE STRUCTURE
+    // 🔥 USE STYLE_REFERENCE_URL AS STYLE GUIDE
     const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
-          image: pfpUrl,
-          prompt: `transform this person into Mad Lads NFT art style, preserve exact face structure and facial proportions, keep same face shape, ${prompt}`,
+          image: STYLE_REFERENCE_URL, // 🔥 Always Mad Lads style!
+          prompt: prompt,
           negative_prompt: negative,
-          prompt_strength: 0.35,  // 🔥 VERY LOW = locks face structure!
+          prompt_strength: 0.60,
           num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 7.0,
+          guidance_scale: 7.5,
           scheduler: "K_EULER_ANCESTRAL",
-          seed: fid,  // 🔥 Same seed per user = same face base
         }
       }
     );
@@ -239,10 +246,7 @@ export async function POST(req: NextRequest) {
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
       success: true,
-      traits: traits,
-      pfpUrl: pfpUrl,
     });
-
   } catch (e: any) {
     console.error("Route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
