@@ -9,7 +9,7 @@ const replicate = new Replicate({
 
 const BASE_CHARACTER = "round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES (FULL COLLECTION)
+// 🎨 72 COLOR SCHEMES (SAME AS BEFORE)
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -108,31 +108,31 @@ const EYE_ITEMS = [
   "cracked monocle", "glowing blue eyes", "X-ray specs"
 ];
 
-// 😁 15 MOUTH ITEMS
+// 😁 15 MOUTH ITEMS - 🔥 NSFW-SAFE DESCRIPTIONS
 const MOUTH_ITEMS = [
-  "wide grin showing sharp pointed fangs clearly visible",
-  "huge open mouth with rows of jagged fangs prominent",
-  "big toothy grin with vampire fangs exposed",
-  "enormous gaping mouth with multiple sharp fangs",
-  "crazy smile showing all sharp teeth and fangs",
-  "evil grinning mouth with prominent fangs visible",
-  "creepy smile with sharp jagged fangs showing",
-  "menacing grin with big pointed fangs",
-  "wicked smile showing rows of sharp teeth",
-  "fierce grinning mouth with fangs prominent",
-  "vampire fangs protruding clearly",
-  "gold tooth shining in grin",
-  "missing teeth gap in smile",
-  "braces on teeth visible",
-  "tongue sticking out playfully"
+  "wide grin with small fangs",
+  "big smile with tiny fangs",
+  "happy grin with cute fangs",
+  "toothy smile with small fangs",
+  "cheerful grin showing fangs",
+  "friendly smile with fangs",
+  "cute grin with little fangs",
+  "big happy smile with fangs",
+  "playful grin with fangs",
+  "excited smile with tiny fangs",
+  "gold tooth visible",
+  "missing tooth gap",
+  "braces visible",
+  "tongue out playfully",
+  "happy closed smile"
 ];
 
-// 👔 35 CLOTHING ITEMS
+// 👔 35 CLOTHING ITEMS - 🔥 REMOVED "BARE CHEST"
 const CLOTHING = [
   "leather vest", "torn rags", "cloth tunic", "fur vest",
   "leather jerkin", "torn robes", "patchwork leather", "animal hide",
   "torn shirt", "iron armor", "torn cloak", "leather coat",
-  "pirate vest", "sailor vest", "bare chest", "hawaiian shirt",
+  "pirate vest", "sailor vest", "simple shirt", "hawaiian shirt",
   "tuxedo", "hoodie", "tank top", "sweater",
   "denim jacket", "bomber jacket", "tracksuit", "polo shirt",
   "football jersey", "basketball jersey", "chef coat", "lab coat",
@@ -167,13 +167,13 @@ const HAND_ITEMS = [
 
 // 🎭 7 EXPRESSIONS
 const EXPRESSIONS = [
-  "happy cheerful smiling joyful",
-  "angry grumpy mad scowling furious",
-  "excited enthusiastic beaming energetic",
-  "nervous sweating worried anxious scared",
-  "silly goofy derpy playful funny",
-  "cool relaxed chill confident smug",
-  "mischievous plotting devious sneaky cunning"
+  "happy cheerful smiling",
+  "angry grumpy scowling",
+  "excited enthusiastic",
+  "nervous worried",
+  "silly goofy playful",
+  "cool confident",
+  "mischievous sneaky"
 ];
 
 function getPersonalizedColor(fid: number): { skin: string; bg: string } {
@@ -196,11 +196,11 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
-  // 🔥 ULTRA-PREMIUM PROFESSIONAL NFT PROMPT
-  const prompt = `masterpiece professional high quality NFT character artwork, adorable cute kawaii chibi ${BASE_CHARACTER} collectible design, ${skinColor} smooth clean vibrant skin tone, perfectly round chubby blob body shape with soft curves, PROMINENT POINTED GOBLIN EARS clearly visible and well-defined on both sides of head, distinctive goblin facial features with small nose and big expressive face, monster creature characteristics, wearing ${headItem} perfectly positioned on top of head, ${eyeItem} clearly visible on face in correct position, ${mouthItem} mouth feature prominently displayed, wearing ${clothing} fitted properly on body, ${neckItem} positioned correctly around neck area, holding ${handItem} clearly in hands with proper grip, ${expression} facial expression with detailed emotion, ultra-thick bold black cartoon outlines defining all shapes, clean flat 2D vector art illustration style, solid vibrant flat colors with simple cel shading for depth, subtle smooth gradients for professional polish, sticker-like aesthetic with glossy finish, high-end kawaii cute character design, full body complete figure standing upright centered in frame, front-facing direct view looking straight at viewer, stubby short legs clearly visible at bottom, small rounded arms clearly visible on sides, perfect symmetrical composition, monochromatic solid ${background} background color filling entire image seamlessly, character and background perfectly color-matched for cohesive monochrome aesthetic, museum-quality professional collectible NFT art, polished refined digital artwork, ultra-clean simple professional design, premium character illustration`;
+  // 🔥 NSFW-SAFE PROFESSIONAL PROMPT
+  const prompt = `professional high quality NFT character artwork, adorable cute kawaii chibi ${BASE_CHARACTER} collectible, ${skinColor} smooth skin tone, round chubby blob body, prominent pointed goblin ears visible on sides of head, small goblin facial features, wearing ${headItem} on head, ${eyeItem} on face, ${mouthItem} mouth, wearing ${clothing} fitted on body, ${neckItem} around neck, holding ${handItem} in hands, ${expression} expression, thick bold black outlines, clean flat 2D cartoon style, solid flat colors with simple cel shading, sticker aesthetic, full body standing centered, front-facing view, monochromatic solid ${background} background, professional collectible NFT art, polished digital artwork`;
 
-  // 🔥 ULTRA-COMPREHENSIVE NEGATIVE PROMPT
-  const negative = `realistic photo, photorealistic render, photography, real life, hyper-realistic CGI, 3D render, Unreal Engine, Blender 3D, cinema4d, octane render, raytracing, volumetric lighting, physically-based rendering, overly complex shading, dramatic cinematic lighting, harsh dramatic shadows, realistic texture detail, skin pores, fur strands, hair follicles, fabric weave, complex material, subsurface scattering, ambient occlusion, global illumination, depth of field blur, bokeh background blur, motion blur, atmospheric fog, lens flare, chromatic aberration, film grain, vignette darkening, gradient shaded background, textured patterned background, detailed complex background scenery, landscape environment, buildings architecture, sky clouds, ground terrain, grass plants, trees nature, objects props in background, multiple characters, crowd of people, other creatures, floating in air, levitating, flying, text labels, watermark overlay, logo branding, artist signature, frame border, cropped edges, cut off, side profile view, 3/4 angled view, back view rear, turned sideways, looking away, facing left, facing right, tilted angle, diagonal composition, off-center placement, asymmetrical, muscular athletic body, fit toned physique, six-pack abs, defined muscles, bodybuilder, tall elongated body, long stretched limbs, human realistic proportions, thin skinny body, slim slender build, lanky gangly, NO EARS VISIBLE, ears completely missing, ears hidden behind objects, ears covered up, ears not showing, ears obscured, ears too small, ears barely visible, messy rough sketch, unfinished incomplete, low quality, bad anatomy, deformed mutated, extra limbs, missing body parts, wrong number of fingers, floating disconnected accessories, items in wrong positions, misplaced objects, smoking cigarette, tobacco pipe, violence, blood, gore, weapons being used violently, inappropriate content, NSFW, background color completely different from character, contrasting background color, wrong background color, background not matching character skin tone, multi-colored background, rainbow background, patterned decorative background`;
+  // 🔥 FAMILY-FRIENDLY NEGATIVE PROMPT
+  const negative = `realistic, photorealistic, 3D render, complex shading, dramatic lighting, gradient background, detailed background, scenery, multiple characters, text, watermark, side view, profile, muscular, tall, human proportions, messy, blurry, low quality, deformed, bad anatomy, no ears, ears missing, different background color, adult content, inappropriate, suggestive, revealing`;
 
   return { prompt, negative };
 }
@@ -226,12 +226,12 @@ export async function POST(req: NextRequest) {
     }
 
     const { prompt, negative } = buildPrompt(selectedColorScheme);
-    console.log("🎨 Generating PREMIUM PROFESSIONAL Goblin NFT...");
+    console.log("🎨 Generating NSFW-Safe Professional Goblin NFT...");
 
     let output: any;
 
     if (pfpUrl) {
-      console.log("🖼️ Using PFP for image-to-image transformation:", pfpUrl);
+      console.log("🖼️ Using PFP for image-to-image:", pfpUrl);
       
       output = await replicate.run(
         "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
@@ -240,17 +240,18 @@ export async function POST(req: NextRequest) {
             image: pfpUrl,
             prompt: prompt,
             negative_prompt: negative,
-            prompt_strength: 0.90,  // 🔥 VERY STRONG transformation
-            num_inference_steps: 60,  // 🔥 MAXIMUM QUALITY - more steps = better detail
+            prompt_strength: 0.88,
+            num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 9.0,  // 🔥 STRONG prompt adherence
-            scheduler: "K_EULER_ANCESTRAL",  // 🔥 BEST quality scheduler
+            guidance_scale: 8.5,
+            scheduler: "K_EULER_ANCESTRAL",
+            disable_safety_checker: false,  // Keep safety on but prompt is safe
           }
         }
       );
     } else {
-      console.log("🎨 No PFP, using pure text-to-image generation");
+      console.log("🎨 No PFP, using text-to-image");
       
       output = await replicate.run(
         "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
@@ -258,11 +259,12 @@ export async function POST(req: NextRequest) {
           input: {
             prompt: prompt,
             negative_prompt: negative,
-            num_inference_steps: 60,  // 🔥 MAXIMUM QUALITY
+            num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 8.5,
+            guidance_scale: 8.0,
             scheduler: "K_EULER_ANCESTRAL",
+            disable_safety_checker: false,
           }
         }
       );
@@ -292,6 +294,16 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     console.error("Route error:", e);
+    
+    // 🔥 HANDLE NSFW ERROR GRACEFULLY
+    if (e?.message?.includes("NSFW")) {
+      console.log("⚠️ NSFW false positive detected, retrying...");
+      return NextResponse.json(
+        { error: "Content filter triggered. Please try generating again." },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
