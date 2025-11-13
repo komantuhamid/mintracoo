@@ -3,216 +3,218 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 
-// ✅ Use Replicate for img2img
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-const BASE_CHARACTER = "round blob goblin creature monster";
-
-// 🎨 72 COLOR SCHEMES - VARIED SKIN with NEUTRAL BACKGROUNDS
+// 🎨 50 COLOR SCHEMES - Maximum variety
 const GOBLIN_COLOR_SCHEMES = [
-  { skin: "bright neon lime green glowing", bg: "soft cream beige light" },
-  { skin: "dark forest green deep", bg: "soft gray light neutral" },
-  { skin: "mint green pastel light", bg: "pale blue light soft" },
-  { skin: "olive green earthy", bg: "warm tan light" },
-  { skin: "emerald green rich vibrant", bg: "soft white off-white" },
-  { skin: "sage green muted soft", bg: "light lavender soft" },
-  { skin: "chartreuse yellow-green bright", bg: "pale pink soft light" },
-  { skin: "jade green medium", bg: "soft peach light" },
-  { skin: "cobalt blue bright electric", bg: "soft cream light" },
-  { skin: "navy blue dark deep", bg: "light gray soft" },
-  { skin: "cyan blue light bright", bg: "warm beige soft" },
-  { skin: "teal turquoise blue-green", bg: "soft yellow pale" },
-  { skin: "sky blue pastel light", bg: "soft gray warm" },
-  { skin: "royal blue rich vibrant", bg: "light cream soft" },
-  { skin: "violet purple bright", bg: "soft beige light" },
-  { skin: "deep purple dark rich", bg: "pale gray light" },
-  { skin: "lavender purple pastel", bg: "soft white warm" },
-  { skin: "magenta purple-pink bright", bg: "light tan soft" },
-  { skin: "indigo purple-blue deep", bg: "soft cream warm" },
-  { skin: "crimson red bright", bg: "soft gray light" },
-  { skin: "dark red maroon deep", bg: "warm beige light" },
-  { skin: "orange bright vibrant", bg: "soft cream light" },
-  { skin: "coral orange-pink", bg: "light blue soft pale" },
-  { skin: "rust orange-brown", bg: "soft gray warm" },
-  { skin: "charcoal gray dark", bg: "soft cream light" },
-  { skin: "slate gray medium", bg: "pale yellow soft" },
-  { skin: "bone white pale cream", bg: "soft gray medium" },
-  { skin: "jet black dark", bg: "soft white light" },
-  { skin: "golden yellow bright", bg: "soft gray light" },
-  { skin: "mustard yellow earthy", bg: "warm beige light" },
-  { skin: "lemon yellow pale", bg: "soft white cream" },
-  { skin: "chocolate brown dark", bg: "light tan soft" },
-  { skin: "tan brown light", bg: "soft gray warm" },
-  { skin: "mahogany red-brown deep", bg: "soft cream light" },
-  { skin: "hot pink bright vibrant", bg: "light gray soft" },
-  { skin: "rose pink soft", bg: "soft beige warm" },
-  { skin: "pastel pink soft baby light", bg: "soft white light" },
-  { skin: "pastel blue soft powder light", bg: "soft cream warm" },
-  { skin: "pastel mint green soft light", bg: "light tan soft" },
-  { skin: "pastel lavender purple soft light", bg: "soft gray light" },
-  { skin: "pastel peach orange soft light", bg: "soft white warm" },
-  { skin: "pastel lemon yellow soft light", bg: "light beige soft" },
-  { skin: "pastel lilac purple soft light", bg: "soft gray warm" },
-  { skin: "pastel aqua blue-green soft light", bg: "soft cream light" },
-  { skin: "pastel coral pink-orange soft light", bg: "pale gray soft" },
-  { skin: "pastel sage green soft light", bg: "soft white light" },
-  { skin: "pastel periwinkle blue-purple soft light", bg: "warm tan light" },
-  { skin: "pastel ivory cream soft light", bg: "soft gray medium" },
-  { skin: "neon pink hot bright glowing electric", bg: "dark charcoal gray" },
-  { skin: "neon green lime bright glowing electric", bg: "dark navy blue" },
-  { skin: "neon blue cyan bright glowing electric", bg: "dark purple deep" },
-  { skin: "neon yellow bright glowing electric", bg: "dark gray charcoal" },
-  { skin: "neon orange bright glowing electric", bg: "dark brown deep" },
-  { skin: "neon purple bright glowing electric", bg: "dark gray medium" },
-  { skin: "neon magenta bright glowing electric", bg: "dark blue navy" },
-  { skin: "neon turquoise bright glowing electric", bg: "dark charcoal" },
-  { skin: "neon red bright glowing electric", bg: "dark gray deep" },
-  { skin: "neon chartreuse yellow-green glowing electric", bg: "dark navy" },
-  { skin: "neon fuchsia pink-purple glowing electric", bg: "dark charcoal gray" },
-  { skin: "neon aqua blue-green glowing electric", bg: "dark gray medium" },
-  { skin: "metallic gold shiny gleaming", bg: "dark burgundy red" },
-  { skin: "metallic silver shiny gleaming", bg: "dark navy blue" },
-  { skin: "metallic bronze copper shiny", bg: "dark forest green" },
-  { skin: "metallic rose gold pink shiny", bg: "dark gray charcoal" },
-  { skin: "metallic platinum silver-white shiny", bg: "dark purple deep" },
-  { skin: "metallic copper orange shiny", bg: "dark teal blue" },
-  { skin: "metallic chrome silver mirror shiny", bg: "dark charcoal gray" },
-  { skin: "metallic brass yellow shiny", bg: "dark brown rich" },
-  { skin: "metallic titanium gray shiny", bg: "dark navy blue" },
-  { skin: "metallic pearl white iridescent shiny", bg: "dark gray deep" },
-  { skin: "metallic gunmetal dark gray shiny", bg: "dark burgundy red" },
-  { skin: "metallic champagne gold-beige shiny", bg: "dark forest green" }
+  { skin: "bright lime green", bg: "soft cream" },
+  { skin: "dark forest green", bg: "light gray" },
+  { skin: "mint green pastel", bg: "pale blue" },
+  { skin: "olive green", bg: "warm tan" },
+  { skin: "emerald green", bg: "soft white" },
+  { skin: "sage green", bg: "light lavender" },
+  { skin: "chartreuse yellow-green", bg: "pale pink" },
+  { skin: "jade green", bg: "soft peach" },
+  { skin: "cobalt blue", bg: "soft cream" },
+  { skin: "navy blue", bg: "light gray" },
+  { skin: "cyan blue", bg: "warm beige" },
+  { skin: "teal turquoise", bg: "soft yellow" },
+  { skin: "sky blue", bg: "soft gray" },
+  { skin: "royal blue", bg: "light cream" },
+  { skin: "violet purple", bg: "soft beige" },
+  { skin: "deep purple", bg: "pale gray" },
+  { skin: "lavender purple", bg: "soft white" },
+  { skin: "magenta purple-pink", bg: "light tan" },
+  { skin: "indigo purple-blue", bg: "soft cream" },
+  { skin: "crimson red", bg: "soft gray" },
+  { skin: "dark red maroon", bg: "warm beige" },
+  { skin: "orange bright", bg: "soft cream" },
+  { skin: "coral orange-pink", bg: "light blue" },
+  { skin: "rust orange-brown", bg: "soft gray" },
+  { skin: "charcoal gray", bg: "soft cream" },
+  { skin: "slate gray", bg: "pale yellow" },
+  { skin: "bone white", bg: "soft gray" },
+  { skin: "jet black", bg: "soft white" },
+  { skin: "golden yellow", bg: "soft gray" },
+  { skin: "mustard yellow", bg: "warm beige" },
+  { skin: "lemon yellow", bg: "soft white" },
+  { skin: "chocolate brown", bg: "light tan" },
+  { skin: "tan brown", bg: "soft gray" },
+  { skin: "mahogany red-brown", bg: "soft cream" },
+  { skin: "hot pink", bg: "light gray" },
+  { skin: "rose pink", bg: "soft beige" },
+  { skin: "pastel pink", bg: "soft white" },
+  { skin: "pastel blue", bg: "soft cream" },
+  { skin: "pastel mint", bg: "light tan" },
+  { skin: "pastel lavender", bg: "soft gray" },
+  { skin: "neon pink glowing", bg: "dark charcoal" },
+  { skin: "neon green glowing", bg: "dark navy" },
+  { skin: "neon blue glowing", bg: "dark purple" },
+  { skin: "neon yellow glowing", bg: "dark gray" },
+  { skin: "neon orange glowing", bg: "dark brown" },
+  { skin: "metallic gold shiny", bg: "dark burgundy" },
+  { skin: "metallic silver shiny", bg: "dark navy" },
+  { skin: "metallic bronze", bg: "dark green" },
+  { skin: "metallic rose gold", bg: "dark charcoal" },
+  { skin: "metallic platinum", bg: "dark purple" }
 ];
 
+// 🎩 50 HEAD ITEMS - Maximum variety
 const HEAD_ITEMS = [
-  "small leather cap on top of head", "tiny metal helmet on top of head",
-  "cloth hood covering head", "small bandana on head",
-  "bone helmet on top of head", "small iron crown on top of head",
-  "wizard hat on top of head", "fur hat on head",
-  "small horned helmet on head", "skull cap on top of head",
-  "straw hat on head", "pointed hood covering head",
-  "war paint marks on face", "animal pelt on head",
-  "bald head no hat", "viking helmet with horns on head",
-  "cowboy hat on top of head", "pirate tricorn hat on head",
-  "chef hat tall white on head", "baseball cap worn backwards on head",
-  "bucket hat on top of head", "beanie knit cap on head",
-  "beret tilted on head", "sombrero on top of head",
-  "top hat tall on head", "fedora hat on head",
-  "samurai kabuto helmet on head", "ninja hood covering head",
-  "santa hat red on head", "party hat cone on head"
+  "wizard hat", "party hat", "crown", "baseball cap", "beanie",
+  "viking helmet with horns", "cowboy hat", "chef hat tall white", 
+  "santa hat red", "bucket hat", "fedora", "top hat",
+  "pirate tricorn hat", "samurai helmet", "ninja hood",
+  "beret", "sombrero", "headband", "bandana tied",
+  "mohawk hairstyle", "backwards cap", "ski goggles on head",
+  "flower crown", "tiara sparkly", "military helmet",
+  "motorcycle helmet", "astronaut helmet", "construction hard hat",
+  "witch hat pointy", "jester hat with bells", "pharaoh headdress",
+  "laurel wreath", "halo glowing", "devil horns small",
+  "cat ears", "bunny ears", "bear ears", "fox ears",
+  "propeller beanie", "graduation cap", "chef toque",
+  "turban wrapped", "bowler hat", "pork pie hat",
+  "safari hat", "sun visor", "snapback cap", "trucker hat",
+  "winter earmuffs", "bald head shiny"
 ];
 
+// 👁️ 40 EYE ITEMS
 const EYE_ITEMS = [
-  "small eye patch over one eye", "tiny goggles over eyes",
-  "small monocle over one eye", "round glasses over eyes",
-  "bandage covering one eye", "tiny aviator goggles over eyes",
-  "large round yellow eyes", "small beady eyes glowing",
-  "wide crazy eyes bulging", "squinting menacing eyes",
-  "sunglasses cool over eyes", "3D glasses red-blue over eyes",
-  "steampunk goggles brass over eyes", "cyclops single giant eye",
-  "heart-shaped glasses over eyes", "ski goggles over eyes",
-  "swimming goggles over eyes", "VR headset over eyes",
-  "laser eyes glowing red", "star-shaped sunglasses over eyes",
-  "cat-eye glasses over eyes", "jeweled monocle over one eye",
-  "cracked monocle over eye", "glowing blue eyes bright",
-  "X-ray specs over eyes"
+  "big round sparkling eyes", "sunglasses cool", "aviator goggles",
+  "eye patch over one eye", "monocle fancy", "3D glasses red-blue",
+  "heart-shaped glasses", "star-shaped sunglasses", "nerd glasses thick",
+  "swimming goggles", "ski goggles", "steampunk goggles brass",
+  "VR headset", "night vision goggles", "cat-eye glasses",
+  "round John Lennon glasses", "rectangular glasses", "reading glasses",
+  "jeweled monocle", "cracked monocle", "laser eyes glowing red",
+  "glowing blue eyes bright", "glowing green eyes", "heterochromia different colored eyes",
+  "spiral hypnotic eyes", "X eyes cartoon", "dollar sign eyes",
+  "heart eyes lovestruck", "star eyes sparkling", "angry narrow eyes",
+  "sleepy droopy eyes", "wide crazy eyes", "cyclops single giant eye",
+  "compound insect eyes", "snake slit eyes", "robotic LED eyes",
+  "blindfold over eyes", "bandage over eye", "makeup cat eye",
+  "tears streaming", "winking one eye"
 ];
 
+// 😁 35 MOUTH ITEMS
 const MOUTH_ITEMS = [
-  "huge wide grinning mouth showing many sharp fangs",
-  "giant open mouth with rows of jagged fangs",
-  "massive toothy grin showing pointed fangs",
-  "enormous mouth with multiple rows of sharp fangs",
-  "wide crazy smile showing all sharp teeth",
-  "evil grinning mouth with prominent fangs visible",
-  "creepy smile with sharp jagged teeth",
-  "menacing grin with big fangs",
-  "wicked smile showing rows of teeth",
-  "fierce grinning mouth with fangs",
-  "vampire fangs protruding from mouth",
-  "single gold tooth shining in grin",
-  "missing front teeth gap in smile",
-  "braces on teeth metal visible",
-  "tongue sticking out cheeky"
+  "big toothy grin showing fangs", "vampire fangs prominent",
+  "cute smile small fangs", "tongue sticking out playful",
+  "gold tooth shining", "braces on teeth metal",
+  "gap in front teeth", "missing tooth", "buck teeth prominent",
+  "zipper mouth", "stitched mouth", "fanged smile evil",
+  "drooling mouth", "toothpick in mouth", "lollipop in mouth",
+  "bubble gum bubble", "cigar (unlit) in mouth", "rose in mouth",
+  "whistle in mouth", "harmonica in mouth", "grillz diamond teeth",
+  "snarl showing all teeth", "laugh open mouth wide",
+  "smile closed mouth", "smirk one corner up",
+  "frown sad mouth", "grimace showing teeth", "pout lips",
+  "kiss pursed lips", "neutral straight mouth", "open mouth surprised",
+  "yawn big mouth open", "tongue out sideways", "forked snake tongue",
+  "robotic speaker mouth"
 ];
 
+// 👔 60 CLOTHING ITEMS - Maximum variety
 const CLOTHING = [
-  "small leather vest worn on torso", "tiny torn rags covering body",
-  "simple cloth tunic on body", "small fur vest on torso",
-  "simple leather jerkin on body", "tiny torn robes on body",
-  "small patchwork leather on body", "tiny animal hide covering torso",
-  "simple torn shirt on body", "small iron armor on torso",
-  "tiny torn cloak over shoulders", "simple leather coat on body",
-  "small pirate vest on torso", "tiny sailor vest on body",
-  "bare chest showing chubby belly", "hawaiian shirt floral on body",
-  "tuxedo jacket fancy on torso", "hoodie with hood down on body",
-  "tank top sleeveless on torso", "sweater knitted on body",
-  "denim jacket on torso", "bomber jacket on body",
-  "tracksuit jacket on torso", "polo shirt collared on body",
-  "football jersey on torso", "basketball jersey on body",
-  "chef coat white on torso", "lab coat white on body",
-  "ninja suit black on torso", "samurai armor on body",
-  "superhero cape on shoulders", "wizard robe long on body",
-  "monk robe brown on body", "kimono traditional on body",
-  "poncho over shoulders"
+  "hoodie casual", "t-shirt plain", "tank top", "muscle shirt",
+  "leather jacket cool", "bomber jacket", "denim jacket",
+  "vest formal", "cardigan cozy", "sweater knitted",
+  "turtleneck", "polo shirt", "button-up shirt",
+  "flannel shirt checkered", "hawaiian shirt floral", 
+  "tie-dye shirt colorful", "band t-shirt", "sports jersey",
+  "football jersey", "basketball jersey", "soccer jersey",
+  "baseball uniform", "tracksuit jacket", "windbreaker",
+  "suit jacket formal", "tuxedo fancy", "blazer",
+  "lab coat white", "chef coat white", "doctor scrubs",
+  "superhero cape", "wizard robe mystical", "witch robe dark",
+  "knight armor metal", "samurai armor", "ninja outfit black",
+  "pirate vest", "cowboy vest leather", "biker vest",
+  "trench coat long", "peacoat", "parka winter",
+  "poncho colorful", "kimono traditional", "toga roman",
+  "prison uniform striped", "referee shirt", "lifeguard shirt red",
+  "military uniform", "police uniform", "firefighter coat",
+  "astronaut suit", "scuba wetsuit", "hazmat suit yellow",
+  "business suit", "three-piece suit", "smoking jacket",
+  "bathrobe fluffy", "onesie pajamas", "apron",
+  "overalls denim", "suspenders", "bare chest"
 ];
 
+// 📿 40 NECK ITEMS
 const NECK_ITEMS = [
-  "small bone necklace around neck", "tiny iron collar around neck",
-  "small tooth necklace on neck", "simple leather cord around neck",
-  "tiny gold chain on neck", "small bead necklace around neck",
-  "tiny medallion hanging on neck", "small skull pendant on neck",
-  "simple rope around neck", "bare neck no necklace",
-  "thick gold chain heavy on neck", "diamond necklace sparkling on neck",
-  "pearl necklace elegant around neck", "dog tag chain military on neck",
-  "crucifix necklace on neck", "locket heart-shaped on neck",
-  "crystal pendant glowing on neck", "amulet mystical on neck",
-  "coin necklace pirate on neck", "feather necklace tribal on neck",
-  "seashell necklace beach on neck", "dog collar spiked around neck",
-  "bow tie around neck", "necktie striped around neck",
-  "scarf wrapped around neck", "bandana around neck",
-  "silver chain thin on neck", "rope necklace thick around neck",
-  "gemstone necklace colorful on neck", "choker tight around neck"
+  "gold chain thick", "silver chain thin", "pearl necklace",
+  "diamond necklace sparkling", "beaded necklace colorful",
+  "dog tag chain military", "pendant necklace", "locket heart",
+  "crystal necklace glowing", "amulet mystical", "talisman magical",
+  "bone necklace tribal", "tooth necklace", "skull pendant",
+  "coin necklace pirate", "feather necklace", "seashell necklace",
+  "leather cord simple", "rope necklace thick", "choker tight",
+  "bow tie formal", "necktie striped", "necktie polka dot",
+  "ascot cravat", "bolo tie western", "scarf wrapped",
+  "bandana around neck", "collar spiked", "collar studded",
+  "turtleneck sweater collar", "medallion large", "crucifix necklace",
+  "ankh symbol necklace", "yin yang necklace", "peace sign necklace",
+  "whistle on chain", "compass on chain", "pocket watch chain",
+  "lei flower garland", "bare neck nothing"
 ];
 
+// ✋ 70 HAND ITEMS - Maximum variety!
 const HAND_ITEMS = [
-  "holding small rusty dagger in hand", "gripping tiny wooden club in hand",
-  "holding small coin bag in hand", "holding tiny wooden shield in hand",
-  "holding small torch in hand", "gripping tiny battle axe in hand",
-  "holding small shortsword in hand", "gripping tiny iron mace in hand",
-  "holding small wooden spear in hand", "holding tiny bow in hand",
-  "holding small loot sack in hand", "holding tiny lantern in hand",
-  "holding small skull cup in hand", "holding tiny potion vial in hand",
-  "gripping tiny pickaxe in hand", "holding small meat leg in hand",
-  "holding small keys in hand", "holding small bottle in hand",
-  "gripping tiny hammer in hand", "both hands clenched in small fists",
-  "holding smartphone in hand", "gripping game controller in hands",
-  "holding coffee cup in hand", "gripping microphone in hand",
-  "holding pizza slice in hand", "holding burger in hand",
-  "gripping baseball bat in hand", "holding tennis racket in hand",
-  "gripping guitar in hands", "holding drumsticks in hands",
-  "holding book in hand", "gripping pen writing in hand",
-  "holding magnifying glass in hand", "gripping wrench tool in hand",
-  "empty hands nothing held"
+  "sword medieval", "katana samurai", "lightsaber glowing",
+  "axe battle", "hammer war", "mace spiked",
+  "staff wooden magical", "wand magic", "scepter royal",
+  "shield round", "shield kite", "buckler small",
+  "bow and arrow", "crossbow", "gun old west",
+  "rifle hunting", "shotgun", "pistol revolver",
+  "dagger curved", "knife hunting", "machete",
+  "chainsaw", "baseball bat wooden", "cricket bat",
+  "hockey stick", "golf club", "tennis racket",
+  "basketball", "football", "soccer ball",
+  "volleyball", "bowling ball", "bowling pin",
+  "torch lit flame", "lantern glowing", "flashlight",
+  "candle holder", "oil lamp", "camping lantern",
+  "book thick spellbook", "scroll ancient", "map treasure",
+  "quill pen", "paintbrush", "marker thick",
+  "microphone", "guitar acoustic", "electric guitar",
+  "bass guitar", "ukulele", "banjo",
+  "drumsticks pair", "trumpet", "saxophone",
+  "violin and bow", "flute", "harmonica",
+  "pizza slice", "burger", "hot dog",
+  "taco", "burrito", "sandwich",
+  "coffee cup steaming", "beer mug foam", "wine glass",
+  "soda can", "juice box", "water bottle",
+  "smartphone modern", "tablet device", "game controller",
+  "TV remote", "wrench tool", "hammer tool",
+  "screwdriver", "plunger", "broom",
+  "mop", "trophy gold", "medal gold",
+  "money bag", "briefcase", "shopping bag",
+  "gift box wrapped", "balloon bunch", "flowers bouquet",
+  "empty hands relaxed", "fist clenched", "peace sign fingers",
+  "thumbs up", "pointing finger", "waving hand"
 ];
 
+// 🎭 15 EXPRESSIONS
 const EXPRESSIONS = [
-  "happy smiling cheerful",
-  "angry grumpy mad",
-  "excited happy beaming",
+  "happy cheerful smile",
+  "angry grumpy frown",
+  "excited enthusiastic",
+  "cool confident smirk",
+  "silly goofy expression",
+  "mischievous devious grin",
+  "sleepy tired yawn",
+  "surprised shocked wide-eyed",
+  "sad melancholy frown",
+  "determined focused serious",
+  "confused puzzled",
+  "laughing hysterical",
   "nervous sweating worried",
-  "silly goofy derpy",
-  "cool relaxed chill",
-  "mischievous plotting devious"
+  "proud chest puffed",
+  "relaxed chill laid-back"
 ];
 
-function getPersonalizedColor(fid: number): { skin: string; bg: string } {
-  const colorIndex = fid % GOBLIN_COLOR_SCHEMES.length;
-  const selectedScheme = GOBLIN_COLOR_SCHEMES[colorIndex];
-  console.log(`🎨 FID ${fid} → Color Index ${colorIndex} → ${selectedScheme.skin}`);
-  return selectedScheme;
+function getPersonalizedColor(fid: number) {
+  return GOBLIN_COLOR_SCHEMES[fid % GOBLIN_COLOR_SCHEMES.length];
 }
 
 function getRandomElement<T>(array: T[]): T {
@@ -231,161 +233,15 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
-const prompt = [
-    // 🔥 ULTRA-FLAT STYLE
-    "simple flat 2D cartoon illustration, clean vector art style",
-    "thick black outlines, bold cartoon lines, simple coloring",
-    "absolutely flat shading, NO gradients, NO depth",
-    "completely flat illustration, zero dimension, pure 2D",
-    "flat solid colors only, no shading variations",
-    "children's book art style,  storybook character",
-    "vector graphic flat design, minimalist shading",
+  // 🔥 ULTIMATE NFT PROMPT
+  const prompt = `masterpiece professional NFT digital artwork, adorable chibi goblin character, cute kawaii style, ${skinColor} smooth clean skin, round chubby blob body, wearing ${headItem} on head, ${eyeItem} on face, ${mouthItem} showing small cute fangs, wearing ${clothing} on body, ${neckItem} around neck, holding ${handItem} in hands, ${expression} facial expression, thick bold black outlines, clean vector art style, flat solid colors, sticker aesthetic, high quality character design, centered composition, full body visible, ${background} solid flat background, professional collectible art, NFT collection style, polished illustration, sharp crisp details, trending on artstation, perfect anatomy, symmetrical design`;
 
-    `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
-    
-    // 🔥 BODY SIZE - SLIGHTLY TALLER (400x450px)
-    "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
-    "body measures precisely 400px width by 450px height",
-    "body is gently oval shape 400x450 pixels maintaining  proportions",
-    "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
-    "body fills 45% of image height consistently",
-    "oval torso measures 400 pixels wide by 450 pixels tall EXACT",
-    "blob body is standard size 400x450px gentle oval ALWAYS",
-    "EXACTLY TWO short stubby legs identical size",
-    "each leg measures precisely 60 pixels tall 30 pixels wide",
-    "EXACTLY TWO small rounded arms identical size",
-    "each arm measures precisely 70 pixels long 25 pixels thick",
-    "head is round sphere attached to body top",
-    "head measures 180 pixels diameter exactly",
-    
-    "no muscle definition, soft pillowy cuddly body",
-    "wide short squat stature, roly-poly blob build",
-
-    `${expression} facial expression`,
-    "small pointed ears on sides of head",
-    `${headItem}`,
-    `${eyeItem}`,
-    `${mouthItem}`,
-    "mouth showing fangs teeth clearly visible",
-    `${clothing}`,
-    `${neckItem}`,
-    `${handItem}`,
-
-    "all accessories in correct anatomical positions",
-    "hat on head, eyes on face, mouth on face visible",
-    "clothing on body, necklace on neck, weapon in hands",
-    "facing directly forward straight ahead toward camera",
-    "front view centered symmetrical pose",
-    "standing upright full body visible",
-    "looking straight at viewer, feet on ground",
-    "stubby legs visible, centered composition",
-
-    // 🔥🔥🔥 ULTRA-ENFORCED BACKGROUND COLOR MATCHING
-    `THE ENTIRE BACKGROUND MUST BE ${skinColor}`,
-    `BACKGROUND COLOR IS EXACTLY ${background}`,
-    `${skinColor} FILLS THE COMPLETE BACKGROUND`,
-    `BACKGROUND IS ${background} SOLID COLOR`,
-    "CRITICAL: background is identical color to character skin",
-    "MANDATORY: character and background are SAME EXACT color",
-    "REQUIRED: perfect monochromatic single-color scheme",
-    "ENFORCED: zero color difference between character and background",
-    "ABSOLUTE: character blends into background color perfectly",
-    "STRICT: background is completely flat solid color",
-    "CRUCIAL: no background shading, no background gradient",
-    "ESSENTIAL: background has zero depth or dimension",
-    "background color matches character skin color 100%",
-    "background and character share identical color palette",
-    "monochromatic color scheme background equals character",
-    `solid ${background} backdrop fills entire image`,
-    `${skinColor} environment surrounds character completely`,
-    "background tone matches character tone perfectly",
-    "unified color scheme across entire composition",
-    "seamless color integration background to foreground",
-    
-    "simple cartoon mascot  blob monster character"
-  ].join(", ");
-
-  const negative = [
-    "3D render, CGI, realistic, photorealistic, detailed",
-    
-    // 🔥 ULTRA-STRONG ANTI-SHADING
-    "complex shading, dramatic lighting, shadows, depth",
-    "gradient shading, soft shading, ambient occlusion",
-    "drop shadow, cast shadow, shadow under character",
-    "shading at bottom, darkening at edges, vignette",
-    "3D lighting, volumetric lighting, rim lighting",
-    "depth of field, blur, bokeh, atmospheric perspective",
-    "ground shadow, floor reflection, depth effect",
-    "dimensional shading, spherical shading, rounded shading",
-    "ambient shadows, contact shadows, soft shadows",
-    "radial gradient, color gradient in background",
-    "detailed texture, fur strands, hair detail, realistic skin",
-    "cinematic lighting, photography, studio lighting",
-    "painted, brush strokes, oil painting, watercolor",
-    "blurry, low quality, messy, sketchy, unfinished",
-    "text, watermark, logo, signature, frame, border",
-    "multiple characters, cropped, background scenery",
-    "side view, profile, turned sideways, angled",
-    "3/4 view, looking sideways, facing left or right",
-    "back view, rear view, turned around, rotated",
-    
-    // 🔥 ANTI-INCONSISTENT BODY SIZE
-    "different body sizes, varying body proportions",
-    "inconsistent body dimensions, irregular body size",
-    "body too large, body too small, wrong body size",
-    "oversized body, undersized body, mismatched proportions",
-    "body bigger than 450 pixels tall, body smaller than 400 pixels wide",
-    "body not oval, elongated body, stretched vertically too much",
-    "tall body, extremely stretched body, compressed body, squashed body",
-    "different leg sizes, uneven legs, asymmetrical legs",
-    "one leg bigger, one leg smaller, varying leg length",
-    "different arm sizes, uneven arms, asymmetrical arms",
-    "one arm bigger, one arm smaller, varying arm length",
-    "large head, tiny head, wrong head size, head too big",
-    
-    "muscular, athletic, fit, toned, abs visible",
-    "muscle definition, biceps, six pack, defined",
-    "tall, long limbs, stretched, slender, lanky",
-    "thin, skinny, slim, lean, human proportions",
-    "cigar, pipe, smoking, cigarette, tobacco",
-    "floating accessories, misplaced items",
-    "hat floating, clothing on wrong body part",
-
-    // 🔥🔥🔥 ULTRA-STRONG BACKGROUND COLOR NEGATIVES
-    "gradient background, textured backdrop, complex scene",
-    "background scenery, background objects, detailed background",
-    "WRONG: different background color, mismatched colors",
-    "WRONG: background different from character color",
-    "WRONG: background lighter than character",
-    "WRONG: background darker than character",
-    "WRONG: background brighter than character",
-    "WRONG: background duller than character",
-    "WRONG: contrasting background, complementary colors",
-    "WRONG: two-tone color scheme, multi-color palette",
-    "WRONG: color variation, color gradient, color difference",
-    "WRONG: background has different shade or tone",
-    "WRONG: wrong background color, incorrect background color",
-    "WRONG: background with depth, background with shadow",
-    "WRONG: background gradient from light to dark",
-    "WRONG: background shading, background vignette",
-    "WRONG: darker background at bottom, lighter at top",
-    "WRONG: any variation in background color",
-    "multicolored background, rainbow background, patterned background",
-    "background scenery, landscape, environment details",
-    "background elements, objects in background, props",
-    "colored borders, colored frames, colored edges",
-    "white background, black background when character is colored",
-    "gray background when character is colored",
-    "neutral background, plain background, blank background",
-    "different hue background, different saturation background",
-    "background color not matching character at all"
-  ].join(", ");
+  // 🔥 ULTIMATE NEGATIVE PROMPT
+  const negative = `realistic, photorealistic, photo, photograph, 3D render, CGI, cinema4d, blender, octane render, unreal engine, ugly, disgusting, deformed, mutated, disfigured, bad anatomy, wrong anatomy, extra limbs, extra arms, extra legs, missing limbs, missing arms, missing legs, fused fingers, too many fingers, long neck, elongated body, disproportionate, asymmetrical face, crooked, tilted, bad proportions, gross, scary, creepy, horror, nightmare, blurry, fuzzy, out of focus, low quality, low resolution, pixelated, jpeg artifacts, compression artifacts, noise, grainy, messy, sketchy, unfinished, draft, watermark, signature, text, words, letters, logo, username, artist name, copyright, frame, border, multiple characters, crowd, group, landscape, scenery, buildings, city, background objects, complex background, detailed background, gradient background, textured background, patterned background, vignette, shadow on ground, floor shadow, dramatic lighting, volumetric lighting, rim lighting, side view, profile view, back view, angled view, 3/4 view, looking away, turned head, muscular, athletic, tall, skinny, thin, human, person, realistic proportions, smoking, cigarette, cigar, weapon violence, blood, gore, nude, nsfw`;
 
   return { prompt, negative };
 }
 
-
-// ✅ Image-to-Image using Replicate
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -407,7 +263,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { prompt, negative } = buildPrompt(selectedColorScheme);
-    console.log("🎨 Generating Goblin NFT...");
+    console.log("🎨 Generating ULTIMATE Goblin NFT...");
 
     let output: any;
 
@@ -421,11 +277,11 @@ export async function POST(req: NextRequest) {
             image: pfpUrl,
             prompt: prompt,
             negative_prompt: negative,
-            prompt_strength: 0.98,  // ✅ INCREASED from 0.75 to 0.98 - MUCH stronger transformation
-            num_inference_steps: 50,  // ✅ INCREASED from 30 to 50 - better quality
+            prompt_strength: 0.97,  // Very strong transformation
+            num_inference_steps: 50,  // Maximum quality
             width: 1024,
             height: 1024,
-            guidance_scale: 9.0,  // ✅ INCREASED from 7.5 to 9.0 - stronger prompt adherence
+            guidance_scale: 9.5,  // Strong prompt adherence
           }
         }
       );
@@ -438,16 +294,16 @@ export async function POST(req: NextRequest) {
           input: {
             prompt: prompt,
             negative_prompt: negative,
-            num_inference_steps: 40,
+            num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 8.0,
+            guidance_scale: 8.5,
           }
         }
       );
     }
 
-    const imageUrl = Array.isArray(output) ? output : output;
+    const imageUrl = Array.isArray(output) ? output[0] : output;
 
     if (!imageUrl) {
       return NextResponse.json({ error: "No image generated" }, { status: 500 });
