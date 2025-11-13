@@ -1,91 +1,91 @@
 export const runtime = "nodejs";
 
-import { NextResponse } from "next/server";
-import { HfInference } from "@huggingface/inference";
+import { NextRequest, NextResponse } from "next/server";
+import Replicate from "replicate";
 
-const MODEL_ID = "black-forest-labs/FLUX.1-dev";
-const PROVIDER = "replicate";
-const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
+// ✅ Use Replicate for img2img
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN || "",
+});
 
 const BASE_CHARACTER = "round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES (MONOCHROMATIC - MATCHING BACKGROUND)
+// 🎨 72 COLOR SCHEMES - VARIED SKIN with NEUTRAL BACKGROUNDS
 const GOBLIN_COLOR_SCHEMES = [
-  { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
-  { skin: "dark forest green deep", bg: "dark forest green deep" },
-  { skin: "mint green pastel light", bg: "mint green pastel light" },
-  { skin: "olive green earthy", bg: "olive green earthy" },
-  { skin: "emerald green rich vibrant", bg: "emerald green rich vibrant" },
-  { skin: "sage green muted soft", bg: "sage green muted soft" },
-  { skin: "chartreuse yellow-green bright", bg: "chartreuse yellow-green bright" },
-  { skin: "jade green medium", bg: "jade green medium" },
-  { skin: "cobalt blue bright electric", bg: "cobalt blue bright electric" },
-  { skin: "navy blue dark deep", bg: "navy blue dark deep" },
-  { skin: "cyan blue light bright", bg: "cyan blue light bright" },
-  { skin: "teal turquoise blue-green", bg: "teal turquoise blue-green" },
-  { skin: "sky blue pastel light", bg: "sky blue pastel light" },
-  { skin: "royal blue rich vibrant", bg: "royal blue rich vibrant" },
-  { skin: "violet purple bright", bg: "violet purple bright" },
-  { skin: "deep purple dark rich", bg: "deep purple dark rich" },
-  { skin: "lavender purple pastel", bg: "lavender purple pastel" },
-  { skin: "magenta purple-pink bright", bg: "magenta purple-pink bright" },
-  { skin: "indigo purple-blue deep", bg: "indigo purple-blue deep" },
-  { skin: "crimson red bright", bg: "crimson red bright" },
-  { skin: "dark red maroon deep", bg: "dark red maroon deep" },
-  { skin: "orange bright vibrant", bg: "orange bright vibrant" },
-  { skin: "coral orange-pink", bg: "coral orange-pink" },
-  { skin: "rust orange-brown", bg: "rust orange-brown" },
-  { skin: "charcoal gray dark", bg: "charcoal gray dark" },
-  { skin: "slate gray medium", bg: "slate gray medium" },
-  { skin: "bone white pale cream", bg: "bone white pale cream" },
-  { skin: "jet black dark", bg: "jet black dark" },
-  { skin: "golden yellow bright", bg: "golden yellow bright" },
-  { skin: "mustard yellow earthy", bg: "mustard yellow earthy" },
-  { skin: "lemon yellow pale", bg: "lemon yellow pale" },
-  { skin: "chocolate brown dark", bg: "chocolate brown dark" },
-  { skin: "tan brown light", bg: "tan brown light" },
-  { skin: "mahogany red-brown deep", bg: "mahogany red-brown deep" },
-  { skin: "hot pink bright vibrant", bg: "hot pink bright vibrant" },
-  { skin: "rose pink soft", bg: "rose pink soft" },
-  { skin: "pastel pink soft baby light", bg: "pastel pink soft baby light" },
-  { skin: "pastel blue soft powder light", bg: "pastel blue soft powder light" },
-  { skin: "pastel mint green soft light", bg: "pastel mint green soft light" },
-  { skin: "pastel lavender purple soft light", bg: "pastel lavender purple soft light" },
-  { skin: "pastel peach orange soft light", bg: "pastel peach orange soft light" },
-  { skin: "pastel lemon yellow soft light", bg: "pastel lemon yellow soft light" },
-  { skin: "pastel lilac purple soft light", bg: "pastel lilac purple soft light" },
-  { skin: "pastel aqua blue-green soft light", bg: "pastel aqua blue-green soft light" },
-  { skin: "pastel coral pink-orange soft light", bg: "pastel coral pink-orange soft light" },
-  { skin: "pastel sage green soft light", bg: "pastel sage green soft light" },
-  { skin: "pastel periwinkle blue-purple soft light", bg: "pastel periwinkle blue-purple soft light" },
-  { skin: "pastel ivory cream soft light", bg: "pastel ivory cream soft light" },
-  { skin: "neon pink hot bright glowing electric", bg: "neon pink hot bright glowing electric" },
-  { skin: "neon green lime bright glowing electric", bg: "neon green lime bright glowing electric" },
-  { skin: "neon blue cyan bright glowing electric", bg: "neon blue cyan bright glowing electric" },
-  { skin: "neon yellow bright glowing electric", bg: "neon yellow bright glowing electric" },
-  { skin: "neon orange bright glowing electric", bg: "neon orange bright glowing electric" },
-  { skin: "neon purple bright glowing electric", bg: "neon purple bright glowing electric" },
-  { skin: "neon magenta bright glowing electric", bg: "neon magenta bright glowing electric" },
-  { skin: "neon turquoise bright glowing electric", bg: "neon turquoise bright glowing electric" },
-  { skin: "neon red bright glowing electric", bg: "neon red bright glowing electric" },
-  { skin: "neon chartreuse yellow-green glowing electric", bg: "neon chartreuse yellow-green glowing electric" },
-  { skin: "neon fuchsia pink-purple glowing electric", bg: "neon fuchsia pink-purple glowing electric" },
-  { skin: "neon aqua blue-green glowing electric", bg: "neon aqua blue-green glowing electric" },
-  { skin: "metallic gold shiny gleaming", bg: "metallic gold shiny gleaming" },
-  { skin: "metallic silver shiny gleaming", bg: "metallic silver shiny gleaming" },
-  { skin: "metallic bronze copper shiny", bg: "metallic bronze copper shiny" },
-  { skin: "metallic rose gold pink shiny", bg: "metallic rose gold pink shiny" },
-  { skin: "metallic platinum silver-white shiny", bg: "metallic platinum silver-white shiny" },
-  { skin: "metallic copper orange shiny", bg: "metallic copper orange shiny" },
-  { skin: "metallic chrome silver mirror shiny", bg: "metallic chrome silver mirror shiny" },
-  { skin: "metallic brass yellow shiny", bg: "metallic brass yellow shiny" },
-  { skin: "metallic titanium gray shiny", bg: "metallic titanium gray shiny" },
-  { skin: "metallic pearl white iridescent shiny", bg: "metallic pearl white iridescent shiny" },
-  { skin: "metallic gunmetal dark gray shiny", bg: "metallic gunmetal dark gray shiny" },
-  { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
+  { skin: "bright neon lime green glowing", bg: "soft cream beige light" },
+  { skin: "dark forest green deep", bg: "soft gray light neutral" },
+  { skin: "mint green pastel light", bg: "pale blue light soft" },
+  { skin: "olive green earthy", bg: "warm tan light" },
+  { skin: "emerald green rich vibrant", bg: "soft white off-white" },
+  { skin: "sage green muted soft", bg: "light lavender soft" },
+  { skin: "chartreuse yellow-green bright", bg: "pale pink soft light" },
+  { skin: "jade green medium", bg: "soft peach light" },
+  { skin: "cobalt blue bright electric", bg: "soft cream light" },
+  { skin: "navy blue dark deep", bg: "light gray soft" },
+  { skin: "cyan blue light bright", bg: "warm beige soft" },
+  { skin: "teal turquoise blue-green", bg: "soft yellow pale" },
+  { skin: "sky blue pastel light", bg: "soft gray warm" },
+  { skin: "royal blue rich vibrant", bg: "light cream soft" },
+  { skin: "violet purple bright", bg: "soft beige light" },
+  { skin: "deep purple dark rich", bg: "pale gray light" },
+  { skin: "lavender purple pastel", bg: "soft white warm" },
+  { skin: "magenta purple-pink bright", bg: "light tan soft" },
+  { skin: "indigo purple-blue deep", bg: "soft cream warm" },
+  { skin: "crimson red bright", bg: "soft gray light" },
+  { skin: "dark red maroon deep", bg: "warm beige light" },
+  { skin: "orange bright vibrant", bg: "soft cream light" },
+  { skin: "coral orange-pink", bg: "light blue soft pale" },
+  { skin: "rust orange-brown", bg: "soft gray warm" },
+  { skin: "charcoal gray dark", bg: "soft cream light" },
+  { skin: "slate gray medium", bg: "pale yellow soft" },
+  { skin: "bone white pale cream", bg: "soft gray medium" },
+  { skin: "jet black dark", bg: "soft white light" },
+  { skin: "golden yellow bright", bg: "soft gray light" },
+  { skin: "mustard yellow earthy", bg: "warm beige light" },
+  { skin: "lemon yellow pale", bg: "soft white cream" },
+  { skin: "chocolate brown dark", bg: "light tan soft" },
+  { skin: "tan brown light", bg: "soft gray warm" },
+  { skin: "mahogany red-brown deep", bg: "soft cream light" },
+  { skin: "hot pink bright vibrant", bg: "light gray soft" },
+  { skin: "rose pink soft", bg: "soft beige warm" },
+  { skin: "pastel pink soft baby light", bg: "soft white light" },
+  { skin: "pastel blue soft powder light", bg: "soft cream warm" },
+  { skin: "pastel mint green soft light", bg: "light tan soft" },
+  { skin: "pastel lavender purple soft light", bg: "soft gray light" },
+  { skin: "pastel peach orange soft light", bg: "soft white warm" },
+  { skin: "pastel lemon yellow soft light", bg: "light beige soft" },
+  { skin: "pastel lilac purple soft light", bg: "soft gray warm" },
+  { skin: "pastel aqua blue-green soft light", bg: "soft cream light" },
+  { skin: "pastel coral pink-orange soft light", bg: "pale gray soft" },
+  { skin: "pastel sage green soft light", bg: "soft white light" },
+  { skin: "pastel periwinkle blue-purple soft light", bg: "warm tan light" },
+  { skin: "pastel ivory cream soft light", bg: "soft gray medium" },
+  { skin: "neon pink hot bright glowing electric", bg: "dark charcoal gray" },
+  { skin: "neon green lime bright glowing electric", bg: "dark navy blue" },
+  { skin: "neon blue cyan bright glowing electric", bg: "dark purple deep" },
+  { skin: "neon yellow bright glowing electric", bg: "dark gray charcoal" },
+  { skin: "neon orange bright glowing electric", bg: "dark brown deep" },
+  { skin: "neon purple bright glowing electric", bg: "dark gray medium" },
+  { skin: "neon magenta bright glowing electric", bg: "dark blue navy" },
+  { skin: "neon turquoise bright glowing electric", bg: "dark charcoal" },
+  { skin: "neon red bright glowing electric", bg: "dark gray deep" },
+  { skin: "neon chartreuse yellow-green glowing electric", bg: "dark navy" },
+  { skin: "neon fuchsia pink-purple glowing electric", bg: "dark charcoal gray" },
+  { skin: "neon aqua blue-green glowing electric", bg: "dark gray medium" },
+  { skin: "metallic gold shiny gleaming", bg: "dark burgundy red" },
+  { skin: "metallic silver shiny gleaming", bg: "dark navy blue" },
+  { skin: "metallic bronze copper shiny", bg: "dark forest green" },
+  { skin: "metallic rose gold pink shiny", bg: "dark gray charcoal" },
+  { skin: "metallic platinum silver-white shiny", bg: "dark purple deep" },
+  { skin: "metallic copper orange shiny", bg: "dark teal blue" },
+  { skin: "metallic chrome silver mirror shiny", bg: "dark charcoal gray" },
+  { skin: "metallic brass yellow shiny", bg: "dark brown rich" },
+  { skin: "metallic titanium gray shiny", bg: "dark navy blue" },
+  { skin: "metallic pearl white iridescent shiny", bg: "dark gray deep" },
+  { skin: "metallic gunmetal dark gray shiny", bg: "dark burgundy red" },
+  { skin: "metallic champagne gold-beige shiny", bg: "dark forest green" }
 ];
 
-// ALL ACCESSORIES (190 total)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -104,6 +104,7 @@ const HEAD_ITEMS = [
   "santa hat red on head", "party hat cone on head"
 ];
 
+// ✅ FIXED: Only ONE EYE_ITEMS declaration
 const EYE_ITEMS = [
   "small eye patch over one eye", "tiny goggles over eyes",
   "small monocle over one eye", "round glasses over eyes",
@@ -190,36 +191,41 @@ const HAND_ITEMS = [
   "gripping tiny hammer in hand", "both hands clenched in small fists",
   "holding smartphone in hand", "gripping game controller in hands",
   "holding coffee cup in hand", "gripping microphone in hand",
-  "holding pizza slice in hand", "gripping magic wand in hand",
-  "holding book open in hand", "gripping telescope in hand",
-  "holding magnifying glass in hand", "gripping fishing rod in hand",
-  "holding basketball in hands", "gripping baseball bat in hand",
-  "holding trophy golden in hand", "gripping drumsticks in hands",
-  "holding guitar small in hand", "gripping paintbrush in hand",
-  "holding camera in hand", "gripping sword katana in hand",
-  "holding gem crystal in hand", "gripping staff wooden in hand"
+  "holding pizza slice in hand", "holding burger in hand",
+  "gripping baseball bat in hand", "holding tennis racket in hand",
+  "gripping guitar in hands", "holding drumsticks in hands",
+  "holding book in hand", "gripping pen writing in hand",
+  "holding magnifying glass in hand", "gripping wrench tool in hand",
+  "empty hands nothing held"
 ];
 
 const EXPRESSIONS = [
-  "angry scowling", "evil grinning maniacally",
-  "grumpy frowning", "crazy laughing wild",
-  "sneaky smirking", "confused dumb",
-  "aggressive menacing", "proud confident",
-  "surprised shocked wide-eyed", "sleepy tired yawning",
-  "excited happy beaming", "nervous sweating worried",
-  "silly goofy derpy", "cool relaxed chill",
+  "happy smiling cheerful",
+  "angry grumpy mad",
+  "excited happy beaming",
+  "nervous sweating worried",
+  "silly goofy derpy",
+  "cool relaxed chill",
   "mischievous plotting devious"
 ];
 
-function getRandomElement<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+// ✅ USE FID FOR CONSISTENT PERSONALIZED COLORS
+function getPersonalizedColor(fid: number): { skin: string; bg: string } {
+  const colorIndex = fid % GOBLIN_COLOR_SCHEMES.length;
+  const selectedScheme = GOBLIN_COLOR_SCHEMES[colorIndex];
+  
+  console.log(`🎨 FID ${fid} → Color Index ${colorIndex} → ${selectedScheme.skin}`);
+  return selectedScheme;
 }
 
-function buildPrompt() {
-  const colorScheme = getRandomElement(GOBLIN_COLOR_SCHEMES);
+function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
+  const colorScheme = colorSchemeHint || getRandomElement(GOBLIN_COLOR_SCHEMES);
   const skinColor = colorScheme.skin;
   const background = colorScheme.bg;
-  
   const headItem = getRandomElement(HEAD_ITEMS);
   const eyeItem = getRandomElement(EYE_ITEMS);
   const mouthItem = getRandomElement(MOUTH_ITEMS);
@@ -227,7 +233,7 @@ function buildPrompt() {
   const neckItem = getRandomElement(NECK_ITEMS);
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
-  
+
   const prompt = [
     // 🔥 ULTRA-FLAT STYLE
     "simple flat 2D cartoon illustration, clean vector art style",
@@ -235,7 +241,7 @@ function buildPrompt() {
     "absolutely flat shading, NO gradients, NO depth",
     "completely flat illustration, zero dimension, pure 2D",
     "flat solid colors only, no shading variations",
-    "children's book art style,  storybook character",
+    "children's book art style, storybook character",
     "vector graphic flat design, minimalist shading",
 
     `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
@@ -243,7 +249,7 @@ function buildPrompt() {
     // 🔥 BODY SIZE - SLIGHTLY TALLER (400x450px)
     "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
     "body measures precisely 400px width by 450px height",
-    "body is gently oval shape 400x450 pixels maintaining  proportions",
+    "body is gently oval shape 400x450 pixels maintaining proportions",
     "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
     "body fills 45% of image height consistently",
     "oval torso measures 400 pixels wide by 450 pixels tall EXACT",
@@ -278,9 +284,9 @@ function buildPrompt() {
     "stubby legs visible, centered composition",
 
     // 🔥🔥🔥 ULTRA-ENFORCED BACKGROUND COLOR MATCHING
-    `THE ENTIRE BACKGROUND MUST BE ${skinColor}`,
+    `THE ENTIRE BACKGROUND MUST BE ${background}`,
     `BACKGROUND COLOR IS EXACTLY ${background}`,
-    `${skinColor} FILLS THE COMPLETE BACKGROUND`,
+    `${background} FILLS THE COMPLETE BACKGROUND`,
     `BACKGROUND IS ${background} SOLID COLOR`,
     "CRITICAL: background is identical color to character skin",
     "MANDATORY: character and background are SAME EXACT color",
@@ -299,7 +305,7 @@ function buildPrompt() {
     "unified color scheme across entire composition",
     "seamless color integration background to foreground",
     
-    "simple cartoon mascot  blob monster character"
+    "simple cartoon mascot blob monster character"
   ].join(", ");
 
   const negative = [
@@ -381,95 +387,90 @@ function buildPrompt() {
   return { prompt, negative };
 }
 
-export async function POST(req: Request) {
+// ✅ Image-to-Image using Replicate
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
+    const fid = body?.fid;
+    const pfpUrl = body?.pfpUrl;
+    
+    let selectedColorScheme: { skin: string; bg: string } | undefined;
+    
+    if (fid && typeof fid === 'number') {
+      selectedColorScheme = getPersonalizedColor(fid);
+      console.log("✅ Using FID-based color:", selectedColorScheme.skin);
+    }
 
-    if (!HF_TOKEN) {
+    if (!process.env.REPLICATE_API_TOKEN) {
       return NextResponse.json(
-        { error: "Missing HUGGINGFACE_API_TOKEN" },
+        { error: "Missing REPLICATE_API_TOKEN" },
         { status: 500 }
       );
     }
 
-    const { prompt, negative } = buildPrompt();
-    console.log("🎨 Generating Slightly Taller Goblin NFT (400x450px)...");
-    
-    const hf = new HfInference(HF_TOKEN);
+    const { prompt, negative } = buildPrompt(selectedColorScheme);
+    console.log("🎨 Generating Goblin NFT...");
 
-    let output: any = null;
-    let lastErr: any = null;
+    let output: any;
 
-    for (let i = 0; i < 3; i++) {
-      try {
-        output = await (hf.textToImage as any)({
-          inputs: prompt,
-          model: MODEL_ID,
-          provider: PROVIDER,
-          parameters: {
+    if (pfpUrl) {
+      console.log("🖼️ Using PFP for image-to-image:", pfpUrl);
+      
+      output = await replicate.run(
+        "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+        {
+          input: {
+            image: pfpUrl,
+            prompt: prompt,
+            negative_prompt: negative,
+            prompt_strength: 0.75,
+            num_inference_steps: 30,
             width: 1024,
             height: 1024,
-            num_inference_steps: 35,
             guidance_scale: 7.5,
-            negative_prompt: negative,
-          },
-        });
-        break;
-      } catch (e: any) {
-        lastErr = e;
-        if (i < 2) {
-          await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+          }
         }
-      }
-    }
-
-    if (!output) {
-      const msg = lastErr?.message || "Inference error";
-      const status = lastErr?.response?.status || 502;
-      return NextResponse.json({ error: msg }, { status });
-    }
-
-    let imgBuf: Buffer;
-    if (typeof output === "string") {
-      if (output.startsWith("data:image")) {
-        const b64 = output.split(",")[1] || "";
-        imgBuf = Buffer.from(b64, "base64");
-      } else if (output.startsWith("http")) {
-        const r = await fetch(output);
-        if (!r.ok) {
-          return NextResponse.json(
-            { error: `Fetch image failed: ${r.status}` },
-            { status: 502 }
-          );
-        }
-        imgBuf = Buffer.from(await r.arrayBuffer());
-      } else {
-        return NextResponse.json(
-          { error: "Unexpected string output" },
-          { status: 500 }
-        );
-      }
-    } else if (output instanceof Blob) {
-      imgBuf = Buffer.from(await output.arrayBuffer());
+      );
     } else {
-      const maybeBlob = output?.blob || output?.image || output?.output;
-      if (maybeBlob?.arrayBuffer) {
-        imgBuf = Buffer.from(await maybeBlob.arrayBuffer());
-      } else {
-        return NextResponse.json(
-          { error: "Unknown output format" },
-          { status: 500 }
-        );
-      }
+      console.log("🎨 No PFP, using text-to-image");
+      
+      output = await replicate.run(
+        "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+        {
+          input: {
+            prompt: prompt,
+            negative_prompt: negative,
+            num_inference_steps: 30,
+            width: 1024,
+            height: 1024,
+            guidance_scale: 7.5,
+          }
+        }
+      );
     }
 
+    const imageUrl = Array.isArray(output) ? output[0] : output;
+
+    if (!imageUrl) {
+      return NextResponse.json({ error: "No image generated" }, { status: 500 });
+    }
+
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      return NextResponse.json(
+        { error: `Failed to fetch generated image: ${imageResponse.status}` },
+        { status: 502 }
+      );
+    }
+
+    const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
 
     return NextResponse.json({
       generated_image_url: dataUrl,
+      imageUrl: dataUrl,
       success: true
     });
-
   } catch (e: any) {
     console.error("Route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
