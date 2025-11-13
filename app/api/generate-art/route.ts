@@ -7,7 +7,9 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-// 🎨 50 COLOR SCHEMES - Maximum variety
+const BASE_CHARACTER = "round blob goblin creature monster";
+
+// 🎨 50 COLOR SCHEMES
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright lime green", bg: "soft cream" },
   { skin: "dark forest green", bg: "light gray" },
@@ -61,137 +63,132 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic platinum", bg: "dark purple" }
 ];
 
-// 🎩 50 HEAD ITEMS - Maximum variety
+// 🎩 50 HEAD ITEMS
 const HEAD_ITEMS = [
-  "wizard hat", "party hat", "crown", "baseball cap", "beanie",
-  "viking helmet with horns", "cowboy hat", "chef hat tall white", 
-  "santa hat red", "bucket hat", "fedora", "top hat",
-  "pirate tricorn hat", "samurai helmet", "ninja hood",
-  "beret", "sombrero", "headband", "bandana tied",
-  "mohawk hairstyle", "backwards cap", "ski goggles on head",
-  "flower crown", "tiara sparkly", "military helmet",
-  "motorcycle helmet", "astronaut helmet", "construction hard hat",
-  "witch hat pointy", "jester hat with bells", "pharaoh headdress",
-  "laurel wreath", "halo glowing", "devil horns small",
-  "cat ears", "bunny ears", "bear ears", "fox ears",
-  "propeller beanie", "graduation cap", "chef toque",
-  "turban wrapped", "bowler hat", "pork pie hat",
-  "safari hat", "sun visor", "snapback cap", "trucker hat",
-  "winter earmuffs", "bald head shiny"
+  "wizard hat on top of head", "party hat cone on top of head", "crown on top of head", 
+  "baseball cap on top of head", "beanie knit cap on head", "viking helmet with horns on head",
+  "cowboy hat on top of head", "chef hat tall white on head", "santa hat red on head",
+  "bucket hat on top of head", "fedora on head", "top hat tall on head",
+  "pirate tricorn hat on head", "samurai helmet on head", "ninja hood covering head",
+  "beret tilted on head", "sombrero on top of head", "headband around head",
+  "bandana tied on head", "mohawk hairstyle", "backwards cap on head",
+  "flower crown on head", "tiara sparkly on head", "military helmet on head",
+  "astronaut helmet on head", "construction hard hat on head", "witch hat pointy on head",
+  "jester hat with bells on head", "laurel wreath on head", "halo glowing above head",
+  "devil horns small on head", "cat ears on head", "bunny ears on head",
+  "bear ears on head", "fox ears on head", "propeller beanie on head",
+  "graduation cap on head", "turban wrapped on head", "bowler hat on head",
+  "pork pie hat on head", "safari hat on head", "sun visor on head",
+  "snapback cap on head", "trucker hat on head", "winter earmuffs on head",
+  "viking horned helmet on head", "small iron crown on top of head", "fur hat on head",
+  "bald head shiny no hat", "skull cap on top of head"
 ];
 
 // 👁️ 40 EYE ITEMS
 const EYE_ITEMS = [
-  "big round sparkling eyes", "sunglasses cool", "aviator goggles",
-  "eye patch over one eye", "monocle fancy", "3D glasses red-blue",
-  "heart-shaped glasses", "star-shaped sunglasses", "nerd glasses thick",
-  "swimming goggles", "ski goggles", "steampunk goggles brass",
-  "VR headset", "night vision goggles", "cat-eye glasses",
-  "round John Lennon glasses", "rectangular glasses", "reading glasses",
-  "jeweled monocle", "cracked monocle", "laser eyes glowing red",
-  "glowing blue eyes bright", "glowing green eyes", "heterochromia different colored eyes",
-  "spiral hypnotic eyes", "X eyes cartoon", "dollar sign eyes",
-  "heart eyes lovestruck", "star eyes sparkling", "angry narrow eyes",
-  "sleepy droopy eyes", "wide crazy eyes", "cyclops single giant eye",
-  "compound insect eyes", "snake slit eyes", "robotic LED eyes",
-  "blindfold over eyes", "bandage over eye", "makeup cat eye",
-  "tears streaming", "winking one eye"
+  "big round sparkling eyes", "sunglasses cool over eyes", "aviator goggles over eyes",
+  "small eye patch over one eye", "monocle fancy over one eye", "3D glasses red-blue over eyes",
+  "heart-shaped glasses over eyes", "star-shaped sunglasses over eyes", "nerd glasses thick over eyes",
+  "swimming goggles over eyes", "ski goggles over eyes", "steampunk goggles brass over eyes",
+  "VR headset over eyes", "cat-eye glasses over eyes", "round glasses over eyes",
+  "rectangular glasses over eyes", "reading glasses over eyes", "jeweled monocle over one eye",
+  "cracked monocle over eye", "laser eyes glowing red", "glowing blue eyes bright",
+  "glowing green eyes", "spiral hypnotic eyes", "X eyes cartoon",
+  "dollar sign eyes", "heart eyes lovestruck", "star eyes sparkling",
+  "angry narrow eyes", "sleepy droopy eyes", "wide crazy eyes bulging",
+  "cyclops single giant eye", "snake slit eyes", "robotic LED eyes",
+  "blindfold over eyes", "bandage covering one eye", "tiny aviator goggles over eyes",
+  "large round yellow eyes", "small beady eyes glowing", "squinting menacing eyes"
 ];
 
 // 😁 35 MOUTH ITEMS
 const MOUTH_ITEMS = [
-  "big toothy grin showing fangs", "vampire fangs prominent",
-  "cute smile small fangs", "tongue sticking out playful",
-  "gold tooth shining", "braces on teeth metal",
-  "gap in front teeth", "missing tooth", "buck teeth prominent",
-  "zipper mouth", "stitched mouth", "fanged smile evil",
-  "drooling mouth", "toothpick in mouth", "lollipop in mouth",
-  "bubble gum bubble", "cigar (unlit) in mouth", "rose in mouth",
-  "whistle in mouth", "harmonica in mouth", "grillz diamond teeth",
-  "snarl showing all teeth", "laugh open mouth wide",
-  "smile closed mouth", "smirk one corner up",
+  "huge wide grinning mouth showing many sharp fangs", "giant open mouth with rows of jagged fangs",
+  "massive toothy grin showing pointed fangs", "enormous mouth with multiple rows of sharp fangs",
+  "wide crazy smile showing all sharp teeth", "evil grinning mouth with prominent fangs visible",
+  "creepy smile with sharp jagged teeth", "menacing grin with big fangs",
+  "wicked smile showing rows of teeth", "fierce grinning mouth with fangs",
+  "vampire fangs protruding from mouth", "single gold tooth shining in grin",
+  "missing front teeth gap in smile", "braces on teeth metal visible",
+  "tongue sticking out cheeky", "buck teeth prominent", "zipper mouth",
+  "stitched mouth", "fanged smile evil", "drooling mouth",
+  "toothpick in mouth", "lollipop in mouth", "bubble gum bubble",
+  "whistle in mouth", "grillz diamond teeth", "snarl showing all teeth",
+  "laugh open mouth wide", "smile closed mouth", "smirk one corner up",
   "frown sad mouth", "grimace showing teeth", "pout lips",
-  "kiss pursed lips", "neutral straight mouth", "open mouth surprised",
-  "yawn big mouth open", "tongue out sideways", "forked snake tongue",
-  "robotic speaker mouth"
+  "neutral straight mouth", "open mouth surprised", "yawn big mouth open"
 ];
 
-// 👔 60 CLOTHING ITEMS - Maximum variety
+// 👔 60 CLOTHING ITEMS
 const CLOTHING = [
-  "hoodie casual", "t-shirt plain", "tank top", "muscle shirt",
-  "leather jacket cool", "bomber jacket", "denim jacket",
-  "vest formal", "cardigan cozy", "sweater knitted",
-  "turtleneck", "polo shirt", "button-up shirt",
-  "flannel shirt checkered", "hawaiian shirt floral", 
-  "tie-dye shirt colorful", "band t-shirt", "sports jersey",
-  "football jersey", "basketball jersey", "soccer jersey",
-  "baseball uniform", "tracksuit jacket", "windbreaker",
-  "suit jacket formal", "tuxedo fancy", "blazer",
-  "lab coat white", "chef coat white", "doctor scrubs",
-  "superhero cape", "wizard robe mystical", "witch robe dark",
-  "knight armor metal", "samurai armor", "ninja outfit black",
-  "pirate vest", "cowboy vest leather", "biker vest",
-  "trench coat long", "peacoat", "parka winter",
-  "poncho colorful", "kimono traditional", "toga roman",
-  "prison uniform striped", "referee shirt", "lifeguard shirt red",
-  "military uniform", "police uniform", "firefighter coat",
-  "astronaut suit", "scuba wetsuit", "hazmat suit yellow",
-  "business suit", "three-piece suit", "smoking jacket",
-  "bathrobe fluffy", "onesie pajamas", "apron",
-  "overalls denim", "suspenders", "bare chest"
+  "small leather vest worn on torso", "tiny torn rags covering body", "simple cloth tunic on body",
+  "hoodie casual on body", "t-shirt plain on body", "tank top on torso",
+  "leather jacket cool on body", "bomber jacket on body", "denim jacket on torso",
+  "vest formal on torso", "cardigan cozy on body", "sweater knitted on body",
+  "turtleneck on torso", "polo shirt on body", "button-up shirt on body",
+  "flannel shirt checkered on body", "hawaiian shirt floral on body", "tie-dye shirt colorful on body",
+  "band t-shirt on torso", "sports jersey on body", "football jersey on torso",
+  "basketball jersey on body", "soccer jersey on body", "baseball uniform on body",
+  "tracksuit jacket on torso", "windbreaker on body", "suit jacket formal on torso",
+  "tuxedo fancy on body", "blazer on torso", "lab coat white on body",
+  "chef coat white on torso", "doctor scrubs on body", "superhero cape on shoulders",
+  "wizard robe mystical on body", "witch robe dark on body", "knight armor metal on body",
+  "samurai armor on body", "ninja outfit black on torso", "pirate vest on torso",
+  "cowboy vest leather on body", "biker vest on torso", "trench coat long on body",
+  "peacoat on body", "parka winter on torso", "poncho colorful on body",
+  "kimono traditional on body", "toga roman on body", "prison uniform striped on body",
+  "referee shirt on body", "lifeguard shirt red on body", "military uniform on body",
+  "police uniform on body", "firefighter coat on body", "astronaut suit on body",
+  "scuba wetsuit on body", "business suit on torso", "three-piece suit on body",
+  "bathrobe fluffy on body", "onesie pajamas on body", "apron on body",
+  "overalls denim on body", "bare chest showing chubby belly"
 ];
 
 // 📿 40 NECK ITEMS
 const NECK_ITEMS = [
-  "gold chain thick", "silver chain thin", "pearl necklace",
-  "diamond necklace sparkling", "beaded necklace colorful",
-  "dog tag chain military", "pendant necklace", "locket heart",
-  "crystal necklace glowing", "amulet mystical", "talisman magical",
-  "bone necklace tribal", "tooth necklace", "skull pendant",
-  "coin necklace pirate", "feather necklace", "seashell necklace",
-  "leather cord simple", "rope necklace thick", "choker tight",
-  "bow tie formal", "necktie striped", "necktie polka dot",
-  "ascot cravat", "bolo tie western", "scarf wrapped",
-  "bandana around neck", "collar spiked", "collar studded",
-  "turtleneck sweater collar", "medallion large", "crucifix necklace",
-  "ankh symbol necklace", "yin yang necklace", "peace sign necklace",
-  "whistle on chain", "compass on chain", "pocket watch chain",
-  "lei flower garland", "bare neck nothing"
+  "small bone necklace around neck", "tiny iron collar around neck", "small tooth necklace on neck",
+  "gold chain thick around neck", "silver chain thin on neck", "pearl necklace around neck",
+  "diamond necklace sparkling on neck", "beaded necklace colorful around neck", "dog tag chain military on neck",
+  "pendant necklace on neck", "locket heart on neck", "crystal necklace glowing on neck",
+  "amulet mystical on neck", "talisman magical on neck", "skull pendant on neck",
+  "coin necklace pirate on neck", "feather necklace on neck", "seashell necklace on neck",
+  "simple leather cord around neck", "tiny gold chain on neck", "small bead necklace around neck",
+  "rope necklace thick around neck", "choker tight around neck", "bow tie around neck",
+  "necktie striped around neck", "necktie polka dot around neck", "bolo tie western around neck",
+  "scarf wrapped around neck", "bandana around neck", "collar spiked around neck",
+  "collar studded around neck", "medallion large on neck", "crucifix necklace on neck",
+  "ankh symbol necklace on neck", "yin yang necklace on neck", "peace sign necklace on neck",
+  "whistle on chain around neck", "compass on chain on neck", "lei flower garland around neck",
+  "bare neck no necklace"
 ];
 
-// ✋ 70 HAND ITEMS - Maximum variety!
+// ✋ 70 HAND ITEMS
 const HAND_ITEMS = [
-  "sword medieval", "katana samurai", "lightsaber glowing",
-  "axe battle", "hammer war", "mace spiked",
-  "staff wooden magical", "wand magic", "scepter royal",
-  "shield round", "shield kite", "buckler small",
-  "bow and arrow", "crossbow", "gun old west",
-  "rifle hunting", "shotgun", "pistol revolver",
-  "dagger curved", "knife hunting", "machete",
-  "chainsaw", "baseball bat wooden", "cricket bat",
-  "hockey stick", "golf club", "tennis racket",
-  "basketball", "football", "soccer ball",
-  "volleyball", "bowling ball", "bowling pin",
-  "torch lit flame", "lantern glowing", "flashlight",
-  "candle holder", "oil lamp", "camping lantern",
-  "book thick spellbook", "scroll ancient", "map treasure",
-  "quill pen", "paintbrush", "marker thick",
-  "microphone", "guitar acoustic", "electric guitar",
-  "bass guitar", "ukulele", "banjo",
-  "drumsticks pair", "trumpet", "saxophone",
-  "violin and bow", "flute", "harmonica",
-  "pizza slice", "burger", "hot dog",
-  "taco", "burrito", "sandwich",
-  "coffee cup steaming", "beer mug foam", "wine glass",
-  "soda can", "juice box", "water bottle",
-  "smartphone modern", "tablet device", "game controller",
-  "TV remote", "wrench tool", "hammer tool",
-  "screwdriver", "plunger", "broom",
-  "mop", "trophy gold", "medal gold",
-  "money bag", "briefcase", "shopping bag",
-  "gift box wrapped", "balloon bunch", "flowers bouquet",
-  "empty hands relaxed", "fist clenched", "peace sign fingers",
-  "thumbs up", "pointing finger", "waving hand"
+  "holding small rusty dagger in hand", "gripping tiny wooden club in hand", "holding small coin bag in hand",
+  "holding tiny wooden shield in hand", "holding small torch in hand", "gripping tiny battle axe in hand",
+  "holding small shortsword in hand", "gripping tiny iron mace in hand", "holding small wooden spear in hand",
+  "sword medieval in hand", "katana samurai in hand", "axe battle in hand",
+  "hammer war in hand", "staff wooden magical in hand", "wand magic in hand",
+  "scepter royal in hand", "shield round in hand", "bow and arrow in hands",
+  "dagger curved in hand", "knife hunting in hand", "machete in hand",
+  "baseball bat wooden in hand", "hockey stick in hand", "golf club in hand",
+  "tennis racket in hand", "basketball in hands", "football in hands",
+  "soccer ball in hands", "torch lit flame in hand", "lantern glowing in hand",
+  "flashlight in hand", "candle holder in hand", "book thick spellbook in hand",
+  "scroll ancient in hand", "map treasure in hand", "quill pen in hand",
+  "paintbrush in hand", "microphone in hand", "guitar acoustic in hands",
+  "electric guitar in hands", "bass guitar in hands", "ukulele in hands",
+  "drumsticks pair in hands", "trumpet in hand", "violin and bow in hands",
+  "pizza slice in hand", "burger in hand", "hot dog in hand",
+  "taco in hand", "sandwich in hand", "coffee cup steaming in hand",
+  "beer mug foam in hand", "wine glass in hand", "soda can in hand",
+  "smartphone modern in hand", "tablet device in hands", "game controller in hands",
+  "wrench tool in hand", "hammer tool in hand", "screwdriver in hand",
+  "broom in hand", "trophy gold in hand", "medal gold in hand",
+  "money bag in hand", "briefcase in hand", "shopping bag in hand",
+  "gift box wrapped in hand", "balloon bunch in hand", "flowers bouquet in hand",
+  "empty hands nothing held", "both hands clenched in small fists", "peace sign fingers",
+  "thumbs up gesture", "pointing finger", "waving hand"
 ];
 
 // 🎭 15 EXPRESSIONS
@@ -233,11 +230,138 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
-  // 🔥 ULTIMATE NFT PROMPT
-  const prompt = `masterpiece professional NFT digital artwork, adorable chibi goblin character, cute kawaii style, ${skinColor} smooth clean skin, round chubby blob body, wearing ${headItem} on head, ${eyeItem} on face, ${mouthItem} showing small cute fangs, wearing ${clothing} on body, ${neckItem} around neck, holding ${handItem} in hands, ${expression} facial expression, thick bold black outlines, clean vector art style, flat solid colors, sticker aesthetic, high quality character design, centered composition, full body visible, ${background} solid flat background, professional collectible art, NFT collection style, polished illustration, sharp crisp details, trending on artstation, perfect anatomy, symmetrical design`;
+  // 🔥 ULTRA-DETAILED PROMPT
+  const prompt = [
+    // Style directives
+    "simple flat 2D cartoon illustration, clean vector art style",
+    "thick black outlines, bold cartoon lines, simple coloring",
+    "absolutely flat shading, NO gradients, NO depth",
+    "completely flat illustration, zero dimension, pure 2D",
+    "flat solid colors only, no shading variations",
+    "children's book art style, storybook character",
+    "vector graphic flat design, minimalist shading",
+    "professional NFT artwork, collectible quality",
+    "kawaii cute chibi style, adorable character design",
 
-  // 🔥 ULTIMATE NEGATIVE PROMPT
-  const negative = `realistic, photorealistic, photo, photograph, 3D render, CGI, cinema4d, blender, octane render, unreal engine, ugly, disgusting, deformed, mutated, disfigured, bad anatomy, wrong anatomy, extra limbs, extra arms, extra legs, missing limbs, missing arms, missing legs, fused fingers, too many fingers, long neck, elongated body, disproportionate, asymmetrical face, crooked, tilted, bad proportions, gross, scary, creepy, horror, nightmare, blurry, fuzzy, out of focus, low quality, low resolution, pixelated, jpeg artifacts, compression artifacts, noise, grainy, messy, sketchy, unfinished, draft, watermark, signature, text, words, letters, logo, username, artist name, copyright, frame, border, multiple characters, crowd, group, landscape, scenery, buildings, city, background objects, complex background, detailed background, gradient background, textured background, patterned background, vignette, shadow on ground, floor shadow, dramatic lighting, volumetric lighting, rim lighting, side view, profile view, back view, angled view, 3/4 view, looking away, turned head, muscular, athletic, tall, skinny, thin, human, person, realistic proportions, smoking, cigarette, cigar, weapon violence, blood, gore, nude, nsfw`;
+    // Character base
+    `adorable ${BASE_CHARACTER} with ${skinColor} smooth skin`,
+    
+    // Body specifications
+    "EXACT BODY DIMENSIONS: slightly oval blob body 400 pixels wide by 450 pixels tall",
+    "body measures precisely 400px width by 450px height",
+    "chubby belly is soft oval exactly 400 wide by 450 tall pixels",
+    "body fills 45% of image height consistently",
+    "EXACTLY TWO short stubby legs identical size",
+    "each leg measures precisely 60 pixels tall 30 pixels wide",
+    "EXACTLY TWO small rounded arms identical size",
+    "each arm measures precisely 70 pixels long 25 pixels thick",
+    "head is round sphere attached to body top",
+    "head measures 180 pixels diameter exactly",
+    "no muscle definition, soft pillowy cuddly body",
+    "wide short squat stature, roly-poly blob build",
+
+    // Features and accessories
+    `${expression} facial expression`,
+    "small pointed ears on sides of head",
+    `${headItem}`,
+    `${eyeItem}`,
+    `${mouthItem}`,
+    "mouth showing fangs teeth clearly visible",
+    `${clothing}`,
+    `${neckItem}`,
+    `${handItem}`,
+
+    // Positioning
+    "all accessories in correct anatomical positions",
+    "hat on head, eyes on face, mouth on face visible",
+    "clothing on body, necklace on neck, weapon in hands",
+    "facing directly forward straight ahead toward camera",
+    "front view centered symmetrical pose",
+    "standing upright full body visible",
+    "looking straight at viewer, feet on ground",
+    "stubby legs visible, centered composition",
+
+    // Background enforcement
+    `THE ENTIRE BACKGROUND MUST BE ${background}`,
+    `BACKGROUND COLOR IS EXACTLY ${background}`,
+    `${background} FILLS THE COMPLETE BACKGROUND`,
+    `BACKGROUND IS ${background} SOLID COLOR`,
+    "background is completely flat solid color",
+    "no background shading, no background gradient",
+    "background has zero depth or dimension",
+    `solid ${background} backdrop fills entire image`,
+    
+    "simple cartoon mascot blob monster character"
+  ].join(", ");
+
+  // 🔥 ULTRA-COMPREHENSIVE NEGATIVE PROMPT
+  const negative = [
+    "3D render, CGI, realistic, photorealistic, detailed",
+    
+    // Anti-shading
+    "complex shading, dramatic lighting, shadows, depth",
+    "gradient shading, soft shading, ambient occlusion",
+    "drop shadow, cast shadow, shadow under character",
+    "shading at bottom, darkening at edges, vignette",
+    "3D lighting, volumetric lighting, rim lighting",
+    "depth of field, blur, bokeh, atmospheric perspective",
+    "ground shadow, floor reflection, depth effect",
+    "dimensional shading, spherical shading, rounded shading",
+    "ambient shadows, contact shadows, soft shadows",
+    "radial gradient, color gradient in background",
+    
+    // Anti-realistic
+    "detailed texture, fur strands, hair detail, realistic skin",
+    "cinematic lighting, photography, studio lighting",
+    "painted, brush strokes, oil painting, watercolor",
+    "blurry, low quality, messy, sketchy, unfinished",
+    "text, watermark, logo, signature, frame, border",
+    
+    // Anti-composition
+    "multiple characters, cropped, background scenery",
+    "side view, profile, turned sideways, angled",
+    "3/4 view, looking sideways, facing left or right",
+    "back view, rear view, turned around, rotated",
+    
+    // Anti-body variation
+    "different body sizes, varying body proportions",
+    "inconsistent body dimensions, irregular body size",
+    "body too large, body too small, wrong body size",
+    "oversized body, undersized body, mismatched proportions",
+    "body bigger than 450 pixels tall, body smaller than 400 pixels wide",
+    "body not oval, elongated body, stretched vertically too much",
+    "tall body, extremely stretched body, compressed body, squashed body",
+    "different leg sizes, uneven legs, asymmetrical legs",
+    "different arm sizes, uneven arms, asymmetrical arms",
+    "large head, tiny head, wrong head size, head too big",
+    
+    // Anti-muscular
+    "muscular, athletic, fit, toned, abs visible",
+    "muscle definition, biceps, six pack, defined",
+    "tall, long limbs, stretched, slender, lanky",
+    "thin, skinny, slim, lean, human proportions",
+    
+    // Anti-background complexity
+    "gradient background, textured backdrop, complex scene",
+    "background scenery, background objects, detailed background",
+    "WRONG: different background color, mismatched colors",
+    "WRONG: background different from character color",
+    "WRONG: background with depth, background with shadow",
+    "WRONG: background gradient from light to dark",
+    "WRONG: any variation in background color",
+    "multicolored background, rainbow background, patterned background",
+    "background scenery, landscape, environment details",
+    "background elements, objects in background, props",
+    "white background, black background when character is colored",
+    "gray background when character is colored",
+    "neutral background, plain background, blank background",
+    
+    // Anti-inappropriate
+    "smoking, cigarette, cigar, tobacco",
+    "floating accessories, misplaced items",
+    "violence, blood, gore, weapons violence",
+    "nude, nsfw, inappropriate"
+  ].join(", ");
 
   return { prompt, negative };
 }
@@ -277,11 +401,11 @@ export async function POST(req: NextRequest) {
             image: pfpUrl,
             prompt: prompt,
             negative_prompt: negative,
-            prompt_strength: 0.97,  // Very strong transformation
-            num_inference_steps: 50,  // Maximum quality
+            prompt_strength: 0.97,
+            num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 9.5,  // Strong prompt adherence
+            guidance_scale: 9.5,
           }
         }
       );
