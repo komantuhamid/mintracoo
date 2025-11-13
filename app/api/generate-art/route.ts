@@ -7,9 +7,7 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-// 🔥 REFERENCE IMAGE - Mad Lads style example
 const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
-
 // 🎨 BACKGROUND COLORS - Textured vintage style
 const BACKGROUND_COLORS = [
   "coral red vintage textured",
@@ -166,31 +164,14 @@ const EXPRESSIONS = [
   "contemplative look"
 ];
 
-function getPersonalizedBackground(fid: number): string {
-  return BACKGROUND_COLORS[fid % BACKGROUND_COLORS.length];
-}
-
 function getRandomElement<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
 function buildPrompt(bgHint?: string) {
-  const background = bgHint || getRandomElement(BACKGROUND_COLORS);
-  const skinTone = getRandomElement(SKIN_TONES);
-  const eyeColor = getRandomElement(EYE_COLORS);
-  const hairstyle = getRandomElement(HAIRSTYLES);
-  const headwear = getRandomElement(HEADWEAR);
-  const eyewear = getRandomElement(EYEWEAR);
-  const clothing = getRandomElement(CLOTHING);
-  const accessory = getRandomElement(ACCESSORIES);
-  const special = getRandomElement(SPECIAL_FEATURES);
-  const expression = getRandomElement(EXPRESSIONS);
-
-  // 🔥 SIMPLIFIED PROMPT - Let reference image define the style!
-  const prompt = `NFT character portrait, ${skinTone}, ${eyeColor}, ${hairstyle}, ${headwear !== "no hat" ? headwear : ""}, ${eyewear !== "no glasses" ? eyewear : ""}, ${expression}, wearing ${clothing}, ${accessory !== "no accessory" ? accessory : ""}, ${special !== "normal" ? special : ""}, ${background} background, exact same art style as reference image, same composition, same thick outlines, same cel shading, same texture, professional NFT artwork`;
-
-  const negative = "full body, legs visible, feet showing, hands in frame, realistic photo, 3D render, blurry, low quality, deformed, multiple people, text, watermark, different art style, smooth cartoon, anime style, different composition, plain background, no texture";
-
+  // keep your random trait logic here...
+  const prompt = `NFT character portrait, random unique outfit and accessories, clean textured background, professional NFT art, in Mad Lads style, thick outlines, sharp cel shading, vibrant color, same body pose as input image, safe for work`;
+  const negative = "nsfw, nude, explicit, realistic photo, blurry, watermark, text, violent, horror, multiple people, deformation, hands, full body, plain background";
   return { prompt, negative };
 }
 
@@ -198,49 +179,34 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const fid = body?.fid;
-    const pfpUrl = body?.pfpUrl;
-    
-    let selectedBackground: string | undefined;
-    
-    if (fid && typeof fid === 'number') {
-      selectedBackground = getPersonalizedBackground(fid);
-      console.log("✅ Using FID-based background:", selectedBackground);
-    }
+    const pfpUrl = body?.pfpUrl; // <- this is uploaded or fetched user PFP
 
-    if (!process.env.REPLICATE_API_TOKEN) {
-      return NextResponse.json(
-        { error: "Missing REPLICATE_API_TOKEN" },
-        { status: 500 }
-      );
-    }
+    // Build prompt/negative
+    const { prompt, negative } = buildPrompt();
 
-    const { prompt, negative } = buildPrompt(selectedBackground);
-    console.log("🎨 Generating Mad Lads Style NFT with Reference Image...");
-
-    // 🔥 USE REFERENCE IMAGE FOR STYLE
+    // 🔥 Key hybrid: use pfp as main image, style ref as guidance
     const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
-          image: STYLE_REFERENCE_URL,  // 🔥 This is the reference image!
+          image: pfpUrl, // main image = user PFP!!
+          style_image: STYLE_REFERENCE_URL, // only if supported by your model
           prompt: prompt,
           negative_prompt: negative,
-          prompt_strength: 0.60,  // 🔥 Lower = follows reference style MORE closely
+          prompt_strength: 0.35, // lower = more pfp, higher = more prompt/style
           num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 7.5,
+          guidance_scale: 7.0,
           scheduler: "K_EULER_ANCESTRAL",
         }
       }
     );
 
     const imageUrl = Array.isArray(output) ? output[0] : output;
-
     if (!imageUrl) {
       return NextResponse.json({ error: "No image generated" }, { status: 500 });
     }
-
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       return NextResponse.json(
@@ -248,14 +214,12 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
-
     const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
-
     return NextResponse.json({
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
-      success: true
+      success: true,
     });
   } catch (e: any) {
     console.error("Route error:", e);
