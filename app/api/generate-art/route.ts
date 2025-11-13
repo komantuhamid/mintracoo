@@ -68,11 +68,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ Parse JSON response
     const responseJSON = await response.json();
     console.log("✅ Got response");
 
-    // ✅ Extract base64 image
     if (!responseJSON.artifacts || !responseJSON.artifacts) {
       console.error("❌ No artifacts in response");
       return NextResponse.json(
@@ -99,13 +97,3 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
-```
-
-**Key changes:**
-1. ✅ **Removed negative prompts** - causing issues
-2. ✅ **Simplified prompt** - much shorter
-3. ✅ **Better error handling** - checks for artifacts
-4. ✅ **Direct base64 conversion** - no Buffer needed
-5. ✅ **More logging** - easier to debug
-
-Deploy this and try again. Your credits are being charged so the API **is working** - we just need to fix the response handling! 🎯✨
