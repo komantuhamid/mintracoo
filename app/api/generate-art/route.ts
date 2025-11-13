@@ -7,6 +7,9 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
+// 🔥 REFERENCE IMAGE - Mad Lads style example
+const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
+
 // 🎨 BACKGROUND COLORS - Textured vintage style
 const BACKGROUND_COLORS = [
   "coral red vintage textured",
@@ -135,7 +138,7 @@ const ACCESSORIES = [
   "collar pin"
 ];
 
-// 🎨 SPECIAL FEATURES (rare traits)
+// 🎨 SPECIAL FEATURES
 const SPECIAL_FEATURES = [
   "normal",
   "normal",
@@ -183,10 +186,10 @@ function buildPrompt(bgHint?: string) {
   const special = getRandomElement(SPECIAL_FEATURES);
   const expression = getRandomElement(EXPRESSIONS);
 
-  // 🔥 MAD LADS STYLE PROMPT
-  const prompt = `professional NFT character portrait artwork, stylish fashionable person, ${skinTone} tone, ${eyeColor}, ${hairstyle}, ${headwear !== "no hat" ? "wearing " + headwear : ""}, ${eyewear !== "no glasses" ? "wearing " + eyewear : ""}, ${expression} facial expression, wearing ${clothing}, ${accessory !== "no accessory" ? accessory : ""}, ${special !== "normal" ? special : ""}, head and shoulders portrait composition, front-facing view, ${background} background with vintage paper texture and subtle brush strokes, clean comic book art style, thick black outlines, cel shaded illustration, professional digital artwork, Mad Lads NFT aesthetic, trendy urban fashion character design, collectible NFT art quality`;
+  // 🔥 SIMPLIFIED PROMPT - Let reference image define the style!
+  const prompt = `NFT character portrait, ${skinTone}, ${eyeColor}, ${hairstyle}, ${headwear !== "no hat" ? headwear : ""}, ${eyewear !== "no glasses" ? eyewear : ""}, ${expression}, wearing ${clothing}, ${accessory !== "no accessory" ? accessory : ""}, ${special !== "normal" ? special : ""}, ${background} background, exact same art style as reference image, same composition, same thick outlines, same cel shading, same texture, professional NFT artwork`;
 
-  const negative = `full body, legs, feet, hands visible, realistic photo, photorealistic, 3D render, blurry, low quality, deformed, bad anatomy, multiple people, crowd, text, watermark, logo, side view, back view, cute chibi, cartoon blob, rounded features, baby face, childish, smooth gradient background, plain solid color background, no texture, goblin, monster, creature, animal ears`;
+  const negative = "full body, legs visible, feet showing, hands in frame, realistic photo, 3D render, blurry, low quality, deformed, multiple people, text, watermark, different art style, smooth cartoon, anime style, different composition, plain background, no texture";
 
   return { prompt, negative };
 }
@@ -212,47 +215,25 @@ export async function POST(req: NextRequest) {
     }
 
     const { prompt, negative } = buildPrompt(selectedBackground);
-    console.log("🎨 Generating Mad Lads Style NFT...");
+    console.log("🎨 Generating Mad Lads Style NFT with Reference Image...");
 
-    let output: any;
-
-    if (pfpUrl) {
-      console.log("🖼️ Using PFP for character reference:", pfpUrl);
-      
-      output = await replicate.run(
-        "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-        {
-          input: {
-            image: pfpUrl,
-            prompt: prompt,
-            negative_prompt: negative,
-            prompt_strength: 0.75,  // Medium strength - keeps some PFP features
-            num_inference_steps: 50,
-            width: 1024,
-            height: 1024,
-            guidance_scale: 8.0,
-            scheduler: "K_EULER_ANCESTRAL",
-          }
+    // 🔥 USE REFERENCE IMAGE FOR STYLE
+    const output: any = await replicate.run(
+      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+      {
+        input: {
+          image: STYLE_REFERENCE_URL,  // 🔥 This is the reference image!
+          prompt: prompt,
+          negative_prompt: negative,
+          prompt_strength: 0.60,  // 🔥 Lower = follows reference style MORE closely
+          num_inference_steps: 50,
+          width: 1024,
+          height: 1024,
+          guidance_scale: 7.5,
+          scheduler: "K_EULER_ANCESTRAL",
         }
-      );
-    } else {
-      console.log("🎨 Generating from scratch");
-      
-      output = await replicate.run(
-        "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-        {
-          input: {
-            prompt: prompt,
-            negative_prompt: negative,
-            num_inference_steps: 50,
-            width: 1024,
-            height: 1024,
-            guidance_scale: 7.5,
-            scheduler: "K_EULER_ANCESTRAL",
-          }
-        }
-      );
-    }
+      }
+    );
 
     const imageUrl = Array.isArray(output) ? output[0] : output;
 
