@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 const STABILITY_API_KEY = process.env.STABILITY_API_KEY || "";
 const BASE_CHARACTER = "round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES - Use NEUTRAL backgrounds (not matching)
+// 🎨 72 COLOR SCHEMES
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "soft cream beige light" },
   { skin: "dark forest green deep", bg: "soft gray light neutral" },
@@ -81,6 +81,7 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "dark forest green" }
 ];
 
+// ALL ACCESSORIES (190 total)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
   "cloth hood covering head", "small bandana on head",
@@ -206,7 +207,6 @@ const EXPRESSIONS = [
   "mischievous plotting devious"
 ];
 
-// ✅ USE FID FOR CONSISTENT COLORS
 function getPersonalizedColor(fid: number): { skin: string; bg: string } {
   const colorIndex = fid % GOBLIN_COLOR_SCHEMES.length;
   return GOBLIN_COLOR_SCHEMES[colorIndex];
@@ -381,7 +381,6 @@ const prompt = [
   return { prompt, negative };
 }
 
-// ✅ Stability AI POST with Image-to-Image
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -392,28 +391,27 @@ export async function POST(req: NextRequest) {
     
     if (fid && typeof fid === 'number') {
       selectedColorScheme = getPersonalizedColor(fid);
-      console.log("✅ Using FID-based color:", selectedColorScheme.skin);
+      console.log("✅ FID-based color:", selectedColorScheme.skin);
     }
 
     if (!STABILITY_API_KEY) {
       return NextResponse.json(
-        { error: "Missing STABILITY_API_KEY in environment variables" },
+        { error: "Missing STABILITY_API_KEY" },
         { status: 500 }
       );
     }
 
     const { prompt, negative } = buildPrompt(selectedColorScheme);
-    console.log("🎨 Generating Goblin NFT...");
+    console.log("🎨 Generating...");
 
     let imageData: Buffer;
 
-    // ✅ Image-to-Image if PFP provided
     if (pfpUrl) {
-      console.log("🖼️ Using PFP for img2img:", pfpUrl);
+      console.log("🖼️ img2img with PFP");
       
       const pfpResponse = await fetch(pfpUrl);
       if (!pfpResponse.ok) {
-        throw new Error(`Failed to fetch PFP: ${pfpResponse.status}`);
+        throw new Error(`PFP fetch failed: ${pfpResponse.status}`);
       }
       const pfpBlob = await pfpResponse.blob();
       const pfpBuffer = Buffer.from(await pfpBlob.arrayBuffer());
@@ -424,8 +422,8 @@ export async function POST(req: NextRequest) {
       formData.append('image_strength', '0.35');
       formData.append('text_prompts[text]', prompt);
       formData.append('text_prompts[weight]', '1');
-      formData.append('text_prompts[text]', negative);[1]
-      formData.append('text_prompts[weight]', '-1');[1]
+      formData.append('text_prompts[text]', negative);
+      formData.append('text_prompts[weight]', '-1');
       formData.append('cfg_scale', '7');
       formData.append('samples', '1');
       formData.append('steps', '30');
@@ -444,15 +442,15 @@ export async function POST(req: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Stability API: ${response.status} - ${errorText}`);
+        console.error("Stability error:", errorText);
+        throw new Error(`Stability: ${response.status}`);
       }
 
       const responseJSON = await response.json();
       imageData = Buffer.from(responseJSON.artifacts.base64, 'base64');
 
     } else {
-      // Text-to-image fallback
-      console.log("🎨 No PFP, using text-to-image");
+      console.log("🎨 text-to-image");
       
       const response = await fetch(
         'https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image',
@@ -479,7 +477,8 @@ export async function POST(req: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Stability API: ${response.status} - ${errorText}`);
+        console.error("Stability error:", errorText);
+        throw new Error(`Stability: ${response.status}`);
       }
 
       const responseJSON = await response.json();
@@ -494,8 +493,10 @@ export async function POST(req: NextRequest) {
       success: true
     });
   } catch (e: any) {
-    console.error("❌ Route error:", e);
-    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
+    console.error("❌ Error:", e);
+    return NextResponse.json({ 
+      error: e?.message || "server_error" 
+    }, { status: 500 });
   }
 }
 
