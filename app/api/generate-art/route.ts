@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ Error:", errorText);
+      console.error("❌ API Error:", errorText);
       return NextResponse.json(
         { error: `Stability: ${response.status}` },
         { status: response.status }
@@ -69,20 +69,43 @@ export async function POST(req: NextRequest) {
     }
 
     const responseJSON = await response.json();
-    console.log("✅ Got response");
+    console.log("✅ Got JSON response");
+    console.log("Response structure:", JSON.stringify(responseJSON, null, 2).substring(0, 500));
 
-    if (!responseJSON.artifacts || !responseJSON.artifacts) {
+    // Check if artifacts exist
+    if (!responseJSON.artifacts) {
       console.error("❌ No artifacts in response");
+      console.error("Full response:", JSON.stringify(responseJSON));
       return NextResponse.json(
-        { error: "No image in response" },
+        { error: "No artifacts in response" },
         { status: 500 }
       );
     }
 
-    const base64Image = responseJSON.artifacts.base64;
-    const dataUrl = `data:image/png;base64,${base64Image}`;
+    if (!responseJSON.artifacts) {
+      console.error("❌ Empty artifacts array");
+      return NextResponse.json(
+        { error: "Empty artifacts array" },
+        { status: 500 }
+      );
+    }
 
-    console.log("✅ Success! Image size:", base64Image.length, "chars");
+    const artifact = responseJSON.artifacts;
+    console.log("Artifact keys:", Object.keys(artifact));
+
+    const base64Image = artifact.base64;
+    
+    if (!base64Image) {
+      console.error("❌ No base64 in artifact");
+      console.error("Artifact:", JSON.stringify(artifact));
+      return NextResponse.json(
+        { error: "No base64 data in artifact" },
+        { status: 500 }
+      );
+    }
+
+    const dataUrl = `data:image/png;base64,${base64Image}`;
+    console.log("✅ Success!");
 
     return NextResponse.json({
       generated_image_url: dataUrl,
@@ -92,6 +115,7 @@ export async function POST(req: NextRequest) {
 
   } catch (e: any) {
     console.error("❌ Catch error:", e.message);
+    console.error("Stack:", e.stack);
     return NextResponse.json({ 
       error: e?.message || "server_error" 
     }, { status: 500 });
