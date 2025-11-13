@@ -1,15 +1,11 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { HfInference } from "@huggingface/inference";
 
-const MODEL_ID = "black-forest-labs/FLUX.1-dev";
-const PROVIDER = "replicate";
-const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN || "";
+const STABILITY_API_KEY = process.env.STABILITY_API_KEY || "";
 const BASE_CHARACTER = "round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES (MONOCHROMATIC - MATCHING BACKGROUND)
-// 🎨 72 COLOR SCHEMES - VARIED SKIN with NEUTRAL BACKGROUNDS
+// 🎨 72 COLOR SCHEMES - Use NEUTRAL backgrounds (not matching)
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "soft cream beige light" },
   { skin: "dark forest green deep", bg: "soft gray light neutral" },
@@ -103,7 +99,6 @@ const HEAD_ITEMS = [
   "santa hat red on head", "party hat cone on head"
 ];
 
-// ✅ FIXED: Only ONE EYE_ITEMS declaration
 const EYE_ITEMS = [
   "small eye patch over one eye", "tiny goggles over eyes",
   "small monocle over one eye", "round glasses over eyes",
@@ -190,39 +185,36 @@ const HAND_ITEMS = [
   "gripping tiny hammer in hand", "both hands clenched in small fists",
   "holding smartphone in hand", "gripping game controller in hands",
   "holding coffee cup in hand", "gripping microphone in hand",
-  "holding pizza slice in hand", "holding burger in hand",
-  "gripping baseball bat in hand", "holding tennis racket in hand",
-  "gripping guitar in hands", "holding drumsticks in hands",
-  "holding book in hand", "gripping pen writing in hand",
-  "holding magnifying glass in hand", "gripping wrench tool in hand",
-  "empty hands nothing held"
+  "holding pizza slice in hand", "gripping magic wand in hand",
+  "holding book open in hand", "gripping telescope in hand",
+  "holding magnifying glass in hand", "gripping fishing rod in hand",
+  "holding basketball in hands", "gripping baseball bat in hand",
+  "holding trophy golden in hand", "gripping drumsticks in hands",
+  "holding guitar small in hand", "gripping paintbrush in hand",
+  "holding camera in hand", "gripping sword katana in hand",
+  "holding gem crystal in hand", "gripping staff wooden in hand"
 ];
 
 const EXPRESSIONS = [
-  "happy smiling cheerful",
-  "angry grumpy mad",
-  "excited happy beaming",
-  "nervous sweating worried",
-  "silly goofy derpy",
-  "cool relaxed chill",
+  "angry scowling", "evil grinning maniacally",
+  "grumpy frowning", "crazy laughing wild",
+  "sneaky smirking", "confused dumb",
+  "aggressive menacing", "proud confident",
+  "surprised shocked wide-eyed", "sleepy tired yawning",
+  "excited happy beaming", "nervous sweating worried",
+  "silly goofy derpy", "cool relaxed chill",
   "mischievous plotting devious"
 ];
 
-function getRandomElement<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-
-// ✅ USE FID FOR CONSISTENT PERSONALIZED COLORS
+// ✅ USE FID FOR CONSISTENT COLORS
 function getPersonalizedColor(fid: number): { skin: string; bg: string } {
-  // Use FID as a seed to pick a consistent color for this user
   const colorIndex = fid % GOBLIN_COLOR_SCHEMES.length;
-  const selectedScheme = GOBLIN_COLOR_SCHEMES[colorIndex];
-  
-  console.log(`🎨 FID ${fid} → Color Index ${colorIndex} → ${selectedScheme.skin}`);
-  return selectedScheme;
+  return GOBLIN_COLOR_SCHEMES[colorIndex];
 }
 
+function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
 
 function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const colorScheme = colorSchemeHint || getRandomElement(GOBLIN_COLOR_SCHEMES);
@@ -236,7 +228,7 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
- const prompt = [
+const prompt = [
     // 🔥 ULTRA-FLAT STYLE
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
@@ -389,24 +381,23 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   return { prompt, negative };
 }
 
-
+// ✅ Stability AI POST with Image-to-Image
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const fid = body?.fid;
-    const pfpUrl = body?.pfpUrl;  // ✅ Get PFP image URL
+    const pfpUrl = body?.pfpUrl;
     
     let selectedColorScheme: { skin: string; bg: string } | undefined;
     
-    // Use FID for consistent colors
     if (fid && typeof fid === 'number') {
       selectedColorScheme = getPersonalizedColor(fid);
       console.log("✅ Using FID-based color:", selectedColorScheme.skin);
     }
 
-    if (!HF_TOKEN) {
+    if (!STABILITY_API_KEY) {
       return NextResponse.json(
-        { error: "Missing HUGGINGFACE_API_TOKEN" },
+        { error: "Missing STABILITY_API_KEY in environment variables" },
         { status: 500 }
       );
     }
@@ -414,100 +405,97 @@ export async function POST(req: NextRequest) {
     const { prompt, negative } = buildPrompt(selectedColorScheme);
     console.log("🎨 Generating Goblin NFT...");
 
-    const hf = new HfInference(HF_TOKEN);
-    let output: any = null;
-    let lastErr: any = null;
+    let imageData: Buffer;
 
-    // ✅ NEW: If PFP URL provided, use image-to-image
-    const parameters: any = {
-      width: 1024,
-      height: 1024,
-      num_inference_steps: 35,
-      guidance_scale: 7.5,
-      negative_prompt: negative,
-    };
-
-    // If PFP provided, fetch it and use as init_image for img2img
+    // ✅ Image-to-Image if PFP provided
     if (pfpUrl) {
-      try {
-        console.log("🖼️ Fetching PFP for image-to-image:", pfpUrl);
-        const pfpResponse = await fetch(pfpUrl);
-        if (pfpResponse.ok) {
-          const pfpBlob = await pfpResponse.blob();
-          parameters.init_image = pfpBlob;  // Use PFP as base image
-          parameters.strength = 0.75;  // How much to transform (0.5-0.9)
-          console.log("✅ Using PFP as base for transformation");
-        }
-      } catch (e) {
-        console.log("⚠️ Could not fetch PFP, using text-to-image instead");
+      console.log("🖼️ Using PFP for img2img:", pfpUrl);
+      
+      const pfpResponse = await fetch(pfpUrl);
+      if (!pfpResponse.ok) {
+        throw new Error(`Failed to fetch PFP: ${pfpResponse.status}`);
       }
-    }
+      const pfpBlob = await pfpResponse.blob();
+      const pfpBuffer = Buffer.from(await pfpBlob.arrayBuffer());
 
-    for (let i = 0; i < 3; i++) {
-      try {
-        output = await (hf.textToImage as any)({
-          inputs: prompt,
-          model: MODEL_ID,
-          provider: PROVIDER,
-          parameters,
-        });
-        break;
-      } catch (e: any) {
-        lastErr = e;
-        if (i < 2) {
-          await new Promise((r) => setTimeout(r, 1200 * (i + 1)));
+      const formData = new FormData();
+      formData.append('init_image', new Blob([pfpBuffer]), 'pfp.png');
+      formData.append('init_image_mode', 'IMAGE_STRENGTH');
+      formData.append('image_strength', '0.35');
+      formData.append('text_prompts[text]', prompt);
+      formData.append('text_prompts[weight]', '1');
+      formData.append('text_prompts[text]', negative);[1]
+      formData.append('text_prompts[weight]', '-1');[1]
+      formData.append('cfg_scale', '7');
+      formData.append('samples', '1');
+      formData.append('steps', '30');
+
+      const response = await fetch(
+        'https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/image-to-image',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${STABILITY_API_KEY}`,
+            'Accept': 'application/json',
+          },
+          body: formData,
         }
-      }
-    }
+      );
 
-    if (!output) {
-      const msg = lastErr?.message || "Inference error";
-      const status = lastErr?.response?.status || 502;
-      return NextResponse.json({ error: msg }, { status });
-    }
-
-    let imgBuf: Buffer;
-    if (typeof output === "string") {
-      if (output.startsWith("data:image")) {
-        const b64 = output.split(",")[1] || "";
-        imgBuf = Buffer.from(b64, "base64");
-      } else if (output.startsWith("http")) {
-        const r = await fetch(output);
-        if (!r.ok) {
-          return NextResponse.json(
-            { error: `Fetch image failed: ${r.status}` },
-            { status: 502 }
-          );
-        }
-        imgBuf = Buffer.from(await r.arrayBuffer());
-      } else {
-        return NextResponse.json(
-          { error: "Unexpected string output" },
-          { status: 500 }
-        );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Stability API: ${response.status} - ${errorText}`);
       }
-    } else if (output instanceof Blob) {
-      imgBuf = Buffer.from(await output.arrayBuffer());
+
+      const responseJSON = await response.json();
+      imageData = Buffer.from(responseJSON.artifacts.base64, 'base64');
+
     } else {
-      const maybeBlob = output?.blob || output?.image || output?.output;
-      if (maybeBlob?.arrayBuffer) {
-        imgBuf = Buffer.from(await maybeBlob.arrayBuffer());
-      } else {
-        return NextResponse.json(
-          { error: "Unknown output format" },
-          { status: 500 }
-        );
+      // Text-to-image fallback
+      console.log("🎨 No PFP, using text-to-image");
+      
+      const response = await fetch(
+        'https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${STABILITY_API_KEY}`,
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            text_prompts: [
+              { text: prompt, weight: 1 },
+              { text: negative, weight: -1 }
+            ],
+            cfg_scale: 7,
+            height: 1024,
+            width: 1024,
+            steps: 30,
+            samples: 1,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Stability API: ${response.status} - ${errorText}`);
       }
+
+      const responseJSON = await response.json();
+      imageData = Buffer.from(responseJSON.artifacts.base64, 'base64');
     }
 
-    const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
+    const dataUrl = `data:image/png;base64,${imageData.toString("base64")}`;
+
     return NextResponse.json({
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
       success: true
     });
   } catch (e: any) {
-    console.error("Route error:", e);
+    console.error("❌ Route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
+
