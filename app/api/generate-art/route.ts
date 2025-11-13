@@ -3,14 +3,13 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 
-// ✅ Use Replicate for img2img
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
 const BASE_CHARACTER = "round blob goblin creature monster";
 
-// 🎨 72 COLOR SCHEMES (MONOCHROMATIC - MATCHING BACKGROUND)
+// 🎨 72 COLOR SCHEMES - SAME AS BEFORE
 const GOBLIN_COLOR_SCHEMES = [
   { skin: "bright neon lime green glowing", bg: "bright neon lime green glowing" },
   { skin: "dark forest green deep", bg: "dark forest green deep" },
@@ -86,134 +85,81 @@ const GOBLIN_COLOR_SCHEMES = [
   { skin: "metallic champagne gold-beige shiny", bg: "metallic champagne gold-beige shiny" }
 ];
 
-
+// SAME TRAITS AS BEFORE
 const HEAD_ITEMS = [
-  "small leather cap on top of head", "tiny metal helmet on top of head",
-  "cloth hood covering head", "small bandana on head",
-  "bone helmet on top of head", "small iron crown on top of head",
-  "wizard hat on top of head", "fur hat on head",
-  "small horned helmet on head", "skull cap on top of head",
-  "straw hat on head", "pointed hood covering head",
-  "war paint marks on face", "animal pelt on head",
-  "bald head no hat", "viking helmet with horns on head",
-  "cowboy hat on top of head", "pirate tricorn hat on head",
-  "chef hat tall white on head", "baseball cap worn backwards on head",
-  "bucket hat on top of head", "beanie knit cap on head",
-  "beret tilted on head", "sombrero on top of head",
-  "top hat tall on head", "fedora hat on head",
-  "samurai kabuto helmet on head", "ninja hood covering head",
-  "santa hat red on head", "party hat cone on head"
+  "wizard hat", "party hat", "crown", "baseball cap", "beanie",
+  "viking helmet with horns", "cowboy hat", "chef hat",
+  "skull cap", "straw hat", "hood", "war paint",
+  "animal pelt", "bald head", "pirate hat",
+  "bucket hat", "beret", "sombrero",
+  "top hat", "fedora", "samurai helmet", "ninja hood",
+  "santa hat", "party cone", "bandana", "fur hat",
+  "horned helmet", "iron crown", "leather cap", "metal helmet"
 ];
 
 const EYE_ITEMS = [
-  "small eye patch over one eye", "tiny goggles over eyes",
-  "small monocle over one eye", "round glasses over eyes",
-  "bandage covering one eye", "tiny aviator goggles over eyes",
-  "large round yellow eyes", "small beady eyes glowing",
-  "wide crazy eyes bulging", "squinting menacing eyes",
-  "sunglasses cool over eyes", "3D glasses red-blue over eyes",
-  "steampunk goggles brass over eyes", "cyclops single giant eye",
-  "heart-shaped glasses over eyes", "ski goggles over eyes",
-  "swimming goggles over eyes", "VR headset over eyes",
-  "laser eyes glowing red", "star-shaped sunglasses over eyes",
-  "cat-eye glasses over eyes", "jeweled monocle over one eye",
-  "cracked monocle over eye", "glowing blue eyes bright",
-  "X-ray specs over eyes"
+  "eye patch", "goggles", "monocle", "round glasses",
+  "bandage over eye", "aviator goggles", "large round eyes",
+  "beady glowing eyes", "wide crazy eyes", "squinting eyes",
+  "sunglasses", "3D glasses", "steampunk goggles", "cyclops eye",
+  "heart glasses", "ski goggles", "swimming goggles", "VR headset",
+  "laser eyes", "star sunglasses", "cat-eye glasses", "jeweled monocle",
+  "cracked monocle", "glowing blue eyes", "X-ray specs"
 ];
 
 const MOUTH_ITEMS = [
-  "huge wide grinning mouth showing many sharp fangs",
-  "giant open mouth with rows of jagged fangs",
-  "massive toothy grin showing pointed fangs",
-  "enormous mouth with multiple rows of sharp fangs",
-  "wide crazy smile showing all sharp teeth",
-  "evil grinning mouth with prominent fangs visible",
-  "creepy smile with sharp jagged teeth",
-  "menacing grin with big fangs",
-  "wicked smile showing rows of teeth",
-  "fierce grinning mouth with fangs",
-  "vampire fangs protruding from mouth",
-  "single gold tooth shining in grin",
-  "missing front teeth gap in smile",
-  "braces on teeth metal visible",
-  "tongue sticking out cheeky"
+  "wide grin with fangs", "open mouth with fangs",
+  "toothy grin", "mouth with sharp fangs",
+  "crazy smile with teeth", "evil grin with fangs",
+  "creepy smile", "menacing grin", "wicked smile",
+  "fierce mouth", "vampire fangs", "gold tooth",
+  "missing teeth", "braces", "tongue out"
 ];
 
 const CLOTHING = [
-  "small leather vest worn on torso", "tiny torn rags covering body",
-  "simple cloth tunic on body", "small fur vest on torso",
-  "simple leather jerkin on body", "tiny torn robes on body",
-  "small patchwork leather on body", "tiny animal hide covering torso",
-  "simple torn shirt on body", "small iron armor on torso",
-  "tiny torn cloak over shoulders", "simple leather coat on body",
-  "small pirate vest on torso", "tiny sailor vest on body",
-  "bare chest showing chubby belly", "hawaiian shirt floral on body",
-  "tuxedo jacket fancy on torso", "hoodie with hood down on body",
-  "tank top sleeveless on torso", "sweater knitted on body",
-  "denim jacket on torso", "bomber jacket on body",
-  "tracksuit jacket on torso", "polo shirt collared on body",
-  "football jersey on torso", "basketball jersey on body",
-  "chef coat white on torso", "lab coat white on body",
-  "ninja suit black on torso", "samurai armor on body",
-  "superhero cape on shoulders", "wizard robe long on body",
-  "monk robe brown on body", "kimono traditional on body",
-  "poncho over shoulders"
+  "leather vest", "torn rags", "cloth tunic", "fur vest",
+  "leather jerkin", "torn robes", "patchwork leather", "animal hide",
+  "torn shirt", "iron armor", "torn cloak", "leather coat",
+  "pirate vest", "sailor vest", "bare chest", "hawaiian shirt",
+  "tuxedo", "hoodie", "tank top", "sweater",
+  "denim jacket", "bomber jacket", "tracksuit", "polo shirt",
+  "football jersey", "basketball jersey", "chef coat", "lab coat",
+  "ninja suit", "samurai armor", "superhero cape", "wizard robe",
+  "monk robe", "kimono", "poncho"
 ];
 
 const NECK_ITEMS = [
-  "small bone necklace around neck", "tiny iron collar around neck",
-  "small tooth necklace on neck", "simple leather cord around neck",
-  "tiny gold chain on neck", "small bead necklace around neck",
-  "tiny medallion hanging on neck", "small skull pendant on neck",
-  "simple rope around neck", "bare neck no necklace",
-  "thick gold chain heavy on neck", "diamond necklace sparkling on neck",
-  "pearl necklace elegant around neck", "dog tag chain military on neck",
-  "crucifix necklace on neck", "locket heart-shaped on neck",
-  "crystal pendant glowing on neck", "amulet mystical on neck",
-  "coin necklace pirate on neck", "feather necklace tribal on neck",
-  "seashell necklace beach on neck", "dog collar spiked around neck",
-  "bow tie around neck", "necktie striped around neck",
-  "scarf wrapped around neck", "bandana around neck",
-  "silver chain thin on neck", "rope necklace thick around neck",
-  "gemstone necklace colorful on neck", "choker tight around neck"
+  "bone necklace", "iron collar", "tooth necklace", "leather cord",
+  "gold chain", "bead necklace", "medallion", "skull pendant",
+  "rope", "no necklace", "thick chain", "diamond necklace",
+  "pearl necklace", "dog tags", "crucifix", "locket",
+  "crystal pendant", "amulet", "coin necklace", "feather necklace",
+  "seashell necklace", "spiked collar", "bow tie", "necktie",
+  "scarf", "bandana", "silver chain", "gemstone necklace", "choker"
 ];
 
 const HAND_ITEMS = [
-  "holding small rusty dagger in hand", "gripping tiny wooden club in hand",
-  "holding small coin bag in hand", "holding tiny wooden shield in hand",
-  "holding small torch in hand", "gripping tiny battle axe in hand",
-  "holding small shortsword in hand", "gripping tiny iron mace in hand",
-  "holding small wooden spear in hand", "holding tiny bow in hand",
-  "holding small loot sack in hand", "holding tiny lantern in hand",
-  "holding small skull cup in hand", "holding tiny potion vial in hand",
-  "gripping tiny pickaxe in hand", "holding small meat leg in hand",
-  "holding small keys in hand", "holding small bottle in hand",
-  "gripping tiny hammer in hand", "both hands clenched in small fists",
-  "holding smartphone in hand", "gripping game controller in hands",
-  "holding coffee cup in hand", "gripping microphone in hand",
-  "holding pizza slice in hand", "holding burger in hand",
-  "gripping baseball bat in hand", "holding tennis racket in hand",
-  "gripping guitar in hands", "holding drumsticks in hands",
-  "holding book in hand", "gripping pen writing in hand",
-  "holding magnifying glass in hand", "gripping wrench tool in hand",
-  "empty hands nothing held"
+  "dagger", "wooden club", "coin bag", "wooden shield",
+  "torch", "battle axe", "shortsword", "iron mace",
+  "wooden spear", "bow", "loot sack", "lantern",
+  "skull cup", "potion vial", "pickaxe", "meat leg",
+  "keys", "bottle", "hammer", "fists",
+  "smartphone", "game controller", "coffee cup", "microphone",
+  "pizza slice", "burger", "baseball bat", "tennis racket",
+  "guitar", "drumsticks", "book", "pen",
+  "magnifying glass", "wrench", "empty hands", "peace sign",
+  "thumbs up", "pointing", "waving"
 ];
 
 const EXPRESSIONS = [
-  "happy smiling cheerful",
-  "angry grumpy mad",
-  "excited happy beaming",
-  "nervous sweating worried",
-  "silly goofy derpy",
-  "cool relaxed chill",
-  "mischievous plotting devious"
+  "happy cheerful", "angry grumpy", "excited",
+  "nervous worried", "silly goofy", "cool chill",
+  "mischievous devious"
 ];
 
 function getPersonalizedColor(fid: number): { skin: string; bg: string } {
   const colorIndex = fid % GOBLIN_COLOR_SCHEMES.length;
-  const selectedScheme = GOBLIN_COLOR_SCHEMES[colorIndex];
-  console.log(`🎨 FID ${fid} → Color Index ${colorIndex} → ${selectedScheme.skin}`);
-  return selectedScheme;
+  return GOBLIN_COLOR_SCHEMES[colorIndex];
 }
 
 function getRandomElement<T>(array: T[]): T {
@@ -232,14 +178,15 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
   const handItem = getRandomElement(HAND_ITEMS);
   const expression = getRandomElement(EXPRESSIONS);
 
-  const prompt = `cute cartoon goblin character, ${skinColor} skin, blob body, wearing ${headItem}, ${eyeItem}, ${mouthItem} with fangs, ${clothing}, ${neckItem}, ${handItem}, ${expression}, flat 2D art, simple style, ${background} background, centered, full body`;
+  // 🔥 OPTIMIZED PROMPT - Short and effective!
+  const prompt = `cute chibi ${BASE_CHARACTER}, ${skinColor} smooth skin, round chubby blob body, small pointed ears, wearing ${headItem}, ${eyeItem}, ${mouthItem} showing small fangs, wearing ${clothing}, ${neckItem}, holding ${handItem}, ${expression} expression, thick black outlines, flat 2D cartoon style, solid colors, simple shading, sticker aesthetic, monochromatic ${background} solid background, centered full body standing, professional character design, kawaii cute style`;
 
-  const negative = `realistic, photorealistic, 3D, CGI, landscape, scenery, buildings, complex background, human, person, detailed shading, gradient background`;
+  // 🔥 FOCUSED NEGATIVE - Only blocks bad stuff
+  const negative = `realistic, photorealistic, 3D render, CGI, complex shading, dramatic lighting, harsh shadows, gradient background, textured background, detailed background, scenery, landscape, buildings, multiple characters, text, watermark, logo, side view, profile, back view, angled, muscular, athletic, tall, long limbs, human proportions, messy, sketchy, blurry, low quality, deformed, bad anatomy, extra limbs, floating objects, smoking, violence, blood, different background color, contrasting background`;
 
   return { prompt, negative };
 }
 
-// ✅ Image-to-Image using Replicate
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -275,11 +222,11 @@ export async function POST(req: NextRequest) {
             image: pfpUrl,
             prompt: prompt,
             negative_prompt: negative,
-            prompt_strength: 0.98,  // ✅ INCREASED from 0.75 to 0.98 - MUCH stronger transformation
-            num_inference_steps: 50,  // ✅ INCREASED from 30 to 50 - better quality
+            prompt_strength: 0.85,  // Balanced for PFP transformation
+            num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 9.0,  // ✅ INCREASED from 7.5 to 9.0 - stronger prompt adherence
+            guidance_scale: 8.0,  // Good balance
           }
         }
       );
@@ -292,16 +239,16 @@ export async function POST(req: NextRequest) {
           input: {
             prompt: prompt,
             negative_prompt: negative,
-            num_inference_steps: 40,
+            num_inference_steps: 50,
             width: 1024,
             height: 1024,
-            guidance_scale: 8.0,
+            guidance_scale: 7.5,
           }
         }
       );
     }
 
-    const imageUrl = Array.isArray(output) ? output : output;
+    const imageUrl = Array.isArray(output) ? output[0] : output;
 
     if (!imageUrl) {
       return NextResponse.json({ error: "No image generated" }, { status: 500 });
@@ -328,4 +275,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
-
