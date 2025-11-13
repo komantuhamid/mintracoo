@@ -392,17 +392,17 @@ function buildPrompt(colorSchemeHint?: { skin: string; bg: string }) {
 
 export async function POST(req: NextRequest) {
   try {
-const body = await req.json().catch(() => ({}));
-const fid = body?.fid;  // ✅ Get FID instead of pfpUrl
-
-let selectedColorScheme: { skin: string; bg: string } | undefined;
-
-// ✅ If FID provided, use it for consistent personalized colors
-if (fid && typeof fid === 'number') {
-  selectedColorScheme = getPersonalizedColor(fid);
-  console.log("✅ Using FID-based color:", selectedColorScheme.skin);
-}
-
+    const body = await req.json().catch(() => ({}));
+    const fid = body?.fid;
+    const pfpUrl = body?.pfpUrl;  // ✅ Get PFP image URL
+    
+    let selectedColorScheme: { skin: string; bg: string } | undefined;
+    
+    // Use FID for consistent colors
+    if (fid && typeof fid === 'number') {
+      selectedColorScheme = getPersonalizedColor(fid);
+      console.log("✅ Using FID-based color:", selectedColorScheme.skin);
+    }
 
     if (!HF_TOKEN) {
       return NextResponse.json(
@@ -418,19 +418,38 @@ if (fid && typeof fid === 'number') {
     let output: any = null;
     let lastErr: any = null;
 
+    // ✅ NEW: If PFP URL provided, use image-to-image
+    const parameters: any = {
+      width: 1024,
+      height: 1024,
+      num_inference_steps: 35,
+      guidance_scale: 7.5,
+      negative_prompt: negative,
+    };
+
+    // If PFP provided, fetch it and use as init_image for img2img
+    if (pfpUrl) {
+      try {
+        console.log("🖼️ Fetching PFP for image-to-image:", pfpUrl);
+        const pfpResponse = await fetch(pfpUrl);
+        if (pfpResponse.ok) {
+          const pfpBlob = await pfpResponse.blob();
+          parameters.init_image = pfpBlob;  // Use PFP as base image
+          parameters.strength = 0.75;  // How much to transform (0.5-0.9)
+          console.log("✅ Using PFP as base for transformation");
+        }
+      } catch (e) {
+        console.log("⚠️ Could not fetch PFP, using text-to-image instead");
+      }
+    }
+
     for (let i = 0; i < 3; i++) {
       try {
         output = await (hf.textToImage as any)({
           inputs: prompt,
           model: MODEL_ID,
           provider: PROVIDER,
-          parameters: {
-            width: 1024,
-            height: 1024,
-            num_inference_steps: 35,
-            guidance_scale: 7.5,
-            negative_prompt: negative,
-          },
+          parameters,
         });
         break;
       } catch (e: any) {
