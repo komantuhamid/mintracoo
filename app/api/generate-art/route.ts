@@ -57,8 +57,6 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    console.log("📡 Response status:", response.status);
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error("❌ API Error:", errorText);
@@ -69,42 +67,43 @@ export async function POST(req: NextRequest) {
     }
 
     const responseJSON = await response.json();
-    console.log("✅ Got JSON response");
-    console.log("Response structure:", JSON.stringify(responseJSON, null, 2).substring(0, 500));
+    console.log("✅ Full response:", JSON.stringify(responseJSON));
 
-    // Check if artifacts exist
-    if (!responseJSON.artifacts) {
-      console.error("❌ No artifacts in response");
-      console.error("Full response:", JSON.stringify(responseJSON));
+    if (!responseJSON.artifacts || !responseJSON.artifacts) {
+      console.error("❌ No artifacts");
       return NextResponse.json(
         { error: "No artifacts in response" },
         { status: 500 }
       );
     }
 
-    if (!responseJSON.artifacts) {
-      console.error("❌ Empty artifacts array");
-      return NextResponse.json(
-        { error: "Empty artifacts array" },
-        { status: 500 }
-      );
-    }
-
     const artifact = responseJSON.artifacts;
-    console.log("Artifact keys:", Object.keys(artifact));
+    console.log("Artifact:", JSON.stringify(artifact));
 
-    const base64Image = artifact.base64;
+    // Try multiple possible fields
+    let imageData: string | null = null;
     
-    if (!base64Image) {
-      console.error("❌ No base64 in artifact");
-      console.error("Artifact:", JSON.stringify(artifact));
+    if (artifact.base64) {
+      imageData = artifact.base64;
+      console.log("✅ Found base64");
+    } else if (artifact.url) {
+      console.log("✅ Found URL, fetching...");
+      const imgResponse = await fetch(artifact.url);
+      const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+      imageData = imgBuffer.toString('base64');
+    } else if (artifact.image) {
+      imageData = artifact.image;
+      console.log("✅ Found image field");
+    } else {
+      console.error("❌ No image data found in artifact");
+      console.error("Artifact keys:", Object.keys(artifact));
       return NextResponse.json(
-        { error: "No base64 data in artifact" },
+        { error: "No image data in artifact", keys: Object.keys(artifact) },
         { status: 500 }
       );
     }
 
-    const dataUrl = `data:image/png;base64,${base64Image}`;
+    const dataUrl = `data:image/png;base64,${imageData}`;
     console.log("✅ Success!");
 
     return NextResponse.json({
@@ -114,8 +113,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (e: any) {
-    console.error("❌ Catch error:", e.message);
-    console.error("Stack:", e.stack);
+    console.error("❌ Error:", e.message);
     return NextResponse.json({ 
       error: e?.message || "server_error" 
     }, { status: 500 });
