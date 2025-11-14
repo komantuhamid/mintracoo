@@ -11,24 +11,17 @@ const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 
 function buildPrompt() {
   // 🔥 SUPER STRONG Mad Lads style prompt
-  const prompt = `
-2D cartoon NFT character portrait, 
-Mad Lads style, thick bold black outlines, 
-flat cel shading, vibrant solid colors, 
-vintage comic book art, illustrated cartoon style, 
-textured retro background, no realistic details, 
-same character from input image but in cartoon style, 
-exact same art style as reference image (${STYLE_REFERENCE_URL}),
-same composition, same thick outlines, same cel shading, same texture, professional NFT artwork, safe for work
+const prompt = `
+Degen Goblin NFT, cartoon style, bold lines, comic book texture, 
+centered character, vivid colors, funny goblin face, big expressive eyes, 
+unique PFP, sticker style, simple props, modern NFT collectible art
 `.trim();
 
-  const negative = `
-realistic, 3D render, photorealistic, detailed shading, 
-soft lighting, gradient shading, hyperrealistic, 
-photograph, blurry, nsfw, nude, explicit, 
-watermark, text, multiple people, hands, full body, 
-plain background, smooth cartoon, anime
+const negative = `
+realistic, 3D, photographic, detailed background, boring, many characters, 
+legs, text, watermark, blurry, nsfw, nude, full body, photo, plain
 `.trim();
+
 
   return { prompt, negative };
 }
