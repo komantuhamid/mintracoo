@@ -15,10 +15,7 @@ const DEFAULT_STYLE_URL = process.env.STYLE_REFERENCE_URL ?? "";
 let createCanvas: any = null;
 let loadImage: any = null;
 
-/* ------------------ soft face canvas (pixelate/blur style) ------------------
-   This produces a simplified/blurred face reference so the model re-draws the face
-   rather than copying photographic pixels.
------------------------------------------------------------------------------*/
+/* ------------------ soft face canvas (pixelate/blur style) ------------------ */
 async function createFeatheredFaceCanvas(pfpUrl: string, faceDiameter: number, feather: number): Promise<any> {
   // runtime require if not loaded
   if (!createCanvas || !loadImage) {
@@ -319,28 +316,84 @@ export async function POST(req: NextRequest) {
     const output: any = await replicate.run(modelVersion, { input: inputPayload });
     console.log("Replicate output (truncated):", JSON.stringify(output).slice(0, 1500));
 
-    // try to extract an URL and convert to data URL (so frontend can display image)
-    let imageUrl: any = Array.isArray(output) ? output[0] : output;
-    if (imageUrl && typeof imageUrl === "object" && imageUrl.url) imageUrl = imageUrl.url;
+    // ---------- robust extraction of image (URL or base64) ----------
+    function tryExtractImageVariant(o: any): { type: "url" | "data" | null; value: string | null } {
+      if (!o) return { type: null, value: null };
 
-    if (!imageUrl || typeof imageUrl !== "string") {
+      // 1) direct data URL
+      if (typeof o === "string" && o.startsWith("data:image/")) return { type: "data", value: o };
+
+      // 2) direct URL string
+      if (typeof o === "string" && /^https?:\/\//i.test(o)) return { type: "url", value: o };
+
+      // 3) array of strings
+      if (Array.isArray(o) && typeof o[0] === "string") {
+        if (o[0].startsWith("data:image/")) return { type: "data", value: o[0] };
+        if (/^https?:\/\//i.test(o[0])) return { type: "url", value: o[0] };
+      }
+
+      // 4) common fields: url, image, output[0], images[], result, b64_json, base64
+      const candidates = [
+        o?.url,
+        o?.image,
+        o?.image_url,
+        o?.result,
+        o?.output?.[0],
+        o?.images?.[0],
+        o?.data?.[0],
+        o?.[0]?.url,
+        o?.[0]?.image,
+        o?.[0]?.b64_json,
+        o?.[0]?.base64,
+        o?.b64_json,
+        o?.base64,
+      ];
+
+      for (const c of candidates) {
+        if (!c) continue;
+        if (typeof c === "string") {
+          if (c.startsWith("data:image/")) return { type: "data", value: c };
+          if (/^https?:\/\//i.test(c)) return { type: "url", value: c };
+          // maybe it's plain base64 without data: prefix
+          if (/^[A-Za-z0-9+/=]+\s*$/.test(c) && c.length > 100) {
+            // assume PNG by default
+            return { type: "data", value: `data:image/png;base64,${c}` };
+          }
+        }
+      }
+
+      // 5) fallback: search JSON text for URL or data URL
       try {
-        const s = JSON.stringify(output || "");
+        const s = JSON.stringify(o || "");
         const m = s.match(/https?:\/\/[^"\s}]+?\.(png|jpg|jpeg)/i);
-        if (m) imageUrl = m[0];
+        if (m) return { type: "url", value: m[0] };
+        const bm = s.match(/(?:data:image\/[a-zA-Z]+;base64,)[A-Za-z0-9+/=]+/i);
+        if (bm) return { type: "data", value: bm[0] };
       } catch (e) {
         // ignore
       }
+
+      return { type: null, value: null };
     }
 
+    // try multiple places
+    const candidate = tryExtractImageVariant(output) 
+      || tryExtractImageVariant(output?.output) 
+      || tryExtractImageVariant(Array.isArray(output) ? output[0] : null);
+
     let finalDataUrl: string | null = null;
-    if (imageUrl && typeof imageUrl === "string") {
+
+    if (candidate && candidate.type === "data" && candidate.value) {
+      finalDataUrl = candidate.value;
+    } else if (candidate && candidate.type === "url" && candidate.value) {
       try {
-        const fetched = await fetchImageAsDataUrl(imageUrl);
-        finalDataUrl = fetched;
+        finalDataUrl = await fetchImageAsDataUrl(candidate.value);
       } catch (e) {
-        console.warn("Failed to fetch/convert replicate image:", e);
+        console.warn("fetchImageAsDataUrl failed for extracted url:", e);
       }
+    } else {
+      // No image found — keep finalDataUrl null, but include raw output for debugging
+      finalDataUrl = null;
     }
 
     // return all helpful fields: merged preview (instant), replicate raw output, and final data url
@@ -351,7 +404,7 @@ export async function POST(req: NextRequest) {
       final_image_data_url: finalDataUrl,
       debug: {
         usedInverseMaskFlow: useInverseMaskFlow,
-        prompt_used: promptText,
+        prompt_used: Array.isArray(promptText) ? promptText.join(" ") : promptText,
       },
     });
   } catch (err: any) {
