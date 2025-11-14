@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           image: pfpUrl, // goblin character from PFP
           prompt: prompt, // Mad Lads style keywords
           negative_prompt: negative,
-          prompt_strength: 0.4, // 🔥 higher = more style, less realism
+          prompt_strength: 0.8, // 🔥 higher = more style, less realism
           num_inference_steps: 50,
           width: 1024,
           height: 1024,
