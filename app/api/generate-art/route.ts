@@ -268,7 +268,7 @@ professional NFT artwork, safe for work
 `.trim();
 
   const negative = `
-gore, blood, exposed organs, violent, sexual, nudity, disfigured, graphic, photorealistic, watermark, text
+gore, blood, exposed organs, violent, sexual, nudity, disfigured, graphic, photorealactic, watermark, text
 `.trim();
 
   return { prompt, negative };
@@ -330,12 +330,12 @@ export async function POST(req: NextRequest) {
 
     // prepare first attempt input
     let inputPayload: any = {};
-    let promptText = "";
+    let promptText: string | string[] = ""; // <-- typed as string | string[]
     let negativeText = "";
 
     if (usedInverseMaskFlow && mergedPreviewDataUrl && maskDataUrl) {
       promptText = buildInverseMaskPromptForRestyling();
-      negativeText = "gore, blood, exposed organs, violent, sexual, nudity, disfigured, graphic, photorealistic";
+      negativeText = "gore, blood, exposed organs, violent, sexual, nudity, disfigured, graphic, photorealactic";
       inputPayload = {
         image: mergedPreviewDataUrl,
         mask: maskDataUrl,
@@ -426,7 +426,7 @@ export async function POST(req: NextRequest) {
 
           // change inputPayload to use mergedRetry + mask + lower strength
           promptText = buildInverseMaskPromptForRestyling();
-          negativeText = "gore, blood, exposed organs, violent, sexual, nudity, disfigured, graphic, photorealistic";
+          negativeText = "gore, blood, exposed organs, violent, sexual, nudity, disfigured, graphic, photorealactic";
           inputPayload = {
             image: mergedPreviewDataUrl,
             mask: maskDataUrl,
@@ -443,7 +443,7 @@ export async function POST(req: NextRequest) {
           // no canvas available: fallback to sending PFP with stricter negative and lower strength
           const p = buildMadLadsPrompt();
           promptText = p.prompt;
-          negativeText = "gore, blood, exposed organs, violent, sexual, nudity, disfigured, graphic, photorealistic";
+          negativeText = "gore, blood, exposed organs, violent, sexual, nudity, disfigured, graphic, photorealactic";
           inputPayload = {
             image: pfpUrl,
             prompt: promptText,
@@ -494,7 +494,7 @@ export async function POST(req: NextRequest) {
       debug: {
         usedInverseMaskFlow,
         usedThumbFactor,
-        prompt_used: typeof promptText === "string" ? promptText : (Array.isArray(promptText) ? promptText.join(" ") : ""),
+        prompt_used: Array.isArray(promptText) ? promptText.join(" ") : String(promptText),
       },
     });
   } catch (err: any) {
