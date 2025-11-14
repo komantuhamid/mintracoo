@@ -18,7 +18,8 @@ flat cel shading, vibrant solid colors,
 vintage comic book art, illustrated cartoon style, 
 textured retro background, no realistic details, 
 same character from input image but in cartoon style, 
-professional NFT artwork, safe for work
+exact same art style as reference image (${STYLE_REFERENCE_URL}),
+same composition, same thick outlines, same cel shading, same texture, professional NFT artwork, safe for work
 `.trim();
 
   const negative = `
@@ -31,6 +32,7 @@ plain background, smooth cartoon, anime
 
   return { prompt, negative };
 }
+
 
 export async function POST(req: NextRequest) {
   try {
