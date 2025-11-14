@@ -1,452 +1,264 @@
-// app/api/generate-art/route.ts
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 
-// Do NOT import @napi-rs/canvas at top-level.
-
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN ?? "",
+  auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-const DEFAULT_STYLE_URL = process.env.STYLE_REFERENCE_URL ?? "";
+// 🔥 REFERENCE IMAGE - Mad Lads style example
+const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 
-/* placeholders for canvas functions (assigned at runtime) */
-let createCanvas: any = null;
-let loadImage: any = null;
+// 🎨 BACKGROUND COLORS - Textured vintage style
+const BACKGROUND_COLORS = [
+  "coral red vintage textured",
+  "sky blue vintage textured",
+  "cream beige vintage textured",
+  "soft pink vintage textured",
+  "mint green vintage textured",
+  "lavender purple vintage textured",
+  "warm orange vintage textured",
+  "powder blue vintage textured",
+  "rose pink vintage textured",
+  "sage green vintage textured",
+  "peach orange vintage textured",
+  "turquoise blue vintage textured"
+];
 
-function ensureNapiCanvas() {
-  if (createCanvas && loadImage) return true;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const napi = require("@napi-rs/canvas");
-    createCanvas = napi.createCanvas;
-    loadImage = napi.loadImage;
-    return true;
-  } catch (e) {
-    createCanvas = null;
-    loadImage = null;
-    return false;
-  }
+// 👤 SKIN TONES
+const SKIN_TONES = [
+  "fair light skin",
+  "medium tan skin",
+  "brown skin",
+  "dark brown skin",
+  "olive skin",
+  "deep skin"
+];
+
+// 👁️ EYE COLORS
+const EYE_COLORS = [
+  "brown eyes",
+  "blue eyes",
+  "green eyes",
+  "hazel eyes",
+  "gray eyes",
+  "amber eyes"
+];
+
+// 💇 HAIRSTYLES
+const HAIRSTYLES = [
+  "short slicked back hair",
+  "curly afro hair",
+  "long flowing hair",
+  "wavy shoulder length hair",
+  "buzz cut short hair",
+  "dreadlocks hair",
+  "man bun hair",
+  "pompadour styled hair",
+  "messy textured hair",
+  "side part hair",
+  "undercut fade hair",
+  "mohawk styled hair",
+  "bald shaved head",
+  "short curly hair",
+  "long straight hair",
+  "bob cut hair",
+  "pixie cut short hair",
+  "braided hair",
+  "ponytail hair",
+  "vintage waves hair"
+];
+
+// 🎩 HEADWEAR
+const HEADWEAR = [
+  "no hat",
+  "vintage fedora hat",
+  "newsboy cap",
+  "beanie knit cap",
+  "baseball cap",
+  "bucket hat",
+  "beret",
+  "wide brim hat",
+  "snapback cap",
+  "trucker hat",
+  "bowler hat",
+  "flat cap",
+  "panama hat",
+  "cowboy hat"
+];
+
+// 👓 EYEWEAR
+const EYEWEAR = [
+  "no glasses",
+  "round frame glasses",
+  "aviator sunglasses",
+  "wayfarer sunglasses",
+  "cat-eye glasses",
+  "rectangular glasses",
+  "vintage round sunglasses",
+  "steampunk goggles",
+  "futuristic visor",
+  "heart-shaped glasses",
+  "oversized sunglasses"
+];
+
+// 👔 CLOTHING
+const CLOTHING = [
+  "pinstripe suit jacket",
+  "leather jacket",
+  "denim jacket",
+  "bomber jacket",
+  "blazer jacket",
+  "trench coat",
+  "hoodie casual",
+  "turtleneck sweater",
+  "button-up shirt",
+  "polo shirt",
+  "graphic t-shirt",
+  "vintage vest",
+  "cardigan sweater",
+  "military jacket",
+  "varsity jacket",
+  "windbreaker",
+  "track jacket",
+  "flannel shirt"
+];
+
+// 📿 ACCESSORIES
+const ACCESSORIES = [
+  "no accessory",
+  "necktie striped",
+  "bow tie",
+  "scarf wrapped",
+  "chain necklace",
+  "pendant necklace",
+  "choker necklace",
+  "bandana",
+  "collar pin"
+];
+
+// 🎨 SPECIAL FEATURES
+const SPECIAL_FEATURES = [
+  "normal",
+  "normal",
+  "normal",
+  "normal",
+  "normal",
+  "normal",
+  "face tattoos small",
+  "septum piercing",
+  "nose ring",
+  "ear gauges",
+  "facial piercings multiple"
+];
+
+// 😎 EXPRESSIONS
+const EXPRESSIONS = [
+  "confident smirk",
+  "serious intense look",
+  "friendly smile",
+  "cool relaxed expression",
+  "smug grin",
+  "determined look",
+  "mysterious expression",
+  "playful smirk",
+  "contemplative look"
+];
+
+function getPersonalizedBackground(fid: number): string {
+  return BACKGROUND_COLORS[fid % BACKGROUND_COLORS.length];
 }
 
-/* create blurred/pixelated face canvas */
-async function createFeatheredFaceCanvas(pfpUrl: string, faceDiameter: number, feather: number, thumbFactor = 12): Promise<any> {
-  if (!createCanvas || !loadImage) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const napi = require("@napi-rs/canvas");
-    createCanvas = napi.createCanvas;
-    loadImage = napi.loadImage;
-  }
-
-  const pfpImg = await loadImage(pfpUrl);
-  const size = Math.ceil(faceDiameter + feather * 2);
-  const canvas = createCanvas(size, size);
-  const ctx = canvas.getContext("2d");
-
-  const scale = Math.max(faceDiameter / pfpImg.width, faceDiameter / pfpImg.height);
-  const dw = Math.round(pfpImg.width * scale);
-  const dh = Math.round(pfpImg.height * scale);
-  const dx = Math.round((size - dw) / 2);
-  const dy = Math.round((size - dh) / 2);
-
-  const thumbSize = Math.max(4, Math.floor(size / thumbFactor));
-  const thumb = createCanvas(thumbSize, thumbSize);
-  const tctx = thumb.getContext("2d");
-  tctx.drawImage(pfpImg, 0, 0, thumbSize, thumbSize);
-
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(thumb, 0, 0, thumbSize, thumbSize, dx, dy, dw, dh);
-
-  const overlayAlpha = thumbFactor >= 18 ? 0.22 : 0.12;
-  ctx.globalAlpha = overlayAlpha;
-  ctx.fillStyle = "rgba(255,255,255,0.06)";
-  ctx.fillRect(0, 0, size, size);
-  ctx.globalAlpha = 1.0;
-
-  const gd = ctx.createRadialGradient(
-    size / 2,
-    size / 2,
-    Math.max(0, faceDiameter / 2 - feather),
-    size / 2,
-    size / 2,
-    faceDiameter / 2 + feather
-  );
-  gd.addColorStop(0, "rgba(0,0,0,1)");
-  gd.addColorStop(0.9, "rgba(0,0,0,0.85)");
-  gd.addColorStop(1, "rgba(0,0,0,0)");
-
-  const tmp = createCanvas(size, size);
-  const tmpCtx = tmp.getContext("2d");
-  tmpCtx.drawImage(canvas, 0, 0);
-  tmpCtx.globalCompositeOperation = "destination-in";
-  tmpCtx.fillStyle = gd as any;
-  tmpCtx.fillRect(0, 0, size, size);
-  tmpCtx.globalCompositeOperation = "source-over";
-
-  return tmp;
+function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
 }
 
-/* merge style (MadLads) + faceCanvas */
-async function mergeStyleWithFace(styleUrl: string, faceCanvas: any, opts?: { canvasSize?: number; faceX?: number; faceY?: number; }) {
-  if (!createCanvas || !loadImage) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const napi = require("@napi-rs/canvas");
-    createCanvas = napi.createCanvas;
-    loadImage = napi.loadImage;
-  }
+function buildPrompt(bgHint?: string) {
+  const background = bgHint || getRandomElement(BACKGROUND_COLORS);
+  const skinTone = getRandomElement(SKIN_TONES);
+  const eyeColor = getRandomElement(EYE_COLORS);
+  const hairstyle = getRandomElement(HAIRSTYLES);
+  const headwear = getRandomElement(HEADWEAR);
+  const eyewear = getRandomElement(EYEWEAR);
+  const clothing = getRandomElement(CLOTHING);
+  const accessory = getRandomElement(ACCESSORIES);
+  const special = getRandomElement(SPECIAL_FEATURES);
+  const expression = getRandomElement(EXPRESSIONS);
 
-  const size = opts?.canvasSize ?? 1024;
-  const canvas = createCanvas(size, size);
-  const ctx = canvas.getContext("2d");
+  // 🔥 SIMPLIFIED PROMPT - Let reference image define the style!
+  const prompt = `NFT character portrait, ${skinTone}, ${eyeColor}, ${hairstyle}, ${headwear !== "no hat" ? headwear : ""}, ${eyewear !== "no glasses" ? eyewear : ""}, ${expression}, wearing ${clothing}, ${accessory !== "no accessory" ? accessory : ""}, ${special !== "normal" ? special : ""}, ${background} background, exact same art style as reference image, same composition, same thick outlines, same cel shading, same texture, professional NFT artwork`;
 
-  const styleImg = await loadImage(styleUrl);
+  const negative = "full body, legs visible, feet showing, hands in frame, realistic photo, 3D render, blurry, low quality, deformed, multiple people, text, watermark, different art style, smooth cartoon, anime style, different composition, plain background, no texture";
 
-  const sw = styleImg.width;
-  const sh = styleImg.height;
-  let sx = 0, sy = 0, sWidth = sw, sHeight = sh;
-  const imgRatio = sw / sh;
-  const canvasRatio = 1;
-  if (imgRatio > canvasRatio) {
-    sWidth = Math.round(sh * canvasRatio);
-    sx = Math.round((sw - sWidth) / 2);
-  } else if (imgRatio < canvasRatio) {
-    sHeight = Math.round(sw / canvasRatio);
-    sy = Math.round((sh - sHeight) / 2);
-  }
-  ctx.drawImage(styleImg, sx, sy, sWidth, sHeight, 0, 0, size, size);
-
-  const faceX = Math.round((size - faceCanvas.width) / 2);
-  const faceY = Math.round(size * 0.20);
-
-  ctx.drawImage(faceCanvas, faceX, faceY, faceCanvas.width, faceCanvas.height);
-
-  return { dataUrl: canvas.toDataURL("image/png"), faceX, faceY, faceSize: faceCanvas.width };
-}
-
-/* create mask where FACE is changeable (white = change) */
-function createInverseMaskDataUrlForChangeFace(canvasSize: number, faceX: number, faceY: number, faceSize: number, feather = 32) {
-  const m = createCanvas(canvasSize, canvasSize);
-  const ctx = m.getContext("2d");
-
-  // preserve everything (black)
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, canvasSize, canvasSize);
-
-  // face area -> white (allow change)
-  const cx = faceX + faceSize / 2;
-  const cy = faceY + faceSize / 2;
-  const innerR = Math.max(0, faceSize / 2 - Math.max(8, Math.floor(feather / 2)));
-  const outerR = faceSize / 2 + Math.max(4, Math.floor(feather / 2));
-
-  ctx.fillStyle = "white";
-  ctx.beginPath();
-  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.fill();
-
-  const steps = Math.max(10, Math.ceil(feather / 3));
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const r = innerR + t * (outerR - innerR);
-    ctx.globalAlpha = 1 - t;
-    ctx.beginPath();
-    ctx.fillStyle = "white";
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1.0;
-
-  return m.toDataURL("image/png");
-}
-
-/* helpers: extract image and fetch as data URL */
-function tryExtractImageVariant(o: any): { type: "url" | "data" | null; value: string | null } {
-  try {
-    if (!o) return { type: null, value: null };
-    if (typeof o === "string") {
-      if (o.startsWith("data:image/")) return { type: "data", value: o };
-      if (/^https?:\/\//i.test(o)) return { type: "url", value: o };
-    }
-    if (Array.isArray(o) && typeof o[0] === "string") {
-      if (o[0].startsWith("data:image/")) return { type: "data", value: o[0] };
-      if (/^https?:\/\//i.test(o[0])) return { type: "url", value: o[0] };
-    }
-    const candidates = [
-      o?.url,
-      o?.image,
-      o?.image_url,
-      o?.result,
-      o?.output?.[0],
-      o?.images?.[0],
-      o?.data?.[0],
-      o?.[0]?.url,
-      o?.[0]?.image,
-      o?.[0]?.b64_json,
-      o?.[0]?.base64,
-      o?.b64_json,
-      o?.base64,
-    ];
-    for (const c of candidates) {
-      if (!c) continue;
-      if (typeof c === "string") {
-        if (c.startsWith("data:image/")) return { type: "data", value: c };
-        if (/^https?:\/\//i.test(c)) return { type: "url", value: c };
-        if (/^[A-Za-z0-9+/=]+\s*$/.test(c) && c.length > 100) {
-          return { type: "data", value: `data:image/png;base64,${c}` };
-        }
-      }
-    }
-    const s = JSON.stringify(o || "");
-    const m = s.match(/https?:\/\/[^"\s}]+?\.(png|jpg|jpeg)/i);
-    if (m) return { type: "url", value: m[0] };
-    const bm = s.match(/(?:data:image\/[a-zA-Z]+;base64,)[A-Za-z0-9+/=]+/i);
-    if (bm) return { type: "data", value: bm[0] };
-  } catch (e) {
-    // ignore
-  }
-  return { type: null, value: null };
-}
-
-async function fetchImageAsDataUrl(url: string) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch image ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    return `data:image/png;base64,${buf.toString("base64")}`;
-  } catch (e) {
-    console.warn("fetchImageAsDataUrl error:", e);
-    return null;
-  }
-}
-
-/* prompt builders: return strings (explicit SFW + DO NOT copy pixels) */
-function buildInverseMaskPromptForRestyling(): string {
-  return [
-    "Safe-for-work, no gore, no sexual content.",
-    "Recreate the FACE area in Mad Lads cartoon style using the blurred/pixelated reference. DO NOT copy or overlay photographic pixels from the input PFP. Render the face fresh with thick black outlines and flat cel shading so it blends naturally with the Mad Lads body.",
-    "Preserve the original character's linework, pose and accessories. Recolor hat/clothes/background to harmonize with the face palette.",
-    "Change clothing textures subtly to match face undertones. Convert hat color to a complementary hue but keep the hat shape and position.",
-  ].join(" ");
-}
-
-function buildMadLadsPrompt(): { prompt: string; negative: string } {
-  const prompt = `
-2D cartoon NFT character portrait,
-Mad Lads style, thick bold black outlines,
-flat cel shading, vibrant solid colors,
-vintage comic book art, illustrated cartoon style,
-textured retro background, same character from input image but in cartoon style,
-professional NFT artwork, safe for work
-`.trim();
-
-  const negative = `gore, blood, exposed organs, violent, sexual, nudity, disfigured, photorealistic, watermark`.trim();
   return { prompt, negative };
 }
 
-/* POST handler */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const pfpUrl: string | undefined = body?.pfpUrl;
-    const styleUrl: string = body?.styleUrl ?? DEFAULT_STYLE_URL;
-    const forceUseMerged: boolean = !!body?.force_use_merged;
-    const retryWithMergedPreviewFlag: boolean = !!body?.retry_with_merged_preview;
-
-    if (!pfpUrl && !body?.merged_preview && !retryWithMergedPreviewFlag) {
-      return NextResponse.json({ error: "pfpUrl required (or send merged_preview for retry)" }, { status: 400 });
-    }
-    if (!styleUrl) return NextResponse.json({ error: "styleUrl missing and no DEFAULT_STYLE_URL configured" }, { status: 400 });
-
-    const canvasSize = 1024;
-    const faceDiameter = typeof body.faceDiameter === "number" ? body.faceDiameter : 520;
-    const feather = typeof body.feather === "number" ? body.feather : 36;
-    const userPromptStrength = typeof body.prompt_strength === "number" ? body.prompt_strength : undefined;
-
-    const hasCanvas = ensureNapiCanvas();
-
-    let mergedPreviewDataUrl: string | null = null;
-    let maskDataUrl: string | null = null;
-    let usedThumbFactor = 12;
-    let usedInverseMaskFlow = false;
-
-    // if request sends merged_preview directly (retry path), use it and skip rebuild
-    if (body?.merged_preview && retryWithMergedPreviewFlag) {
-      mergedPreviewDataUrl = body.merged_preview;
-      // We cannot reconstruct faceX/faceSize from just the merged dataURL on server easily.
-      // So we'll proceed without mask if merged_preview is provided but no mask: let server call replicate with just merged_preview (no mask).
-      maskDataUrl = null;
-      usedInverseMaskFlow = false;
-    } else if (hasCanvas && pfpUrl) {
-      try {
-        const faceCanvas = await createFeatheredFaceCanvas(pfpUrl, faceDiameter, feather, usedThumbFactor);
-        const merged = await mergeStyleWithFace(styleUrl, faceCanvas, { canvasSize });
-        mergedPreviewDataUrl = merged.dataUrl;
-        maskDataUrl = createInverseMaskDataUrlForChangeFace(canvasSize, merged.faceX, merged.faceY, merged.faceSize, Math.max(20, Math.floor(feather * 0.7)));
-        usedInverseMaskFlow = true;
-      } catch (e) {
-        console.warn("Canvas flow failed (initial):", e);
-        mergedPreviewDataUrl = null;
-        maskDataUrl = null;
-        usedInverseMaskFlow = false;
-      }
+    const fid = body?.fid;
+    const pfpUrl = body?.pfpUrl;
+    
+    let selectedBackground: string | undefined;
+    
+    if (fid && typeof fid === 'number') {
+      selectedBackground = getPersonalizedBackground(fid);
+      console.log("✅ Using FID-based background:", selectedBackground);
     }
 
-    const modelVersion = "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b";
-
-    async function callReplicate(payload: any) {
-      console.log("Calling replicate with keys:", Object.keys(payload));
-      const out = await replicate.run(modelVersion, { input: payload });
-      console.log("Replicate raw output (truncated):", JSON.stringify(out).slice(0, 1200));
-      return out;
+    if (!process.env.REPLICATE_API_TOKEN) {
+      return NextResponse.json(
+        { error: "Missing REPLICATE_API_TOKEN" },
+        { status: 500 }
+      );
     }
 
-    // build initial input
-    let inputPayload: any = {};
-    let promptText = "";
-    let negativeText = "";
+    const { prompt, negative } = buildPrompt(selectedBackground);
+    console.log("🎨 Generating Mad Lads Style NFT with Reference Image...");
 
-    if (usedInverseMaskFlow && mergedPreviewDataUrl && maskDataUrl) {
-      promptText = buildInverseMaskPromptForRestyling();
-      negativeText = "gore, blood, exposed organs, violent, sexual, nudity, disfigured, photorealactic, do not paste photographic pixels";
-      inputPayload = {
-        image: mergedPreviewDataUrl,
-        mask: maskDataUrl,
-        prompt: promptText,
-        negative_prompt: negativeText,
-        prompt_strength: typeof userPromptStrength === "number" ? userPromptStrength : 0.7,
-        num_inference_steps: typeof body.num_inference_steps === "number" ? body.num_inference_steps : 50,
-        width: canvasSize,
-        height: canvasSize,
-        guidance_scale: typeof body.guidance_scale === "number" ? body.guidance_scale : 8.5,
-        scheduler: "K_EULER_ANCESTRAL",
-      };
-    } else {
-      // fallback: send pfpUrl directly with MadLads prompt (or merged_preview if provided but no mask)
-      const p = buildMadLadsPrompt();
-      promptText = p.prompt;
-      negativeText = p.negative;
-      const imageToSend = mergedPreviewDataUrl ?? pfpUrl ?? body.merged_preview;
-      inputPayload = {
-        image: imageToSend,
-        prompt: promptText,
-        negative_prompt: negativeText,
-        prompt_strength: typeof userPromptStrength === "number" ? userPromptStrength : 0.5,
-        num_inference_steps: typeof body.num_inference_steps === "number" ? body.num_inference_steps : 50,
-        width: canvasSize,
-        height: canvasSize,
-        guidance_scale: typeof body.guidance_scale === "number" ? body.guidance_scale : 9.0,
-        scheduler: "K_EULER_ANCESTRAL",
-      };
-    }
-
-    // attempt call + retry strategy
-    let output: any = null;
-    let finalDataUrl: string | null = null;
-    let triedRetry = false;
-
-    try {
-      output = await callReplicate(inputPayload);
-    } catch (err: any) {
-      console.warn("Replicate initial call failed:", err?.message ?? err);
-      // allow retry
-      triedRetry = true;
-    }
-
-    // try to extract final image from output if any
-    if (output) {
-      const cand = tryExtractImageVariant(output) || tryExtractImageVariant(output?.output) || tryExtractImageVariant(Array.isArray(output) ? output[0] : null);
-      if (cand && cand.type === "data" && cand.value) {
-        finalDataUrl = cand.value;
-      } else if (cand && cand.type === "url" && cand.value) {
-        finalDataUrl = await fetchImageAsDataUrl(cand.value);
-      } else {
-        const sOut = JSON.stringify(output || "");
-        if ((/nsfw|safety|blocked|forbidden|refused/i).test(sOut)) triedRetry = true;
-      }
-    }
-
-    // RETRY: if no final image and we flagged retry (or triedRetry triggered), do one retry with stronger blur or weaker prompt_strength
-    if (!finalDataUrl && triedRetry) {
-      try {
-        if (hasCanvas && pfpUrl) {
-          usedThumbFactor = 20; // stronger blur
-          const faceCanvasRetry = await createFeatheredFaceCanvas(pfpUrl, faceDiameter, feather, usedThumbFactor);
-          const mergedRetry = await mergeStyleWithFace(styleUrl, faceCanvasRetry, { canvasSize });
-          mergedPreviewDataUrl = mergedRetry.dataUrl;
-          maskDataUrl = createInverseMaskDataUrlForChangeFace(canvasSize, mergedRetry.faceX, mergedRetry.faceY, mergedRetry.faceSize, Math.max(20, Math.floor(feather * 0.7)));
-          usedInverseMaskFlow = true;
-
-          promptText = buildInverseMaskPromptForRestyling();
-          negativeText = "gore, blood, exposed organs, violent, sexual, nudity, disfigured, photorealactic, do not paste photographic pixels";
-          inputPayload = {
-            image: mergedPreviewDataUrl,
-            mask: maskDataUrl,
-            prompt: promptText,
-            negative_prompt: negativeText,
-            prompt_strength: typeof userPromptStrength === "number" ? Math.min(userPromptStrength, 0.45) : 0.45,
-            num_inference_steps: typeof body.num_inference_steps === "number" ? body.num_inference_steps : 45,
-            width: canvasSize,
-            height: canvasSize,
-            guidance_scale: typeof body.guidance_scale === "number" ? body.guidance_scale : 7.5,
-            scheduler: "K_EULER_ANCESTRAL",
-          };
-        } else {
-          const p = buildMadLadsPrompt();
-          promptText = p.prompt;
-          negativeText = p.negative + ", do not paste photographic pixels";
-          inputPayload = {
-            image: pfpUrl,
-            prompt: promptText,
-            negative_prompt: negativeText,
-            prompt_strength: typeof userPromptStrength === "number" ? Math.min(userPromptStrength, 0.45) : 0.45,
-            num_inference_steps: typeof body.num_inference_steps === "number" ? body.num_inference_steps : 45,
-            width: canvasSize,
-            height: canvasSize,
-            guidance_scale: typeof body.guidance_scale === "number" ? body.guidance_scale : 7.5,
-            scheduler: "K_EULER_ANCESTRAL",
-          };
+    // 🔥 USE REFERENCE IMAGE FOR STYLE
+    const output: any = await replicate.run(
+      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+      {
+        input: {
+          image: STYLE_REFERENCE_URL,  // 🔥 This is the reference image!
+          prompt: prompt,
+          negative_prompt: negative,
+          prompt_strength: 0.60,  // 🔥 Lower = follows reference style MORE closely
+          num_inference_steps: 50,
+          width: 1024,
+          height: 1024,
+          guidance_scale: 7.5,
+          scheduler: "K_EULER_ANCESTRAL",
         }
-
-        const outRetry = await callReplicate(inputPayload);
-        output = outRetry;
-        const v2 = tryExtractImageVariant(output) || tryExtractImageVariant(output?.output) || tryExtractImageVariant(Array.isArray(output) ? output[0] : null);
-        if (v2 && v2.type === "data" && v2.value) {
-          finalDataUrl = v2.value;
-        } else if (v2 && v2.type === "url" && v2.value) {
-          finalDataUrl = await fetchImageAsDataUrl(v2.value);
-        } else {
-          try {
-            const s = JSON.stringify(output || "");
-            const m = s.match(/https?:\/\/[^"\s}]+?\.(png|jpg|jpeg)/i);
-            if (m) finalDataUrl = await fetchImageAsDataUrl(m[0]);
-          } catch (e) { /* ignore */ }
-        }
-      } catch (e) {
-        console.warn("Retry failed:", e);
       }
+    );
+
+    const imageUrl = Array.isArray(output) ? output[0] : output;
+
+    if (!imageUrl) {
+      return NextResponse.json({ error: "No image generated" }, { status: 500 });
     }
 
-    // if user asked to force use merged_preview (convenience), set finalDataUrl to mergedPreview
-    if (!finalDataUrl && forceUseMerged && mergedPreviewDataUrl) {
-      finalDataUrl = mergedPreviewDataUrl;
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      return NextResponse.json(
+        { error: `Failed to fetch generated image: ${imageResponse.status}` },
+        { status: 502 }
+      );
     }
+
+    const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
+    const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
 
     return NextResponse.json({
-      ok: true,
-      merged_preview: mergedPreviewDataUrl,
-      replicate_output: output,
-      final_image_data_url: finalDataUrl,
-      debug: {
-        usedInverseMaskFlow,
-        usedThumbFactor,
-        prompt_used: promptText,
-      },
+      generated_image_url: dataUrl,
+      imageUrl: dataUrl,
+      success: true
     });
-  } catch (err: any) {
-    console.error("generate-art error:", err);
-    return NextResponse.json({ error: err?.message ?? String(err) }, { status: 500 });
+  } catch (e: any) {
+    console.error("Route error:", e);
+    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
