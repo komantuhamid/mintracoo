@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
-		  image: STYLE_REFERENCE_URL,  // 🔥 This is the reference image!
+		  image2: STYLE_REFERENCE_URL,  // 🔥 This is the reference image!
           image: pfpUrl, // goblin character from PFP
           prompt: prompt, // Mad Lads style keywords
           negative_prompt: negative,
