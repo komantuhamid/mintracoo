@@ -10,33 +10,38 @@ const replicate = new Replicate({
 const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 
 function buildPrompt() {
-  // 🔥 SUPER STRONG Mad Lads style prompt
-const EXPRESSIONS = [
-  "angry scowling", "evil grinning maniacally",
-  "grumpy frowning", "crazy laughing wild",
-  "sneaky smirking", "confused dumb",
-  "aggressive menacing", "proud confident",
-  "surprised shocked wide-eyed", "sleepy tired yawning",
-  "excited happy beaming", "nervous sweating worried",
-  "silly goofy derpy", "cool relaxed chill",
-  "mischievous plotting devious"
-];
-const expression = EXPRESSIONS[Math.floor(Math.random() * EXPRESSIONS.length)];
-const prompt = `
-fat goblin NFT, big ears, ${expression}, clear visible hands, clear visible legs, 
-well-defined arms and feet, standing, cartoon style, bold outlines, 
-chubby body, super cute proportions, crisp clean shape, unique collectible art
+  // 🔥 Expression variety
+  const EXPRESSIONS = [
+    "angry scowling", "evil grinning maniacally",
+    "grumpy frowning", "crazy laughing wild",
+    "sneaky smirking", "confused dumb looking",
+    "aggressive menacing", "proud confident",
+    "surprised shocked wide-eyed", "sleepy tired yawning",
+    "excited happy beaming", "nervous sweating worried",
+    "silly goofy derpy", "cool relaxed chill",
+    "mischievous plotting devious"
+  ];
+  
+  const expression = EXPRESSIONS[Math.floor(Math.random() * EXPRESSIONS.length)];
+
+  // ✅ CLEAN, PRO PROMPT
+  const prompt = `
+professional NFT character portrait, fat goblin, big pointed ears, ${expression},
+cartoon style, thick bold black outlines, flat cel shading, vibrant solid colors,
+clear visible hands with 5 fingers, clear visible feet, well-proportioned chubby body,
+standing centered, high quality digital art, crisp clean lines, no background clutter,
+collectible PFP artwork, sticker style, unique character design
 `.trim();
 
-
-
-
-
-const negative = `
-realistic, 3D, photographic, detailed background, boring, many characters, 
-legs, text, watermark, blurry, nsfw, nude, full body, photo, plain
+  // ✅ STRONG NEGATIVE (blocks all the bad stuff)
+  const negative = `
+realistic, photorealistic, 3D render, photograph, blurry, low quality,
+cropped, cut off body, missing hands, missing legs, missing limbs, extra limbs,
+fused limbs, body glitches, anatomical errors, distorted face, melted shapes,
+multiple characters, watermark, text, signature, nsfw, nude, explicit,
+complex background, detailed background, gradient shading, soft lighting,
+hyperrealistic, smooth cartoon, anime style, plain boring
 `.trim();
-
 
   return { prompt, negative };
 }
@@ -56,22 +61,23 @@ export async function POST(req: NextRequest) {
     console.log("🎨 Generating Mad Lads style NFT from PFP...");
     console.log("PFP URL:", pfpUrl);
 
-    const output: any = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-      {
-        input: {
-          image: pfpUrl, // goblin character from PFP
-          prompt: prompt, // Mad Lads style keywords
-          negative_prompt: negative,
-          prompt_strength: 0.60, // 🔥 higher = more style, less realism
-          num_inference_steps: 50,
-          width: 1024,
-          height: 1024,
-          guidance_scale: 8.0, // 🔥 stronger adherence to prompt
-          scheduler: "K_EULER_ANCESTRAL",
-        }
-      }
-    );
+const output: any = await replicate.run(
+  "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+  {
+    input: {
+      image: pfpUrl,
+      prompt: prompt,
+      negative_prompt: negative,
+      prompt_strength: 0.75,        // ⬆️ slightly higher for better style adherence
+      num_inference_steps: 80,      // ⬆️ more steps = cleaner results
+      width: 1024,
+      height: 1024,
+      guidance_scale: 10,          // ⬆️ stronger prompt following
+      scheduler: "K_EULER_ANCESTRAL",
+    }
+  }
+);
+
 
     const imageUrl = Array.isArray(output) ? output[0] : output;
     if (!imageUrl) {
