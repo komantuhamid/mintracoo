@@ -11,26 +11,36 @@ const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 
 function buildPrompt() {
   // 🔥 SUPER STRONG Mad Lads style prompt
-  const prompt = `
-2D cartoon NFT character portrait, 
-Mad Lads style, thick bold black outlines, 
-flat cel shading, vibrant solid colors, 
-vintage comic book art, illustrated cartoon style, 
-textured retro background, no realistic details, 
-same character from input image but in cartoon style, 
-professional NFT artwork, safe for work
+const EXPRESSIONS = [
+  "angry scowling", "evil grinning maniacally",
+  "grumpy frowning", "crazy laughing wild",
+  "sneaky smirking", "confused dumb",
+  "aggressive menacing", "proud confident",
+  "surprised shocked wide-eyed", "sleepy tired yawning",
+  "excited happy beaming", "nervous sweating worried",
+  "silly goofy derpy", "cool relaxed chill",
+  "mischievous plotting devious"
+];
+const expression = EXPRESSIONS[Math.floor(Math.random() * EXPRESSIONS.length)];
+const prompt = `
+fat goblin NFT, big ears, ${expression}, clear visible hands, clear visible legs, 
+well-defined arms and feet, standing, cartoon style, bold outlines, 
+chubby body, super cute proportions, crisp clean shape, unique collectible art
 `.trim();
 
-  const negative = `
-realistic, 3D render, photorealistic, detailed shading, 
-soft lighting, gradient shading, hyperrealistic, 
-photograph, blurry, nsfw, nude, explicit, 
-watermark, text, multiple people, hands, full body, 
-plain background, smooth cartoon, anime
+
+
+
+
+const negative = `
+realistic, 3D, photographic, detailed background, boring, many characters, 
+legs, text, watermark, blurry, nsfw, nude, full body, photo, plain
 `.trim();
+
 
   return { prompt, negative };
 }
+
 
 export async function POST(req: NextRequest) {
   try {
