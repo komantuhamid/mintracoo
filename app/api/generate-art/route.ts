@@ -3,21 +3,20 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 
-// Replace this with an actual color extraction function for real production
-async function extractDominantColor(pfpUrl: string) {
-  // Basic mock: use filename keywords as color, or fallback color
-  const keywords = ["blue", "red", "gold", "green", "pink", "black", "purple", "orange"];
-  const match = keywords.find((k) => pfpUrl?.toLowerCase()?.includes(k));
+// 🚩 Replace this mock with actual color extraction for production usage
+async function extractColorFromPfp(pfpUrl: string) {
+  const keywords = ["blue", "red", "gold", "green", "purple", "pink", "yellow", "orange"];
+  const match = keywords.find((word) => pfpUrl?.toLowerCase()?.includes(word));
   return match || "random color";
 }
 
 function buildPrompt(mainColor: string) {
   const prompt = `
-Mad Lads NFT, human portrait, head and shoulders, thick bold outlines, flat cel-shading, vibrant ${mainColor} color palette, random stylish outfit (jacket, hat, tie, hoodie), clean textured background, cartoon style, no monster, no animal, male or female human, professional NFT art, safe for work
+Mad Lads NFT, human portrait only, head and shoulders, thick black outline, flat cel-shading, vibrant ${mainColor} color palette, stylish modern outfit (hoodie, jacket, baseball cap, sunglasses), textured vintage background, cartoon, by <your artist>
 `.trim();
 
   const negative = `
-monster, goblin, beast, animal, non-human, exaggerated teeth, multiple eyes, creature, photorealistic, 3d, nsfw, watermark, text, hands, full body, puppet, muppet, round blob
+monster, goblin, beast, animal, animal ears, muppet, puppet, round blob, photo, photorealistic, nsfw, 3d, watermark, fantasy, full body
 `.trim();
 
   return { prompt, negative };
@@ -31,20 +30,19 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const pfpUrl = body?.pfpUrl;
-
-    const mainColor = await extractDominantColor(pfpUrl);
+    const mainColor = await extractColorFromPfp(pfpUrl);
 
     const { prompt, negative } = buildPrompt(mainColor);
 
     const output: any = await replicate.run(
-      "stability-ai/sdxl:latest",
+      "stability-ai/sdxl:latest", // Or the current official SDXL version
       {
         input: {
           prompt: prompt,
           negative_prompt: negative,
           width: 1024,
           height: 1024,
-          num_inference_steps: 50,
+          num_inference_steps: 40,
           guidance_scale: 8.0,
         }
       }
