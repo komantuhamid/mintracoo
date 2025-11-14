@@ -1,8 +1,7 @@
 // app/api/generate-art/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
-import { createCanvas, loadImage } from "@napi-rs/canvas";
-
+// note: do NOT import @napi-rs/canvas at top-level to avoid webpack bundling .node binaries
 
 export const runtime = "nodejs";
 
@@ -12,8 +11,18 @@ const replicate = new Replicate({
 
 const DEFAULT_STYLE_URL = process.env.STYLE_REFERENCE_URL ?? "";
 
-/* ---------- helper: create feathered face canvas (circle) ---------- */
-async function createFeatheredFaceCanvas(pfpUrl: string, faceDiameter: number, feather: number): Promise<Canvas> {
+/* ---------- NOTE ----------
+ We declare placeholders for createCanvas/loadImage and types as `any`.
+ They will be assigned at runtime inside the POST handler using require().
+ This prevents Webpack from trying to parse .node binaries at build time.
+------------------------------*/
+let createCanvas: any = null;
+let loadImage: any = null;
+
+/* ---------- helper: create feathered face canvas (circle) ----------
+   Uses createCanvas & loadImage variables (assigned at runtime)
+--------------------------------------------------------------------*/
+async function createFeatheredFaceCanvas(pfpUrl: string, faceDiameter: number, feather: number): Promise<any> {
   const pfpImg = await loadImage(pfpUrl);
   const size = Math.ceil(faceDiameter + feather * 2);
   const canvas = createCanvas(size, size);
@@ -46,7 +55,7 @@ async function createFeatheredFaceCanvas(pfpUrl: string, faceDiameter: number, f
 }
 
 /* ---------- helper: merge style (MadLads) + faceCanvas ---------- */
-async function mergeStyleWithFace(styleUrl: string, faceCanvas: Canvas, opts?: { canvasSize?: number; faceX?: number; faceY?: number; }) {
+async function mergeStyleWithFace(styleUrl: string, faceCanvas: any, opts?: { canvasSize?: number; faceX?: number; faceY?: number; }) {
   const size = opts?.canvasSize ?? 1024;
   const canvas = createCanvas(size, size);
   const ctx = canvas.getContext("2d");
@@ -122,6 +131,12 @@ function createInverseMaskDataUrl(canvasSize: number, faceX: number, faceY: numb
 /* ---------- POST handler ---------- */
 export async function POST(req: NextRequest) {
   try {
+    // runtime require: ensure @napi-rs/canvas is required at server runtime (not bundled)
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const napiCanvas = require('@napi-rs/canvas');
+    createCanvas = napiCanvas.createCanvas;
+    loadImage = napiCanvas.loadImage;
+
     const body = await req.json();
 
     const pfpUrl: string = body.pfpUrl;
