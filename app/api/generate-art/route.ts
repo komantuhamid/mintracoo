@@ -3,62 +3,49 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN || "",
-});
+// Replace this with an actual color extraction function for real production
+async function extractDominantColor(pfpUrl: string) {
+  // Basic mock: use filename keywords as color, or fallback color
+  const keywords = ["blue", "red", "gold", "green", "pink", "black", "purple", "orange"];
+  const match = keywords.find((k) => pfpUrl?.toLowerCase()?.includes(k));
+  return match || "random color";
+}
 
-const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
-
-function buildPrompt() {
-  // 🔥 SUPER STRONG Mad Lads style prompt
+function buildPrompt(mainColor: string) {
   const prompt = `
-2D cartoon NFT character portrait, 
-Mad Lads style, thick bold black outlines, 
-flat cel shading, vibrant solid colors, 
-vintage comic book art, illustrated cartoon style, 
-textured retro background, no realistic details, 
-same character from input image but in cartoon style, 
-professional NFT artwork, safe for work
+Mad Lads NFT, human portrait, head and shoulders, thick bold outlines, flat cel-shading, vibrant ${mainColor} color palette, random stylish outfit (jacket, hat, tie, hoodie), clean textured background, cartoon style, no monster, no animal, male or female human, professional NFT art, safe for work
 `.trim();
 
   const negative = `
-realistic, 3D render, photorealistic, detailed shading, 
-soft lighting, gradient shading, hyperrealistic, 
-photograph, blurry, nsfw, nude, explicit, 
-watermark, text, multiple people, hands, full body, 
-plain background, smooth cartoon, anime
+monster, goblin, beast, animal, non-human, exaggerated teeth, multiple eyes, creature, photorealistic, 3d, nsfw, watermark, text, hands, full body, puppet, muppet, round blob
 `.trim();
 
   return { prompt, negative };
 }
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN || "",
+});
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const pfpUrl = body?.pfpUrl;
 
-    if (!pfpUrl) {
-      return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
-    }
+    const mainColor = await extractDominantColor(pfpUrl);
 
-    const { prompt, negative } = buildPrompt();
-
-    console.log("🎨 Generating Mad Lads style NFT from PFP...");
-    console.log("PFP URL:", pfpUrl);
+    const { prompt, negative } = buildPrompt(mainColor);
 
     const output: any = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+      "stability-ai/sdxl:latest",
       {
         input: {
-          image: pfpUrl, // goblin character from PFP
-          prompt: prompt, // Mad Lads style keywords
+          prompt: prompt,
           negative_prompt: negative,
-          prompt_strength: 0.60, // 🔥 higher = more style, less realism
-          num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 8.0, // 🔥 stronger adherence to prompt
-          scheduler: "K_EULER_ANCESTRAL",
+          num_inference_steps: 50,
+          guidance_scale: 8.0,
         }
       }
     );
@@ -78,7 +65,6 @@ export async function POST(req: NextRequest) {
 
     const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
-
     return NextResponse.json({
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
