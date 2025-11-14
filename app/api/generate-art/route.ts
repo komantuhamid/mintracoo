@@ -11,11 +11,12 @@ const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 
 function buildPrompt() {
   // 🔥 SUPER STRONG Mad Lads style prompt
-const negative = `
-realistic, photorealistic, blurry, low quality, cropped, cut off, 
-missing hands, missing legs, cut-off body parts, extra limbs, body glitches, 
-fused limbs, anatomical errors, multiple characters, watermark, text, nsfw
+const prompt = `
+fat goblin NFT PFP, big ears, clear visible hands, clear visible legs, 
+well-defined arms and feet, standing, cartoon style, bold outlines, 
+chubby body, super cute proportions, crisp clean shape, unique collectible art
 `.trim();
+
 
 
 
