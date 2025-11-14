@@ -11,8 +11,19 @@ const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 
 function buildPrompt() {
   // 🔥 SUPER STRONG Mad Lads style prompt
+const EXPRESSIONS = [
+  "angry scowling", "evil grinning maniacally",
+  "grumpy frowning", "crazy laughing wild",
+  "sneaky smirking", "confused dumb",
+  "aggressive menacing", "proud confident",
+  "surprised shocked wide-eyed", "sleepy tired yawning",
+  "excited happy beaming", "nervous sweating worried",
+  "silly goofy derpy", "cool relaxed chill",
+  "mischievous plotting devious"
+];
+const expression = EXPRESSIONS[Math.floor(Math.random() * EXPRESSIONS.length)];
 const prompt = `
-fat goblin NFT PFP, big ears, clear visible hands, clear visible legs, 
+fat goblin NFT, big ears, ${expression}, clear visible hands, clear visible legs, 
 well-defined arms and feet, standing, cartoon style, bold outlines, 
 chubby body, super cute proportions, crisp clean shape, unique collectible art
 `.trim();
