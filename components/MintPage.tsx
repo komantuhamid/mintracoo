@@ -1,4 +1,3 @@
-// components/MintPage.tsx
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -6,8 +5,10 @@ import { parseAbi, encodeFunctionData, parseEther } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
 import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
+// ✅ YOUR CONTRACT ADDRESS
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
 
+// ✅ CORRECT ABI FOR YOUR NEW CONTRACT
 const MINT_ABI = parseAbi([
   'function mint(string memory tokenURI_) payable',
 ]);
@@ -22,7 +23,7 @@ export default function MintPage() {
   });
 
   const [profile, setProfile] = useState<any>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isAppReady, setIsAppReady] = useState(false);
@@ -66,7 +67,7 @@ export default function MintPage() {
         const fid = context?.user?.fid;
         const username = context?.user?.username;
         const pfpUrl = context?.user?.pfpUrl;
-
+        
         if (fid) {
           setProfile({
             display_name: username || '',
@@ -98,97 +99,20 @@ export default function MintPage() {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pfpUrl: profile?.pfp_url,
-          styleUrl: undefined, // use default
+        body: JSON.stringify({ 
+          style: 'pixel raccoon',
+          pfpUrl: profile?.pfp_url  // ✅ ADD THIS - send the actual PFP image
         }),
       });
       const j = await res.json();
-      if (!res.ok) {
-        if (j?.merged_preview) {
-          setGeneratedImage(j.merged_preview);
-          window.localStorage.setItem('last_merged_preview', j.merged_preview);
-          setMessage("⚠️ Server didn't return final image. Saved merged preview — press Retry (use preview) to retry or accept.");
-        } else {
-          throw new Error(j?.error || 'Failed');
-        }
-        setLoading(false);
-        return;
-      }
-
-      // prefer final image
-      const final = j.final_image_data_url || j.generated_image_url || j.imageUrl;
-      if (final) {
-        setGeneratedImage(final);
-        window.localStorage.removeItem('last_merged_preview');
-        setMessage('✅ Ready to mint!');
-        setLoading(false);
-        return;
-      }
-
-      // fallback to merged preview
-      if (j.merged_preview) {
-        setGeneratedImage(j.merged_preview);
-        window.localStorage.setItem('last_merged_preview', j.merged_preview);
-        setMessage("⚠️ Model didn't return final image — saved merged preview. Press Retry (use preview) to retry.");
-        setLoading(false);
-        return;
-      }
-
-      throw new Error('No final image produced by model.');
+      if (!res.ok) throw new Error(j?.error || 'Failed');
+      setGeneratedImage(j.generated_image_url || j.imageUrl);
+      setMessage('✅ Ready to mint!');
     } catch (e: any) {
-      setMessage(`❌ ${e?.message || 'Failed'}`);
+      setMessage(`❌ ${e?.message}`);
     } finally {
       setLoading(false);
     }
-  };
-
-  const retryWithMergedPreview = async () => {
-    const merged = window.localStorage.getItem('last_merged_preview');
-    if (!merged) return setMessage('No merged preview saved to retry.');
-    setLoading(true);
-    setMessage('🔁 Retrying using merged preview...');
-    try {
-      const res = await fetch('/api/generate-art', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          merged_preview: merged,
-          retry_with_merged_preview: true,
-        }),
-      });
-      const j = await res.json();
-      if (!res.ok) {
-        throw new Error(j?.error || 'Retry failed');
-      }
-      const final = j.final_image_data_url || j.generated_image_url || j.imageUrl;
-      if (final) {
-        setGeneratedImage(final);
-        window.localStorage.removeItem('last_merged_preview');
-        setMessage('✅ Ready to mint!');
-        setLoading(false);
-        return;
-      }
-      // If still no final, keep merged preview shown
-      if (j.merged_preview) {
-        setGeneratedImage(j.merged_preview);
-        setMessage("⚠️ Retry didn't produce final image. You can accept merged preview (use Force) or try again.");
-      } else {
-        setMessage('❌ Retry did not produce a final image.');
-      }
-    } catch (e: any) {
-      setMessage(`❌ ${e?.message || 'Retry error'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const acceptMergedAsFinalAndMint = async () => {
-    const merged = window.localStorage.getItem('last_merged_preview') || generatedImage;
-    if (!merged) return setMessage('No image to use for mint');
-    setGeneratedImage(merged);
-    setMessage('✅ Using preview as final image. Ready to mint.');
-    window.localStorage.removeItem('last_merged_preview');
   };
 
   const performMint = async () => {
@@ -211,6 +135,7 @@ export default function MintPage() {
       const uploadData = await uploadRes.json();
       if (uploadData.error) throw new Error(uploadData.error);
       const { metadataUri } = uploadData;
+      console.log('✅ Metadata URI:', metadataUri);
       setMessage('🔐 Confirm in wallet...');
 
       const data = encodeFunctionData({
@@ -218,6 +143,7 @@ export default function MintPage() {
         functionName: 'mint',
         args: [metadataUri],
       });
+      console.log('✅ Encoded data:', data);
 
       sendTransaction({
         to: CONTRACT_ADDRESS,
@@ -238,10 +164,28 @@ export default function MintPage() {
           🦝 Goblin Mint
         </h1>
 
+        {/* User Profile Section */}
         {profile && (
-          <div style={{ background: '#334155', borderRadius: '12px', padding: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ 
+            background: '#334155', 
+            borderRadius: '12px', 
+            padding: '16px', 
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
             {profile.pfp_url && (
-              <img src={profile.pfp_url} alt="Profile" style={{ width: '50px', height: '50px', borderRadius: '50%', border: '2px solid #10b981' }} />
+              <img 
+                src={profile.pfp_url} 
+                alt="Profile" 
+                style={{ 
+                  width: '50px', 
+                  height: '50px', 
+                  borderRadius: '50%',
+                  border: '2px solid #10b981'
+                }} 
+              />
             )}
             <div style={{ flex: 1 }}>
               <div style={{ color: '#fff', fontWeight: '600', fontSize: '16px' }}>
@@ -262,20 +206,19 @@ export default function MintPage() {
           )}
         </div>
 
-        <button onClick={generateRaccoon} disabled={loading} style={{ width: '100%', padding: '14px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' }}>
+        <button
+          onClick={generateRaccoon}
+          disabled={loading}
+          style={{ width: '100%', padding: '14px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' }}
+        >
           {loading ? '⏳ Generating...' : '🎨 Generate Goblin'}
         </button>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-          <button onClick={retryWithMergedPreview} disabled={loading} style={{ flex: 1, padding: '10px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
-            🔁 Retry (use preview)
-          </button>
-          <button onClick={acceptMergedAsFinalAndMint} disabled={loading} style={{ padding: '10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
-            ✅ Accept preview
-          </button>
-        </div>
-
-        <button onClick={performMint} disabled={!generatedImage || isPending || isConfirming} style={{ width: '100%', padding: '14px', background: !generatedImage ? '#475569' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: generatedImage ? 'pointer' : 'not-allowed', opacity: !generatedImage ? 0.5 : 1 }}>
+        <button
+          onClick={performMint}
+          disabled={!generatedImage || isPending || isConfirming}
+          style={{ width: '100%', padding: '14px', background: !generatedImage ? '#475569' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: generatedImage ? 'pointer' : 'not-allowed', opacity: !generatedImage ? 0.5 : 1 }}
+        >
           {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
         </button>
 
@@ -287,7 +230,7 @@ export default function MintPage() {
 
         {txHash && (
           <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
-            TX: {String(txHash).slice(0, 10)}...{String(txHash).slice(-8)}
+            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </div>
         )}
       </div>
