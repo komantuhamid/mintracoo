@@ -19,11 +19,13 @@ export default function MintPage() {
   const { disconnect } = useDisconnect();
   const { sendTransaction, isPending, data: txHash } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
+    hash: txHash as any,
   });
 
   const [profile, setProfile] = useState<any>(null);
-  const [generatedImage, setGeneratedImage] = useState<any>(null);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null); // will hold data:image/... or null
+  const [mergedPreview, setMergedPreview] = useState<string | null>(null); // instant preview from server
+  const [replicateOutput, setReplicateOutput] = useState<any>(null); // debug info
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isAppReady, setIsAppReady] = useState(false);
@@ -67,7 +69,7 @@ export default function MintPage() {
         const fid = context?.user?.fid;
         const username = context?.user?.username;
         const pfpUrl = context?.user?.pfpUrl;
-        
+
         if (fid) {
           setProfile({
             display_name: username || '',
@@ -92,25 +94,118 @@ export default function MintPage() {
     }
   }, [isPending, isConfirming, isConfirmed]);
 
+  // helper: try to fetch a remote image URL and convert to data URL (browser-friendly)
+  async function fetchUrlToDataUrl(url: string) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`Fetch failed ${r.status}`);
+      const blob = await r.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result));
+        fr.onerror = (e) => reject(e);
+        fr.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.warn('fetchUrlToDataUrl error', e);
+      return null;
+    }
+  }
+
+  // polling helper: if replicate_output contains a URL, try fetching it few times
+  async function tryPollForImage(replOut: any, retries = 6, delayMs = 1500) {
+    try {
+      const s = JSON.stringify(replOut || '');
+      const m = s.match(/https?:\/\/[^"\s}]+?\.(png|jpg|jpeg)/i);
+      if (!m) return null;
+      const url = m[0];
+      for (let i = 0; i < retries; i++) {
+        const dataUrl = await fetchUrlToDataUrl(url);
+        if (dataUrl) return dataUrl;
+        // wait before next try
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('🎨 Generating personalized Goblin...');
+    setGeneratedImage(null);
+    setMergedPreview(null);
+    setReplicateOutput(null);
+
     try {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          style: 'pixel raccoon',
-          pfpUrl: profile?.pfp_url  // ✅ ADD THIS - send the actual PFP image
+        body: JSON.stringify({
+          styleUrl: undefined, // optional: use default; or set custom style URL string
+          pfpUrl: profile?.pfp_url,
         }),
       });
       const j = await res.json();
-      if (!res.ok) throw new Error(j?.error || 'Failed');
-      setGeneratedImage(j.generated_image_url || j.imageUrl);
-      setMessage('✅ Ready to mint!');
+
+      if (!res.ok) {
+        console.error('generate error', j);
+        setMessage(`❌ ${j?.error || 'Generation failed'}`);
+        setLoading(false);
+        return;
+      }
+
+      // debug store
+      setReplicateOutput(j.replicate_output ?? j);
+
+      // merged preview (instant) — display it while final arrives
+      if (j.merged_preview) {
+        setMergedPreview(j.merged_preview);
+        setGeneratedImage(j.merged_preview); // show preview immediately
+      }
+
+      // if server already returned final data url -> use it
+      if (j.final_image_data_url) {
+        setGeneratedImage(j.final_image_data_url);
+        setMessage('✅ Ready to mint!');
+        setLoading(false);
+        return;
+      }
+
+      // otherwise try to poll for a remote URL inside replicate_output
+      const polled = await tryPollForImage(j.replicate_output ?? j);
+      if (polled) {
+        setGeneratedImage(polled);
+        setMessage('✅ Ready to mint!');
+        setLoading(false);
+        return;
+      }
+
+      // fallback: sometimes replicate_output itself contains direct url string(s)
+      // attempt one more extraction from replicate_output
+      try {
+        const s = JSON.stringify(j.replicate_output || '');
+        const m = s.match(/https?:\/\/[^"\s}]+?\.(png|jpg|jpeg)/i);
+        if (m?.[0]) {
+          const d = await fetchUrlToDataUrl(m[0]);
+          if (d) {
+            setGeneratedImage(d);
+            setMessage('✅ Ready to mint!');
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // if we reach here, we have a merged preview but no final image yet
+      setMessage('✅ Preview ready. Final image pending (check debug output).');
+      setLoading(false);
     } catch (e: any) {
-      setMessage(`❌ ${e?.message}`);
-    } finally {
+      console.error('generateRaccoon error', e);
+      setMessage(`❌ ${e?.message || 'Failed to generate'}`);
       setLoading(false);
     }
   };
@@ -166,25 +261,25 @@ export default function MintPage() {
 
         {/* User Profile Section */}
         {profile && (
-          <div style={{ 
-            background: '#334155', 
-            borderRadius: '12px', 
-            padding: '16px', 
+          <div style={{
+            background: '#334155',
+            borderRadius: '12px',
+            padding: '16px',
             marginBottom: '20px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px'
           }}>
             {profile.pfp_url && (
-              <img 
-                src={profile.pfp_url} 
-                alt="Profile" 
-                style={{ 
-                  width: '50px', 
-                  height: '50px', 
+              <img
+                src={profile.pfp_url}
+                alt="Profile"
+                style={{
+                  width: '50px',
+                  height: '50px',
                   borderRadius: '50%',
                   border: '2px solid #10b981'
-                }} 
+                }}
               />
             )}
             <div style={{ flex: 1 }}>
@@ -202,7 +297,7 @@ export default function MintPage() {
           {generatedImage ? (
             <img src={generatedImage} alt="Generated" style={{ maxWidth: '100%', borderRadius: '8px' }} />
           ) : (
-            <p style={{ color: '#94a3b8', textAlign: 'center' }}>No image generated</p>
+            <p style={{ color: '#94a3b8', textAlign: 'center' }}>{loading ? 'Generating...' : 'No image generated'}</p>
           )}
         </div>
 
@@ -230,8 +325,16 @@ export default function MintPage() {
 
         {txHash && (
           <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
-            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+            TX: {String(txHash).slice(0, 10)}...{String(txHash).slice(-8)}
           </div>
+        )}
+
+        {/* debug: replicate output (collapse) */}
+        {replicateOutput && (
+          <details style={{ marginTop: 12, color: '#cbd5e1' }}>
+            <summary>Replicate output (debug)</summary>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(replicateOutput, null, 2)}</pre>
+          </details>
         )}
       </div>
     </div>
