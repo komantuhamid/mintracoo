@@ -27,15 +27,15 @@ function buildPrompt() {
   // ✅ CLEAN, PRO PROMPT
 const prompt = `
 professional NFT character portrait, fat goblin, big pointed ears, ${expression},
-full body, centered, standing, takes up most of the frame, not cropped, not zoomed in,
-consistent scale, perfect PFP, bold black outlines, flat shading, unique collectible art
+full body, centered, standing upright, taking up most of the image frame, proportionally scaled,
+not cropped, not too small, not too big, perfect PFP, bold black outlines, crisp lines, flat shading, collectible art,
 `.trim();
 
 const negative = `
-realistic, photorealistic, cropped, cut off, missing limbs, too small, too big,
-zoomed in, zoomed out, off center, character on the side, empty background,
-multiple characters, blurry, watermark, text, nsfw, nude, plain boring, fuzzy details
+cropped, cut off body, cut off feet, cut off head, off center, too small, too large, zoomed in, zoomed out,
+empty space, character to the side, missing limbs, blurry, watermark, text, multiple characters,
 `.trim();
+
 
 
   return { prompt, negative };
