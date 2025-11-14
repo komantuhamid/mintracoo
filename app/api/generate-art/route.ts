@@ -25,23 +25,18 @@ function buildPrompt() {
   const expression = EXPRESSIONS[Math.floor(Math.random() * EXPRESSIONS.length)];
 
   // ✅ CLEAN, PRO PROMPT
-  const prompt = `
+const prompt = `
 professional NFT character portrait, fat goblin, big pointed ears, ${expression},
-cartoon style, thick bold black outlines, flat cel shading, vibrant solid colors,
-clear visible hands with 5 fingers, clear visible feet, well-proportioned chubby body,
-standing centered, high quality digital art, crisp clean lines, no background clutter,
-collectible PFP artwork, sticker style, unique character design
+full body, centered, standing, takes up most of the frame, not cropped, not zoomed in,
+consistent scale, perfect PFP, bold black outlines, flat shading, unique collectible art
 `.trim();
 
-  // ✅ STRONG NEGATIVE (blocks all the bad stuff)
-  const negative = `
-realistic, photorealistic, 3D render, photograph, blurry, low quality,
-cropped, cut off body, missing hands, missing legs, missing limbs, extra limbs,
-fused limbs, body glitches, anatomical errors, distorted face, melted shapes,
-multiple characters, watermark, text, signature, nsfw, nude, explicit,
-complex background, detailed background, gradient shading, soft lighting,
-hyperrealistic, smooth cartoon, anime style, plain boring
+const negative = `
+realistic, photorealistic, cropped, cut off, missing limbs, too small, too big,
+zoomed in, zoomed out, off center, character on the side, empty background,
+multiple characters, blurry, watermark, text, nsfw, nude, plain boring, fuzzy details
 `.trim();
+
 
   return { prompt, negative };
 }
