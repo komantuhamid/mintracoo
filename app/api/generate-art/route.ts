@@ -12,10 +12,11 @@ const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 function buildPrompt() {
   // 🔥 SUPER STRONG Mad Lads style prompt
 const prompt = `
-Degen Goblin NFT, cartoon style, bold lines, comic book texture, 
-centered character, vivid colors, funny goblin face, big expressive eyes, 
-unique PFP, sticker style, simple props, modern NFT collectible art
+Fat goblin NFT character, big ears, cartoon style, bold lines, 
+comic book texture, centered character, vivid colors, unique funny face, 
+PFP, sticker style, simple props, modern NFT collectible art
 `.trim();
+
 
 const negative = `
 realistic, 3D, photographic, detailed background, boring, many characters, 
