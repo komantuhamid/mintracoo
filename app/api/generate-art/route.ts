@@ -63,11 +63,11 @@ const output: any = await replicate.run(
       image: pfpUrl,
       prompt: prompt,
       negative_prompt: negative,
-      prompt_strength: 0.75,        // ⬆️ slightly higher for better style adherence
-      num_inference_steps: 80,      // ⬆️ more steps = cleaner results
+      prompt_strength: 0.65,        // ⬆️ slightly higher for better style adherence
+      num_inference_steps: 60,      // ⬆️ more steps = cleaner results
       width: 1024,
       height: 1024,
-      guidance_scale: 10,          // ⬆️ stronger prompt following
+      guidance_scale: 9.0,          // ⬆️ stronger prompt following
       scheduler: "K_EULER_ANCESTRAL",
     }
   }
