@@ -11,11 +11,13 @@ const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
 
 function buildPrompt() {
   // 🔥 SUPER STRONG Mad Lads style prompt
-const prompt = `
-Fat goblin NFT character, big ears, cartoon style, bold lines, 
-comic book texture, centered character, vivid colors, unique funny face, 
-PFP, sticker style, simple props, modern NFT collectible art
+const negative = `
+realistic, photorealistic, blurry, low quality, cropped, cut off, 
+missing hands, missing legs, cut-off body parts, extra limbs, body glitches, 
+fused limbs, anatomical errors, multiple characters, watermark, text, nsfw
 `.trim();
+
+
 
 
 const negative = `
