@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
           num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 6.0, // 🔥 stronger adherence to prompt
+          guidance_scale: 15, // 🔥 stronger adherence to prompt
           scheduler: "K_EULER_ANCESTRAL",
         }
       }
