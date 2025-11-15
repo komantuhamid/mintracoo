@@ -11,49 +11,17 @@ const GOBLIN_SEED = 42069;
 
 async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promise<Buffer> {
   return await sharp(inputBuffer)
-    .trim()
-    .resize(1024, 1024, {
-      fit: "contain",
-      background: bgColor,
-    })
+    .resize(1024, 1024, { fit: "contain", background: bgColor })
     .png()
     .toBuffer();
 }
 
-/**
- * ✅ AI PFP Check (Softer Prompt)
- */
-async function verifyIsWarpletStyle(userPfpUrl: string): Promise<{isValid: boolean; message: string}> {
-  try {
-    const output: any = await replicate.run(
-      "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
-      {
-        input: {
-          image: userPfpUrl,
-          prompt: `
-Look at this image. Does it look like a Warplet NFT PFP?
-Traits: A cartoonish, monster-like or creature-like NFT character, typically with chubby/round or cute body, large eyes, fangs/teeth, colorful skin, and playful art. 
-If YES, answer YES. Only answer NO if you are very sure it's not a Warplet— for example, it's a photo, logo, human, animal, or completely abstract/random art.
-Answer ONLY YES or NO, and be forgiving if unsure.`.trim(),
-          max_tokens: 5,
-          temperature: 0.1,
-        }
-      }
-    );
-    const response = (Array.isArray(output) ? output.join('') : output).trim().toUpperCase();
-    if (response.includes("YES")) {
-      return { isValid: true, message: "Valid Warplet character" };
-    }
-    return {
-      isValid: false,
-      message: "❌ Your profile picture must be a Warplet character. Try using an official or visually similar Warplet image (avoid heavy edits, overlays, or low-res icons)."
-    };
-  } catch (error) {
-    return {
-      isValid: true,
-      message: "Verification fallback: allowing image (vision model error)" // Avoids blocking due to vision model outage
-    };
-  }
+function randomizeTrait() {
+  const traits = [
+    "spiky hair", "glowing eyes", "tiny wings", "horns", "striped belly", "freckles", "antenna", "star badge", 
+    "bubble helmet", "gear-like ears", "patch on vest", "bandana", "fangs", "cheek blush", "tail", "head flower"
+  ];
+  return traits[Math.floor(Math.random() * traits.length)];
 }
 
 export async function POST(req: NextRequest) {
@@ -64,38 +32,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
     }
 
-    // Soft AI verification first
-    const verification = await verifyIsWarpletStyle(userPfpUrl);
-    if (!verification.isValid) {
-      return NextResponse.json({
-        error: "invalid_pfp",
-        message: verification.message,
-        tip: "Set your PFP as a Warplet NFT or a Warplet-style monster to mint.",
-      }, { status: 403 });
-    }
+    // Extract a random trait each time
+    const extraTrait = randomizeTrait();
 
-    // Generation (sdxl, similar as in previous setup)
+    // Always use the PFP image for palette and background—never for pose/structure
+    const sdxlPrompt = `
+A small, chubby, cute cartoon monster mascot, collectible NFT character inspired by Warplets.
+Character design:
+- Round body, short stubby arms/legs, oversized head, big innocent eyes, smiling mouth, and consistent size.
+- Background color palette and skin/clothes colors are EXTRACTED from the provided image (${userPfpUrl}).
+- ${extraTrait} as a unique collectible trait (changes every generation).
+- Symmetrical, standing past the center, in a clean PFP format.
+- Family-friendly, bold black outlines, simple plain background matching dominant color(s) from PFP image.
+- Professional NFT art, perfect for stickers or profile avatars.
+    `.trim();
+
+    const sdxlNegative = `
+human, realistic, nsfw, photo, text, watermark, dark, multiple characters, logo, photo artifacts, bad anatomy, cartoon errors, messy, abstract, severe distortion, violence
+    `.trim();
+
     const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
+          prompt: sdxlPrompt,
           image: userPfpUrl,
-          prompt: `
-A cute kawaii chibi goblin mascot character, family-friendly collectible NFT art. 
-Adorable round chubby body, oversized head with big innocent eyes, tiny stubby arms and legs, 
-large pointed elf ears, friendly happy expression with big smile showing teeth. 
-Consistent Warplets-inspired proportions and style. Professional NFT-quality art.
-          `.trim(),
-          negative_prompt: `
-nsfw, adult content, inappropriate, human, realistic, horror, blurry, distorted, abstract, photo, watermark, multi-character, bad proportions
-          `.trim(),
-          prompt_strength: 0.7,
-          num_inference_steps: 50,
+          negative_prompt: sdxlNegative,
+          prompt_strength: 0.45, // lower for less direct img2img copying
+          num_inference_steps: 45,
           width: 1024,
           height: 1024,
-          guidance_scale: 10.0,
+          guidance_scale: 9.5,
           scheduler: "DPMSolverMultistep",
-          seed: GOBLIN_SEED,
+          seed: Math.floor(Math.random() * 1_000_000),
         }
       }
     );
@@ -106,7 +75,7 @@ nsfw, adult content, inappropriate, human, realistic, horror, blurry, distorted,
     }
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
-      return NextResponse.json({ error: `Failed to fetch: ${imageResponse.status}` }, { status: 502 });
+      return NextResponse.json({ error: `Failed: ${imageResponse.status}` }, { status: 502 });
     }
     const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
     const croppedBuffer = await autocropToSquare(imgBuf, "#1a1a1a");
@@ -116,6 +85,8 @@ nsfw, adult content, inappropriate, human, realistic, horror, blurry, distorted,
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
       success: true,
+      pfp_palette_source: userPfpUrl,
+      applied_trait: extraTrait
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
