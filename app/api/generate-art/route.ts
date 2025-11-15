@@ -8,9 +8,6 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-/**
- * Auto-crops and centers to 1024x1024
- */
 async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promise<Buffer> {
   return await sharp(inputBuffer)
     .trim()
@@ -20,6 +17,25 @@ async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promi
     })
     .png()
     .toBuffer();
+}
+
+function buildStyleTransferPrompt(styleReferenceUrl: string) {
+  const prompt = `
+A premium NFT portrait in the exact style of this reference image: ${styleReferenceUrl}.
+Transform the subject into a monster character with glowing yellow/orange eyes, dark reptilian scales, 
+geometric patterns, vibrant neon colors (green, red, blue, orange), mystical energy effects, 
+and dramatic volumetric lighting. The character should have the same visual aesthetic, texture quality, 
+color palette, and artistic style as the reference. Professional digital collectible art, centered composition, 
+bold black outlines, high detail PFP format, dark atmospheric background.
+`.trim();
+
+  const negative = `
+realistic photography, human skin, normal person, plain boring, blurry, low quality, 
+multiple people, text, watermark, signature, cropped, distorted, off-center, 
+simple cartoon, flat colors, low effort
+`.trim();
+
+  return { prompt, negative };
 }
 
 export async function POST(req: NextRequest) {
@@ -35,29 +51,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("🎨 Style Transfer with SDXL + IP-Adapter...");
+    const { prompt, negative } = buildStyleTransferPrompt(styleReferenceUrl);
+
+    console.log("🎨 Style Transfer Generation...");
     console.log("User PFP:", userPfpUrl);
     console.log("Style Reference:", styleReferenceUrl);
 
-    // 🔥 USE SDXL WITH IP-ADAPTER FOR TRUE STYLE TRANSFER
+    // 🔥 USE SDXL IMG2IMG WITH STRONG STYLE PROMPT
     const output: any = await replicate.run(
-      "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
+      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
-          input_image: userPfpUrl, // Person to transform
-          style_image: styleReferenceUrl, // Monster style
-          prompt: `Transform this person into a premium monster NFT character. 
-Keep their face structure and pose but apply the glowing eyes, dark reptilian scales, 
-vibrant neon colors, geometric patterns, dramatic lighting, and mystical energy effects 
-from the style reference. The character should be centered, front-facing, with bold outlines, 
-and premium NFT aesthetic. Professional digital art, high detail, perfect PFP composition.`,
-          negative_prompt: `realistic, photographic, blurry, low quality, boring, plain background, 
-multiple people, text, watermark, signature, distorted, cropped, cut off, off-center`,
-          num_outputs: 1,
-          num_inference_steps: 50,
-          style_strength_ratio: 35, // 🔥 CRITICAL: Controls how much style is applied (20-50)
-          guidance_scale: 7.5,
-          seed: 0,
+          image: userPfpUrl, // Base structure
+          prompt: prompt, // Style instructions with reference URL
+          negative_prompt: negative,
+          prompt_strength: 0.80, // 🔥 HIGH = More transformation
+          num_inference_steps: 60,
+          width: 1024,
+          height: 1024,
+          guidance_scale: 10.0, // 🔥 STRONG adherence to prompt
+          scheduler: "DPMSolverMultistep",
         }
       }
     );
@@ -70,7 +83,7 @@ multiple people, text, watermark, signature, distorted, cropped, cut off, off-ce
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       return NextResponse.json(
-        { error: `Failed to fetch generated image: ${imageResponse.status}` },
+        { error: `Failed to fetch: ${imageResponse.status}` },
         { status: 502 }
       );
     }
