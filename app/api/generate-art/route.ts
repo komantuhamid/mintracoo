@@ -360,7 +360,7 @@ Do NOT modify the background.
         height: 450,
         safety_tolerance: 2,
         prompt_upsampling: false,
-        prompt_strength: default_prompt_strength,
+        prompt_strength: 0.6,
         guidance_scale: default_guidance_scale,
         num_inference_steps: default_steps,
         seed,
