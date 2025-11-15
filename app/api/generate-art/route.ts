@@ -14,15 +14,32 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-// MASTER_PROMPT (trimmed here for readability; keep full in production)
+// MASTER_PROMPT — locked to GOBLIN identity, allow eye style & small facial cosmetics
 const MASTER_PROMPT = `
 Transform this character into a fully randomized NFT variant while preserving the original background, pose, and environment exactly.
-Do NOT modify the background in any way. Only change the character.
+Do NOT modify the background in any way. Only change the allowed trait layers described below.
 
-Each generation must be unique, high-variance, and non-repeating.
-Keep only the character’s body shape and identity silhouette.
+IMPORTANT: This character is a GOBLIN. Preserve the goblin identity.
 
-Strong stylization must affect ONLY the character.
+### CHARACTER LOCK — goblin identity (strict)
+Preserve the original GOBLIN's head shape, skull structure, facial proportions, muzzle/nose shape, ear shape and placement, eye placement (horizontal/vertical positions), and overall silhouette exactly.
+Do NOT replace the goblin with another species or redesign the head shape or facial proportions.
+Do NOT alter the relative positions of the eyes, nose, mouth, or ears.
+Do NOT change the body proportions or silhouette.
+
+### EYES (style allowed)
+You MAY change the appearance/style of the eyes only — color, glow, pupil shape, added goggles/monocle/eye-patch, laser/holographic effects or accessories over the eyes.
+You MUST NOT change the eyes' absolute placement or spacing on the face.
+
+### ALLOWED FACE VARIATIONS (minor, cosmetic)
+Small cosmetic changes to the face are allowed: add/remove short facial hair (beard/mustache), change skin/fur color hues slightly, small warpaint/scars/makeup details, subtle color shifts. These changes MUST NOT change facial proportions or anatomy.
+
+### ALLOWED CHANGES (full freedom)
+The ONLY things allowed to change are: clothing, accessories, hand items, weapons, headgear, glasses, expressions, mouth shapes, eye STYLE (color/glow/accessories), small facial cosmetics (beard, small color shifts), and props.
+Stylization should affect ONLY the character and not the background or lighting.
+
+### FINAL RULE
+If any generation attempts to replace the head, change the species, or significantly alter facial proportions, discard and regenerate. Keep the base character identical across generations except for allowed cosmetic changes.
 `.trim();
 
 // === TRAIT LISTS ===
@@ -246,7 +263,9 @@ export async function POST(req: NextRequest) {
     const skinPool = shuffle(SKIN_TRAITS);
 
     const redrawInstructions = `
-COMPLETELY REDRAW the character's clothing, accessories, hats, props and hands. Preserve ONLY the background, pose and silhouette. Do NOT reuse previous clothing/accessory combinations. Make a fresh illustration-style redesign each request.
+Redraw only the allowed trait layers: clothing, accessories, hand items, headgear, eye items, mouth items, and small facial cosmetics (beard, small color shifts).
+Do NOT replace or redesign the character's facial structure, head shape, eye placement, or overall silhouette.
+Do NOT modify the background.
 `.trim();
 
     const basePrompt = promptOverride ? promptOverride : MASTER_PROMPT;
