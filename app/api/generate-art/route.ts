@@ -1,7 +1,18 @@
+// app/api/generate-art/route.ts
+// Full Next.js App Route (Node runtime) to test randomized NFT generation with Flux Kontext Pro.
+// - Accepts pfpUrl OR farcasterUsername/fid (pfp resolution not included here; pass pfpUrl).
+// - Supports single or batch generation (count).
+// - Stronger defaults: prompt_strength=0.40, guidance_scale=22, random seed when not provided.
+// - Returns array of data-URLs (preview) and replicate URLs when available.
+// Requirements: REPLICATE_API_TOKEN env var set.
+// Install: npm i replicate
+// Usage: POST JSON { pfpUrl: "...", count: 3, style: "cyberpunk" }
+
 import Replicate from "replicate";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
@@ -128,58 +139,83 @@ random skin colors, markings, textures, glow, metallic shine, spots, or patterns
 - Stylization affects ONLY the character.
 `.trim();
 
+async function fetchImageAsDataUrl(url: string) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch image ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  // try to detect mime from headers
+  const ct = res.headers.get("content-type") || "image/jpeg";
+  return `data:${ct};base64,${buf.toString("base64")}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const pfpUrl = body?.pfpUrl;
+    const pfpUrl = body?.pfpUrl || body?.input_image || body?.imageUrl;
     if (!pfpUrl) return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
 
-    // Optionally support overriding prompt via body.prompt, or append a style hint via body.style
+    // generation options
+    const count = Number(body?.count || 1); // number of variations to produce
     const styleHint = body?.style ? ` Style hint: ${String(body.style)}.` : "";
-    const prompt = body?.prompt ? String(body.prompt) : MASTER_PROMPT + styleHint;
-    const negative = body?.negative ? String(body.negative) : "blurry, low resolution, watermark, extra background elements, remove background";
+    const promptOverride = body?.prompt ? String(body.prompt) : undefined;
 
-    // You can also pass seed in body to control randomness; otherwise leave undefined to be random
-    const seed = typeof body?.seed === "number" ? body.seed : undefined;
+    // stronger instructions to force redraw of clothing/accessories
+    const redrawInstructions = `
+COMPLETELY REDRAW the character's clothing, accessories, hats and props. Preserve ONLY the background, pose and silhouette. Do NOT reuse previous clothing/accessory combinations. Make a fresh illustration-style redesign each request.
+`.trim();
 
-    const output = await replicate.run("black-forest-labs/flux-kontext-pro", {
-      input: {
-        prompt: prompt,
+    const finalPrompt = (promptOverride ? promptOverride : MASTER_PROMPT) + styleHint + "\n" + redrawInstructions;
+
+    // defaults that are stronger than before
+    const default_prompt_strength = typeof body?.prompt_strength === "number" ? body.prompt_strength : 0.40;
+    const default_guidance_scale = typeof body?.guidance_scale === "number" ? body.guidance_scale : 22;
+    const default_steps = typeof body?.num_inference_steps === "number" ? body.num_inference_steps : 50;
+
+    // simple rate-delay to avoid overloading the API in quick loops
+    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    const results: { replicate_url?: string; dataUrl?: string; seed?: number; error?: string }[] = [];
+
+    for (let i = 0; i < count; i++) {
+      // unique random seed per generation unless provided
+      const seed = typeof body?.seed === "number" ? body.seed + i : Math.floor(Math.random() * 1e9);
+
+      // Build model input. Flux/kontext expects input_image and prompt; include prompt_strength/guidance if supported.
+      const input = {
+        prompt: finalPrompt,
         input_image: pfpUrl,
         output_format: "jpg",
         safety_tolerance: 2,
         prompt_upsampling: false,
-        // pass seed if provided (some models accept it)
-        ...(seed !== undefined ? { seed } : {}),
-      },
-    });
+        // optional model knobs (may be ignored by some models)
+        prompt_strength: default_prompt_strength,
+        guidance_scale: default_guidance_scale,
+        num_inference_steps: default_steps,
+        seed,
+      };
 
-    if (!output) return NextResponse.json({ error: "No image generated" }, { status: 500 });
+      try {
+        const output = await replicate.run("black-forest-labs/flux-kontext-pro", { input });
+        // output can be string or array
+        const firstUrl = Array.isArray(output) ? output[0] : output;
+        // fetch the image and return dataURL preview
+        const dataUrl = await fetchImageAsDataUrl(firstUrl);
+        results.push({ replicate_url: firstUrl, dataUrl, seed });
+      } catch (err: any) {
+        // capture error for this iteration and continue
+        results.push({ error: String(err?.message || err), seed });
+      }
 
-    // Fetch generated image and return data URL preview (keeps existing behavior)
-    const imageUrl = Array.isArray(output) ? output[0] : output;
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      return NextResponse.json(
-        { error: `Failed to fetch generated image: ${imageResponse.status}` },
-        { status: 502 }
-      );
+      // small delay between calls to be polite (200-500ms). Adjust if you hit rate limits.
+      if (i < count - 1) await delay(300);
     }
-    const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
-    const dataUrl = `data:image/jpeg;base64,${imgBuf.toString("base64")}`;
 
-    return NextResponse.json({
-      generated_image_url: dataUrl,
-      imageUrl: dataUrl,
-      success: true,
-    });
-  } catch (e: any) {
-    if (e?.message?.toLowerCase().includes("nsfw")) {
-      return NextResponse.json(
-        { error: "NSFW content detected. Please try a different image!" },
-        { status: 403 }
-      );
+    return NextResponse.json({ ok: true, results }, { status: 200 });
+  } catch (err: any) {
+    const msg = String(err?.message || err);
+    if (msg.toLowerCase().includes("nsfw")) {
+      return NextResponse.json({ error: "NSFW content detected. Please try a different image!" }, { status: 403 });
     }
-    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
