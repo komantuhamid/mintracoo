@@ -6,26 +6,21 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const pfpUrl = body?.pfpUrl;
-    if (!pfpUrl)
-      return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
+const MASTER_PROMPT = `
+Transform this character into a fully randomized NFT variant while preserving the original background, pose, and environment exactly. 
+Do NOT modify the background in any way. Only change the character.
 
-    // Master prompt with expressions + clothing + accessories and background-preserve instruction
-    const prompt = `
-Transform this character into a randomized NFT variant while preserving the original background, pose, and environment exactly. Do NOT modify the background in any way.
-Keep only the character’s body shape and identity, but fully randomize all traits. Each generation must be unique, non-repeating, and high-variance.
+Each generation must be unique, high-variance, and non-repeating. 
+Keep only the character’s body shape and identity silhouette.
 
-### EXPRESSIONS (randomly choose ONE)
+### EXPRESSIONS (choose ONE at random)
 angry scowling, evil grinning maniacally, grumpy frowning, crazy laughing wild,
 sneaky smirking, confused dumb, aggressive menacing, proud confident,
 surprised shocked wide-eyed, sleepy tired yawning,
 excited happy beaming, nervous sweating worried,
 silly goofy derpy, cool relaxed chill, mischievous plotting devious.
 
-### CLOTHING (randomly choose ONE)
+### CLOTHING (choose ONE at random)
 small leather vest worn on torso, tiny torn rags covering body,
 simple cloth tunic on body, small fur vest on torso,
 simple leather jerkin on body, tiny torn robes on body,
@@ -45,22 +40,107 @@ superhero cape on shoulders, wizard robe long on body,
 monk robe brown on body, kimono traditional on body,
 poncho over shoulders.
 
-### ACCESSORIES (randomly choose some)
+### HAND_ITEMS (choose ONE or NONE randomly)
+holding small rusty dagger in hand, gripping tiny wooden club in hand,
+holding small coin bag in hand, holding tiny wooden shield in hand,
+holding small torch in hand, gripping tiny battle axe in hand,
+holding small shortsword in hand, gripping tiny iron mace in hand,
+holding small wooden spear in hand, holding tiny bow in hand,
+holding small loot sack in hand, holding tiny lantern in hand,
+holding small skull cup in hand, holding tiny potion vial in hand,
+gripping tiny pickaxe in hand, holding small meat leg in hand,
+holding small keys in hand, holding small bottle in hand,
+gripping tiny hammer in hand, both hands clenched in small fists,
+holding smartphone in hand, gripping game controller in hands,
+holding coffee cup in hand, gripping microphone in hand,
+holding pizza slice in hand, gripping magic wand in hand,
+holding book open in hand, gripping telescope in hand,
+holding magnifying glass in hand, gripping fishing rod in hand,
+holding basketball in hands, gripping baseball bat in hand,
+holding trophy golden in hand, gripping drumsticks in hands,
+holding guitar small in hand, gripping paintbrush in hand,
+holding camera in hand, gripping sword katana in hand,
+holding gem crystal in hand, gripping staff wooden in hand.
+
+### EYE_ITEMS (choose ONE randomly)
+small eye patch over one eye, tiny goggles over eyes,
+small monocle over one eye, round glasses over eyes,
+bandage covering one eye, tiny aviator goggles over eyes,
+large round yellow eyes, small beady eyes glowing,
+wide crazy eyes bulging, squinting menacing eyes,
+sunglasses cool over eyes, 3D glasses red-blue over eyes,
+steampunk goggles brass over eyes, cyclops single giant eye,
+heart-shaped glasses over eyes, ski goggles over eyes,
+swimming goggles over eyes, VR headset over eyes,
+laser eyes glowing red, star-shaped sunglasses over eyes,
+cat-eye glasses over eyes, jeweled monocle over one eye,
+cracked monocle over eye, glowing blue eyes bright,
+X-ray specs over eyes.
+
+### HEAD_ITEMS (choose ONE randomly)
+small leather cap on top of head, tiny metal helmet on top of head,
+cloth hood covering head, small bandana on head,
+bone helmet on top of head, small iron crown on top of head,
+wizard hat on top of head, fur hat on head,
+small horned helmet on head, skull cap on top of head,
+straw hat on head, pointed hood covering head,
+war paint marks on face, animal pelt on head,
+bald head no hat, viking helmet with horns on head,
+cowboy hat on top of head, pirate tricorn hat on head,
+chef hat tall white on head, baseball cap worn backwards on head,
+bucket hat on top of head, beanie knit cap on head,
+beret tilted on head, sombrero on top of head,
+top hat tall on head, fedora hat on head,
+samurai kabuto helmet on head, ninja hood covering head,
+santa hat red on head, party hat cone on head.
+
+### MOUTH_ITEMS (choose ONE randomly)
+huge wide grinning mouth showing many sharp fangs,
+giant open mouth with rows of jagged fangs,
+massive toothy grin showing pointed fangs,
+enormous mouth with multiple rows of sharp fangs,
+wide crazy smile showing all sharp teeth,
+evil grinning mouth with prominent fangs visible,
+creepy smile with sharp jagged teeth,
+menacing grin with big fangs,
+wicked smile showing rows of teeth,
+fierce grinning mouth with fangs,
+vampire fangs protruding from mouth,
+single gold tooth shining in grin,
+missing front teeth gap in smile,
+braces on teeth metal visible,
+tongue sticking out cheeky.
+
+### ACCESSORIES (choose some randomly)
 gold chains, earrings, piercings, rings, glasses, cigars, amulets, tech implants.
 
-### HEADGEAR (randomly choose ONE)
-crown, cap, beanie, bandana, wizard hat, cowboy hat, pirate hat,
-samurai helmet, futuristic visor, holographic headband.
-
-### EYES (randomly choose ONE)
+### EYES (choose ONE randomly)
 laser eyes, glowing neon eyes, sleepy eyes, angry eyes, cyber eyes,
 holographic irises, elemental eyes, glitch eyes.
 
 ### SKIN TRAITS
 random skin colors, markings, textures, glow, metallic shine, spots, or patterns.
 
-Strong stylization ONLY on the character. Do NOT change the background, lighting environment, or scenery.
+### FINAL RULES
+- Traits must be randomly selected every generation.
+- Do NOT reuse the same combination of traits across repeated requests.
+- Do NOT modify the background at all.
+- Stylization affects ONLY the character.
 `.trim();
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const pfpUrl = body?.pfpUrl;
+    if (!pfpUrl) return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
+
+    // Optionally support overriding prompt via body.prompt, or append a style hint via body.style
+    const styleHint = body?.style ? ` Style hint: ${String(body.style)}.` : "";
+    const prompt = body?.prompt ? String(body.prompt) : MASTER_PROMPT + styleHint;
+    const negative = body?.negative ? String(body.negative) : "blurry, low resolution, watermark, extra background elements, remove background";
+
+    // You can also pass seed in body to control randomness; otherwise leave undefined to be random
+    const seed = typeof body?.seed === "number" ? body.seed : undefined;
 
     const output = await replicate.run("black-forest-labs/flux-kontext-pro", {
       input: {
@@ -69,13 +149,14 @@ Strong stylization ONLY on the character. Do NOT change the background, lighting
         output_format: "jpg",
         safety_tolerance: 2,
         prompt_upsampling: false,
+        // pass seed if provided (some models accept it)
+        ...(seed !== undefined ? { seed } : {}),
       },
     });
 
-    if (!output)
-      return NextResponse.json({ error: "No image generated" }, { status: 500 });
+    if (!output) return NextResponse.json({ error: "No image generated" }, { status: 500 });
 
-    // OPTIONAL: return base64/dataURL preview (this is enabled)
+    // Fetch generated image and return data URL preview (keeps existing behavior)
     const imageUrl = Array.isArray(output) ? output[0] : output;
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
@@ -99,9 +180,6 @@ Strong stylization ONLY on the character. Do NOT change the background, lighting
         { status: 403 }
       );
     }
-    return NextResponse.json(
-      { error: e?.message || "server_error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
