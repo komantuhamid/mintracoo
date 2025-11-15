@@ -11,7 +11,6 @@ const replicate = new Replicate({
 
 const BASE_CHARACTER = "round blob goblin creature monster";
 
-// Randomize trait accessories
 const TRAITS = [
   "spiky hair", "glowing eyes", "tiny wings", "striped belly", "freckles", 
   "antenna", "star badge", "bubble helmet", "fangs", "cheek blush", "tail", 
@@ -26,12 +25,11 @@ async function extractPaletteFromPFP(pfpUrl: string): Promise<string[]> {
   try {
     const res = await fetch(pfpUrl);
     const buffer = Buffer.from(await res.arrayBuffer());
-    // Extract top 4 dominant colors
     const colors = await ColorThief.getPalette(buffer, 4);
     return colors.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
   } catch (e) {
     console.error("Color extraction error:", e);
-    // Fallback to default palette if extraction fails
+    // fallback palette
     return ["rgb(100, 200, 150)", "rgb(80, 150, 200)", "rgb(255, 180, 100)", "rgb(200, 100, 200)"];
   }
 }
@@ -39,7 +37,7 @@ async function extractPaletteFromPFP(pfpUrl: string): Promise<string[]> {
 function buildPrompt(palette: string[], trait: string) {
   const mainColor = palette[0];
   const accentColor = palette[1] || palette[0];
-  
+
   const prompt = [
     "simple flat 2D cartoon illustration, clean vector art style",
     "thick black outlines, bold cartoon lines, simple coloring",
@@ -50,7 +48,7 @@ function buildPrompt(palette: string[], trait: string) {
     `adorable ${BASE_CHARACTER} with smooth skin`,
     `skin color is ${mainColor}`,
     `accent colors using ${accentColor}`,
-    
+
     "EXACT BODY DIMENSIONS: chubby oval blob body 400 pixels wide by 450 pixels tall",
     "EXACTLY TWO short stubby legs identical size, each leg 60px tall 30px wide",
     "EXACTLY TWO small rounded arms identical size, each arm 70px long 25px thick",
@@ -65,7 +63,7 @@ function buildPrompt(palette: string[], trait: string) {
     "facing directly forward, centered composition",
     "standing upright full body visible, feet on ground",
 
-    // 🔥 ULTRA-ENFORCED MATCHING BACKGROUND
+    // Background matches skin color
     `THE ENTIRE BACKGROUND MUST BE ${mainColor}`,
     `BACKGROUND COLOR IS EXACTLY ${mainColor}`,
     `${mainColor} FILLS THE COMPLETE BACKGROUND`,
@@ -74,7 +72,7 @@ function buildPrompt(palette: string[], trait: string) {
     "background is completely flat solid color",
     "no background shading, no background gradient",
     "monochromatic color scheme background equals character",
-    
+
     "simple cartoon mascot blob monster character"
   ].join(", ");
 
@@ -111,7 +109,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
     }
 
-    // Extract color palette from user's PFP
     const palette = await extractPaletteFromPFP(userPfpUrl);
     const trait = randomTrait();
     const { prompt, negative } = buildPrompt(palette, trait);
