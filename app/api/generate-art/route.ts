@@ -216,22 +216,25 @@ export async function POST(req: NextRequest) {
     const palette = await extractPaletteFromPFP(userPfpUrl);
     const { prompt, negative } = buildPrompt(palette);
 
-    const output: any = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-      {
-        input: {
-          prompt,
-          negative_prompt: negative,
-          image: userPfpUrl,
-          num_inference_steps: 40,
-          width: 1024,
-          height: 1024,
-          guidance_scale: 8.5,
-          scheduler: "DPMSolverMultistep",
-          seed: Math.floor(Math.random() * 1_000_000),
-        },
-      }
-    );
+const userSeed = getSeedFromUserOrTraits(userPfpUrl, selectedTraits);
+
+const output: any = await replicate.run(
+  "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+  {
+    input: {
+      prompt,
+      negative_prompt: negative,
+      image: userPfpUrl,
+      num_inference_steps: 40,
+      width: 1024,
+      height: 1024,
+      guidance_scale: 8.5,
+      scheduler: "DPMSolverMultistep",
+      seed: userSeed, // always the same for the same user or trait
+    },
+  }
+);
+
 
     const imageUrl = Array.isArray(output) ? output[0] : output;
     if (!imageUrl)
