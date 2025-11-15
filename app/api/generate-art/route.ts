@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 
@@ -5,68 +6,63 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-function getSeed(key: string): number {
-  let hash = 5381;
-  for (let i = 0; i < key.length; i++) hash = ((hash << 5) + hash) + key.charCodeAt(i);
-  return Math.abs(hash % 1_000_000);
+function buildPrompt() {
+  const prompt =
+    "A unique 1/1 NFT character, redrawn from the input image, keeping all core features and pose";
+  const negative =
+    "nsfw, nude, explicit, broken, abstract, mutation, deformed, unrealistic, messy, blurry, text, extra limbs";
+  return { prompt, negative };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const userPfpUrl = body?.pfpUrl || body?.userPfpUrl || "";
-    const userId = body?.fid?.toString() || "0";
+    const pfpUrl = body?.pfpUrl;
 
-    if (!userPfpUrl)
+    if (!pfpUrl) {
       return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
+    }
 
-    const style =
-      "high quality cartoon sticker, vector-like, smooth lines, sticker, simple pastel background";
+    const { prompt, negative } = buildPrompt();
 
-    const prompt = [
-      `A unique 1/1 NFT character, redrawn from the input image, keeping all core features and pose`,
-      `Stylized as ${style}.`,
-      `Do not add or remove parts, don't invent accessories or new traits, don't change anatomy or proportions.`,
-      `Center the character, plain background, soft shadows only.`,
-    ].join(", ");
-
-    const negative = [
-      "nsfw, inappropriate, new objects, new traits, new accessories, floating shapes, extra limbs, multiple characters, abstract, background pattern, distortion, broken limbs",
-    ].join(", ");
-
-  const output: any = await replicate.run(
+    const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
-          image: pfpUrl, // goblin character from PFP
-          prompt: prompt, // Mad Lads style keywords
+          image: pfpUrl,
+          prompt: prompt,
           negative_prompt: negative,
-          prompt_strength: 0.60, // 🔥 higher = more style, less realism
-          num_inference_steps: 50,
+          prompt_strength: 0.5,            // try 0.45~0.55 for more/less stylization
+          num_inference_steps: 44,
           width: 1024,
           height: 1024,
-          guidance_scale: 8.0, // 🔥 stronger adherence to prompt
+          guidance_scale: 9,               // 9 is a good starting point
           scheduler: "K_EULER_ANCESTRAL",
         }
       }
     );
 
     const imageUrl = Array.isArray(output) ? output[0] : output;
-    if (!imageUrl)
+    if (!imageUrl) {
       return NextResponse.json({ error: "No image generated" }, { status: 500 });
+    }
 
-    // Optional: Download and re-host, or serve as dataURL, etc.
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      return NextResponse.json(
+        { error: `Failed to fetch generated image: ${imageResponse.status}` },
+        { status: 502 }
+      );
+    }
+    const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
+    const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
 
     return NextResponse.json({
-      generated_image_url: imageUrl,
-      prompt,
-      seed: getSeed(userId),
+      generated_image_url: dataUrl,
+      imageUrl: dataUrl,
       success: true,
     });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || "server_error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
