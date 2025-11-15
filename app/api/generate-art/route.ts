@@ -9,18 +9,17 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-const BASE_CHARACTER = "round blob goblin creature monster";
+// Random accessory lists (expand as needed)
+const HEAD_ITEMS = [ "wizard hat", "bandana", "spiky helmet", "goggles" ];
+const EYE_ITEMS = [ "big round eyes", "glowing eyes", "starry eyes", "striped eyelids" ];
+const MOUTH_ITEMS = [ "wide toothy grinning mouth", "fangs", "cute smile" ];
+const CLOTHING_ITEMS = [ "bubble vest", "patch jacket", "scarf", "space suit" ];
+const EXPRESSIONS = [ "cheek blush", "excited", "silly" ];
 
-const TRAITS = [
-  "spiky hair", "glowing eyes", "tiny wings", "striped belly", "freckles", 
-  "antenna", "star badge", "bubble helmet", "fangs", "cheek blush", "tail", 
-  "patch", "horns", "bandana", "goggles", "baseball cap", "wizard hat"
-];
+// Pick a random item from an array
+function rand(arr: string[]) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-function randomTrait() {
-  return TRAITS[Math.floor(Math.random() * TRAITS.length)];
-}
-
+// Use pfp image to get top palette colors
 async function extractPaletteFromPFP(pfpUrl: string): Promise<string[]> {
   try {
     const res = await fetch(pfpUrl);
@@ -30,75 +29,46 @@ async function extractPaletteFromPFP(pfpUrl: string): Promise<string[]> {
     return colors.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
   } catch (e) {
     console.error("Color extraction error:", e);
-    return [
-      "rgb(100, 200, 150)",
-      "rgb(80, 150, 200)",
-      "rgb(255, 180, 100)",
-      "rgb(200, 100, 200)"
-    ];
+    return [ "rgb(100, 200, 150)", "rgb(80, 150, 200)", "rgb(255, 180, 100)", "rgb(200, 100, 200)" ];
   }
 }
 
-function buildPrompt(palette: string[], trait: string) {
+function buildPrompt(palette: string[]) {
   const mainColor = palette[0];
   const accentColor = palette[1] || palette[0];
+  const eyeColor = palette[2] || accentColor;
+  const detailColor = palette[3] || mainColor;
 
+  // Accessories, traits, expressions
+  const headTrait = rand(HEAD_ITEMS);
+  const eyeTrait = rand(EYE_ITEMS);
+  const mouthTrait = rand(MOUTH_ITEMS);
+  const clothingTrait = rand(CLOTHING_ITEMS);
+  const expressionTrait = rand(EXPRESSIONS);
+
+  // Prompt enforcing color usage, strict matching, no background noise
   const prompt = [
-    "simple flat 2D cartoon illustration, clean vector art style",
-    "thick black outlines, bold cartoon lines, simple coloring",
-    "absolutely flat shading, NO gradients, NO depth",
-    "children's book art style, storybook character",
-    "vector graphic flat design, minimalist shading",
-
-    `adorable ${BASE_CHARACTER} with smooth skin`,
-    `skin color is ${mainColor}`,
-    `accent colors using ${accentColor}`,
-
-    "EXACT BODY DIMENSIONS: chubby oval blob body 400 pixels wide by 450 pixels tall",
-    "EXACTLY TWO short stubby legs identical size, each leg 60px tall 30px wide",
-    "EXACTLY TWO small rounded arms identical size, each arm 70px long 25px thick",
-    "head is round sphere 180px diameter exactly",
-    "no muscle definition, soft pillowy cuddly body",
-
-    `wearing ${trait} as unique trait`,
-    "large round friendly eyes",
-    "wide grinning mouth showing cute fangs",
-    "small pointed ears on sides of head",
-
-    "facing directly forward, centered composition",
-    "standing upright full body visible, feet on ground",
-
-    `THE ENTIRE BACKGROUND MUST BE ${mainColor}`,
-    `BACKGROUND COLOR IS EXACTLY ${mainColor}`,
-    `${mainColor} FILLS THE COMPLETE BACKGROUND`,
-    "CRITICAL: background is identical color to character skin",
-    "MANDATORY: character and background are SAME EXACT color",
-    "background is completely flat solid color",
-    "no background shading, no background gradient",
-    "monochromatic color scheme background equals character",
-
-    "simple cartoon mascot blob monster character"
+    "ULTRA-FLAT STYLE, simple flat 2D cartoon illustration, clean vector art style, thick black outlines, bold cartoon lines",
+    "absolutely flat shading, NO gradients, NO depth, zero dimension, children's book art style",
+    "adorable round blob goblin creature monster with smooth skin",
+    `skin and body color is ${mainColor}, accent color is ${accentColor}`,
+    `big eyes colored ${eyeColor}, extra details in ${detailColor}`,
+    `BODY SIZE - 400x450px, chubby oval blob, legs 60x30px, arms 70x25px, round head 180px diameter, all perfectly proportional`,
+    `features include: ${headTrait}, ${eyeTrait}, ${mouthTrait}, ${clothingTrait}, expression: ${expressionTrait}`,
+    "CENTERED FRONT VIEW, standing upright full body, stubby legs, all features visible, centered composition",
+    `ULTRA-ENFORCED BACKGROUND COLOR MATCHING. THE ENTIRE BACKGROUND MUST BE ${mainColor}`,
+    `BACKGROUND COLOR IS EXACTLY ${mainColor}. ${mainColor} FILLS THE COMPLETE BACKGROUND.`,
+    "CRITICAL: background is identical color to character skin. MANDATORY: character and background are SAME EXACT color.",
+    "REQUIRED: perfect monochromatic single-color scheme. NO background shading. NO gradient. NO patterns.",
+    "simple cartoon mascot blob monster character, sticker style"
   ].join(", ");
 
   const negative = [
-    "3D render, CGI, realistic, photorealistic, detailed",
-    "complex shading, dramatic lighting, shadows, depth",
-    "gradient shading, soft shading, ambient occlusion",
-    "drop shadow, cast shadow, shadow under character",
-    "3D lighting, volumetric lighting, rim lighting",
-    "detailed texture, fur strands, hair detail",
-    "blurry, low quality, messy, sketchy",
-    "text, watermark, logo, signature",
-    "multiple characters, cropped, background scenery",
-    "side view, profile, turned sideways",
-    "different body sizes, varying body proportions",
-    "muscular, athletic, fit, toned",
-    "tall, long limbs, stretched, slender",
-    "gradient background, textured backdrop, complex scene",
-    "WRONG: different background color, mismatched colors",
-    "WRONG: background different from character color",
-    "multicolored background, patterned background",
-    "white background, black background, gray background"
+    "3D render, realistic, photorealistic, detailed, soft shading, dramatic lighting",
+    "gradient, texture, drop shadow, cast shadow, shadow under character",
+    "multiple characters, cropped, background elements, background scenery, white/black/gray background",
+    "side view, profile, turned, different body sizes, muscular, tall, stretched, slender",
+    "gradient background, patterned background, fur detail, logo, watermark, text, signature"
   ].join(", ");
 
   return { prompt, negative };
@@ -108,18 +78,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const userPfpUrl = body?.pfpUrl || body?.userPfpUrl;
-
-    if (!userPfpUrl) {
-      return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
-    }
+    if (!userPfpUrl) return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
 
     const palette = await extractPaletteFromPFP(userPfpUrl);
-    const trait = randomTrait();
-    const { prompt, negative } = buildPrompt(palette, trait);
-
-    console.log("🎨 Generating Chubby Monster NFT with PFP colors...");
-    console.log("Palette:", palette);
-    console.log("Trait:", trait);
+    const { prompt, negative } = buildPrompt(palette);
 
     const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
@@ -138,13 +100,9 @@ export async function POST(req: NextRequest) {
     );
 
     const imageUrl = Array.isArray(output) ? output[0] : output;
-
-    if (!imageUrl) {
-      return NextResponse.json({ error: "No image generated" }, { status: 500 });
-    }
+    if (!imageUrl) return NextResponse.json({ error: "No image generated" }, { status: 500 });
 
     const imageResponse = await fetch(imageUrl);
-
     if (!imageResponse.ok) {
       return NextResponse.json({ error: `Fetch failed: ${imageResponse.status}` }, { status: 502 });
     }
@@ -157,8 +115,8 @@ export async function POST(req: NextRequest) {
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
       palette,
-      trait,
-      success: true,
+      prompt,
+      success: true
     });
 
   } catch (e: any) {
