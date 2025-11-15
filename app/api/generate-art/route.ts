@@ -45,6 +45,14 @@ const PRESERVE_BG_LINE = `
 Preserve the input background exactly. Do NOT add particles, stars, sparkles, confetti, floating dots, noise, or any extra background elements.
 `;
 
+// Strong body-lock instructions (explicit, repeatable)
+const BODY_LOCK_LINE = `
+CRITICAL: KEEP THE BODY & SILHOUETTE EXACT. Render the character's BODY layer exactly the SAME SHAPE, SAME POSE, SAME PROPORTIONS and in the SAME POSITION every generation.
+The character's body must occupy a fixed flat bounding box of exactly 400x450 pixels (centered) on the canvas — keep the body placement, limbs, and silhouette identical across all generated variants.
+Only change clothes/accessories/props/facial cosmetic details inside or on top of that fixed body silhouette. Do NOT move, resize, or reshape the body or change the pose.
+`;
+
+// Negative prompt to block 3D / particles / artifacts
 const NEGATIVE_PROMPT = `
 photorealistic, real photo, 3D render, photoreal, ultra realistic, DSLR, bokeh, depth of field, octane render, unreal engine, cinema4d, vray, raytracing, film grain, hyperrealistic, studio lighting, HDR, watermark,
 particles, sparkles, stars, confetti, dust, noise, black speckles, white speckles, floating dots, glitter, lens flare, bokeh spots, artifacts
@@ -243,7 +251,7 @@ async function fetchImageAsDataUrl(url: string) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch image ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
-  const ct = res.headers.get("content-type") || "image/jpeg";
+  const ct = res.headers.get("content-type") || "image/png";
   return `data:${ct};base64,${buf.toString("base64")}`;
 }
 
@@ -287,7 +295,7 @@ Do NOT modify the background.
 
     const basePrompt = promptOverride ? promptOverride : MASTER_PROMPT;
 
-    const default_prompt_strength = typeof body?.prompt_strength === "number" ? body.prompt_strength : 0.45;
+    const default_prompt_strength = typeof body?.prompt_strength === "number" ? body.prompt_strength : 0.5;
     const default_guidance_scale = typeof body?.guidance_scale === "number" ? body.guidance_scale : 22;
     const default_steps = typeof body?.num_inference_steps === "number" ? body.num_inference_steps : 50;
 
@@ -313,7 +321,7 @@ Do NOT modify the background.
       const accessoryChoice = accessoryPool[i % accessoryPool.length];
       const skinChoice = skinPool[i % skinPool.length];
 
-      // compose forced-traits sentences
+      // compose forced-traits sentences (with extreme repetition for compliance)
       const forcedLines = [
         `Force clothing: ${clothingChoice}.`,
         `Force headgear: ${headChoice}.`,
@@ -326,19 +334,33 @@ Do NOT modify the background.
         // extra strong rule repetition
         `DO NOT modify the background under any circumstances.`,
         `DO NOT change the character species or head shape.`,
-        `Ensure the character remains the same identity silhouette; only change the listed traits.`
+        `Ensure the character remains the same identity silhouette; only change the listed traits.`,
+        // body-lock repeated for model emphasis
+        BODY_LOCK_LINE,
+        BODY_LOCK_LINE,
       ].join("\n");
 
-      // final prompt: base + style + forcedLines + redraw + preserve bg
-      const finalPrompt = [basePrompt, styleHint, forcedLines, STYLE_ENFORCEMENT, PRESERVE_BG_LINE, redrawInstructions].join("\n");
+      // final prompt: base + style + forcedLines + preserve bg + redraw instructions
+      const finalPrompt = [
+        basePrompt,
+        styleHint,
+        forcedLines,
+        STYLE_ENFORCEMENT,
+        PRESERVE_BG_LINE,
+        redrawInstructions,
+      ].join("\n");
 
       const input = {
         prompt: finalPrompt,
+        negative_prompt: NEGATIVE_PROMPT,
         input_image: pfpUrl,
-        output_format: "jpg",
+        output_format: "png", // prefer png so transparency and edges are preserved
+        // try sending desired output size / bbox — model may respect it
+        width: 400,
+        height: 450,
         safety_tolerance: 2,
         prompt_upsampling: false,
-        prompt_strength: 0.5,
+        prompt_strength: default_prompt_strength,
         guidance_scale: default_guidance_scale,
         num_inference_steps: default_steps,
         seed,
