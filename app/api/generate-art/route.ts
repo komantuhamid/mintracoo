@@ -22,28 +22,31 @@ async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promi
 }
 
 /**
- * ✅ VERIFY IF USER'S PFP LOOKS LIKE A WARPLET CHARACTER
- * Uses AI vision - no need for 10k reference images!
+ * ✅ VERIFY IF USER'S PFP IS A WARPLET CHARACTER
+ * This MUST pass before generation starts
  */
 async function verifyIsWarpletStyle(userPfpUrl: string): Promise<{isValid: boolean; message: string}> {
   try {
-    console.log("🔍 Checking if PFP matches Warplets art style...");
+    console.log("🔍 Verifying if PFP is a Warplet character...");
 
     const output: any = await replicate.run(
       "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
       {
         input: {
           image: userPfpUrl,
-          prompt: `Look at this image. Answer ONLY "YES" or "NO".
+          prompt: `Look at this image carefully. Answer ONLY "YES" or "NO".
 
-Is this a WARPLETS NFT character with these EXACT traits:
-1. Cute monster/creature (NOT human, NOT realistic animal)
-2. Chubby/round body with short arms and legs
-3. Big expressive eyes (often glowing or colorful)
-4. Sharp teeth or fangs clearly visible in mouth
-5. Cartoonish/illustrated NFT art style (NOT photograph, NOT 3D render)
-6. Colorful textured skin (scales, fur, or patterns)
-7. Standing/sitting pose against simple background
+Is this a WARPLETS NFT character? Check ALL these traits:
+1. Cartoon monster/creature character (NOT human, NOT abstract art, NOT realistic photo)
+2. Has a defined character with body, head, and limbs
+3. Chubby/round body shape
+4. Big expressive eyes
+5. Visible mouth with teeth/fangs
+6. Cute chibi/kawaii art style
+7. Solid character design (NOT abstract patterns, NOT blurry shapes)
+
+If ANY trait is missing, answer NO.
+If this is abstract art, geometric shapes, or anything other than a clear monster character, answer NO.
 
 Answer:`,
           max_tokens: 5,
@@ -54,23 +57,26 @@ Answer:`,
 
     const response = (Array.isArray(output) ? output.join('') : output).trim().toUpperCase();
     
-    console.log("AI Response:", response);
+    console.log("🤖 AI Verification Result:", response);
     
     if (response.includes("YES")) {
-      console.log("✅ Valid Warplet detected!");
-      return { isValid: true, message: "Valid Warplet character detected" };
+      console.log("✅ Valid Warplet character detected!");
+      return { isValid: true, message: "Valid Warplet character" };
     }
 
-    console.log("❌ Not a Warplet character");
+    console.log("❌ Not a Warplet - blocked");
     return { 
       isValid: false, 
-      message: "❌ Your profile picture must be a Warplet NFT character. Please change your PFP to a Warplet to generate art!" 
+      message: "❌ Your profile picture must be a Warplet NFT character (not abstract art or other images). Please change your PFP to a Warplet!" 
     };
 
   } catch (error) {
-    console.error("Vision verification error:", error);
-    // Fail open (allow generation) if verification fails
-    return { isValid: true, message: "Verification skipped due to error" };
+    console.error("Verification error:", error);
+    // FAIL SAFE: Block unknown images to prevent distortion
+    return { 
+      isValid: false, 
+      message: "⚠️ Could not verify your PFP. Please make sure it's a clear Warplet character image." 
+    };
   }
 }
 
@@ -83,19 +89,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
     }
 
-    // 🔥 VERIFY USER'S PFP MATCHES WARPLETS STYLE
+    // 🔥 STEP 1: VERIFY WARPLET FIRST - THIS PREVENTS DISTORTION
+    console.log("=" .repeat(50));
+    console.log("STEP 1: Verifying Warplet character...");
+    console.log("=" .repeat(50));
+    
     const verification = await verifyIsWarpletStyle(userPfpUrl);
     
     if (!verification.isValid) {
+      console.log("❌ BLOCKED: Not a Warplet character");
       return NextResponse.json({
         error: "invalid_pfp",
         message: verification.message,
-        opensea_url: "https://opensea.io/collection/the-warplets"
+        opensea_url: "https://opensea.io/collection/the-warplets",
+        tip: "Make sure your PFP shows a clear Warplet monster character, not abstract art or other images."
       }, { status: 403 });
     }
 
-    console.log("🦝 Generating Warplet-Style Goblin NFT...");
+    console.log("✅ Verification passed - proceeding to generation");
+    console.log("=" .repeat(50));
+    console.log("STEP 2: Generating Warplet-style art...");
+    console.log("=" .repeat(50));
 
+    // 🔥 STEP 2: GENERATE ART (only runs if verification passed)
     const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
@@ -117,22 +133,24 @@ MANDATORY FEATURES:
 ✓ Cartoon style, G-rated family content
 ✓ Bright cheerful colors from input image
 ✓ Standing upright, neutral friendly pose
-✓ Clean background matching input image style
+✓ Clean solid color background matching input image
 ✓ Bold black outlines, professional NFT art
 ✓ Centered frontal view, symmetrical design
+✓ CRISP and CLEAR artwork (no blur, no distortion)
 
-Extract dominant colors from input image for skin tone and clothing. 
+Extract dominant colors from input character for skin tone and clothing. 
 Premium collectible digital art, perfect PFP format, wholesome content.`,
 
           negative_prompt: `nsfw, adult content, inappropriate, suggestive, revealing clothing, nudity, 
 sexy, mature, realistic skin, human anatomy, violence, gore, weapons, dark themes, horror, scary, 
-disturbing, multiple characters, asymmetrical, rotation, side view, blurry, low quality, text, watermark`,
+disturbing, multiple characters, asymmetrical, rotation, side view, blurry, distorted, abstract, 
+low quality, text, watermark, noise, artifacts, compression`,
 
-          prompt_strength: 0.65,
+          prompt_strength: 0.7, // 🔥 Slightly higher to maintain structure
           num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 9.5,
+          guidance_scale: 10.0, // 🔥 Higher guidance for clarity
           scheduler: "DPMSolverMultistep",
           seed: GOBLIN_SEED,
         }
@@ -156,6 +174,8 @@ disturbing, multiple characters, asymmetrical, rotation, side view, blurry, low 
     const croppedBuffer = await autocropToSquare(imgBuf, "#1a1a1a");
     const dataUrl = `data:image/png;base64,${croppedBuffer.toString("base64")}`;
 
+    console.log("✅ Generation complete!");
+    
     return NextResponse.json({
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
@@ -163,23 +183,23 @@ disturbing, multiple characters, asymmetrical, rotation, side view, blurry, low 
     });
 
   } catch (e: any) {
-    console.error("Route error:", e);
+    console.error("❌ Route error:", e);
     
     // NSFW retry logic
     if (e?.message?.includes("NSFW")) {
-      console.log("⚠️ NSFW detected, retrying...");
+      console.log("⚠️ NSFW detected, retrying with safe fallback...");
       
       try {
         const retryOutput: any = await replicate.run(
           "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
           {
             input: {
-              prompt: `Cute chibi kawaii goblin mascot toy, G-rated family-friendly. Round body, big head, tiny arms, tiny legs, big eyes, friendly smile. Fully clothed. Bold outlines, bright colors, cartoon style.`,
-              negative_prompt: `nsfw, adult, inappropriate, human, realistic, scary`,
+              prompt: `Cute chibi kawaii goblin mascot toy, G-rated family-friendly. Round body, big head, tiny arms, tiny legs, big eyes, friendly smile. Fully clothed. Bold outlines, bright colors, cartoon style. Clean and crisp artwork.`,
+              negative_prompt: `nsfw, adult, inappropriate, human, realistic, scary, blurry, distorted`,
               num_inference_steps: 40,
               width: 1024,
               height: 1024,
-              guidance_scale: 7.0,
+              guidance_scale: 8.0,
               seed: GOBLIN_SEED,
             }
           }
