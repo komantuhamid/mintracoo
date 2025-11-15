@@ -57,7 +57,7 @@ multiple people, text, watermark, signature, distorted, cropped, cut off, off-ce
           num_inference_steps: 50,
           style_strength_ratio: 35, // 🔥 CRITICAL: Controls how much style is applied (20-50)
           guidance_scale: 7.5,
-          seed: -1,
+          seed: 0,
         }
       }
     );
