@@ -14,36 +14,46 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-// MASTER_PROMPT — locked to GOBLIN identity, allow eye style & small facial cosmetics
+/* ---------------------------
+   PROMPTS: MASTER + STYLE + NEGATIVE
+   --------------------------- */
+
 const MASTER_PROMPT = `
 Transform this character into a fully randomized NFT variant while preserving the original background, pose, and environment exactly.
 Do NOT modify the background in any way. Only change the allowed trait layers described below.
 
-IMPORTANT: This character is a GOBLIN. Preserve the goblin identity.
+IMPORTANT: This character must remain the SAME SPECIES / BASE IDENTITY. Do NOT replace the character or change its silhouette.
 
-### CHARACTER LOCK — goblin identity (strict)
-Preserve the original GOBLIN's head shape, skull structure, facial proportions, muzzle/nose shape, ear shape and placement, eye placement (horizontal/vertical positions), and overall silhouette exactly.
-Do NOT replace the goblin with another species or redesign the head shape or facial proportions.
-Do NOT alter the relative positions of the eyes, nose, mouth, or ears.
-Do NOT change the body proportions or silhouette.
+### CHARACTER LOCK
+Preserve head shape, skull structure, facial proportions, ear placement, eye placement and overall silhouette. Do NOT alter the relative positions of eyes/nose/mouth or change the species.
 
-### EYES (style allowed)
-You MAY change the appearance/style of the eyes only — color, glow, pupil shape, added goggles/monocle/eye-patch, laser/holographic effects or accessories over the eyes.
-You MUST NOT change the eyes' absolute placement or spacing on the face.
+### ALLOWED CHANGES
+You MAY change: clothing, accessories, hand items, weapons, headgear, eye-style (color/glow/accessories), mouth shapes, expressions, small facial cosmetics (beard/warpaint), and skin textures/colors to match the input PFP.
+You MUST NOT modify the background or change the body pose/silhouette.
 
-### ALLOWED FACE VARIATIONS (minor, cosmetic)
-Small cosmetic changes to the face are allowed: add/remove short facial hair (beard/mustache), change skin/fur color hues slightly, small warpaint/scars/makeup details, subtle color shifts. These changes MUST NOT change facial proportions or anatomy.
-
-### ALLOWED CHANGES (full freedom)
-The ONLY things allowed to change are: clothing, accessories, hand items, weapons, headgear, glasses, expressions, mouth shapes, eye STYLE (color/glow/accessories), small facial cosmetics (beard, small color shifts), and props.
-Stylization should affect ONLY the character and not the background or lighting.
-
-### FINAL RULE
-If any generation attempts to replace the head, change the species, or significantly alter facial proportions, discard and regenerate. Keep the base character identical across generations except for allowed cosmetic changes.
+### FINAL RULES
+- Each generation must be unique and not reuse the same exact clothing/accessory combination.
+- Strong stylization allowed, but keep final output in clear 2D NFT collectible style.
 `.trim();
 
-// === TRAIT LISTS ===
-// Use the exact items you provided; feel free to expand these arrays.
+const STYLE_ENFORCEMENT = `
+Force art style: 2D flat vector / cel-shaded / cartoon NFT style, limited palette, bold outlines, clean flat colors, crisp shading, no photorealism.
+Do NOT produce 3D renders, baked lighting, film grain, DSLR/photo effects, raytraced reflections, realistic skin pores, or hyperrealistic textures.
+`.trim();
+
+const PRESERVE_BG_LINE = `
+Preserve the input background exactly. Do NOT add particles, stars, sparkles, confetti, floating dots, noise, or any extra background elements.
+`;
+
+const NEGATIVE_PROMPT = `
+photorealistic, real photo, 3D render, photoreal, ultra realistic, DSLR, bokeh, depth of field, octane render, unreal engine, cinema4d, vray, raytracing, film grain, hyperrealistic, studio lighting, HDR, watermark,
+particles, sparkles, stars, confetti, dust, noise, black speckles, white speckles, floating dots, glitter, lens flare, bokeh spots, artifacts
+`.trim();
+
+/* ---------------------------
+   TRAIT LISTS
+   --------------------------- */
+
 const CLOTHING_LIST = [
   "small leather vest worn on torso",
   "tiny torn rags covering body",
@@ -225,7 +235,10 @@ const SKIN_TRAITS = [
   "holographic sheen",
 ];
 
-// helper to fetch image -> dataURL
+/* ---------------------------
+   helpers
+   --------------------------- */
+
 async function fetchImageAsDataUrl(url: string) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch image ${res.status}`);
@@ -242,6 +255,10 @@ function shuffle<T>(arr: T[]) {
   }
   return a;
 }
+
+/* ---------------------------
+   API: POST handler
+   --------------------------- */
 
 export async function POST(req: NextRequest) {
   try {
@@ -296,7 +313,7 @@ Do NOT modify the background.
       const accessoryChoice = accessoryPool[i % accessoryPool.length];
       const skinChoice = skinPool[i % skinPool.length];
 
-      // Compose forced-traits sentences
+      // compose forced-traits sentences
       const forcedLines = [
         `Force clothing: ${clothingChoice}.`,
         `Force headgear: ${headChoice}.`,
@@ -305,10 +322,15 @@ Do NOT modify the background.
         `Force mouth item: ${mouthChoice}.`,
         `Force accessory: ${accessoryChoice}.`,
         `Force skin trait: ${skinChoice}.`,
-        `Do NOT preserve any previous clothing, accessories, hats or props.`
+        `Do NOT preserve any previous clothing, accessories, hats or props.`,
+        // extra strong rule repetition
+        `DO NOT modify the background under any circumstances.`,
+        `DO NOT change the character species or head shape.`,
+        `Ensure the character remains the same identity silhouette; only change the listed traits.`
       ].join("\n");
 
-      const finalPrompt = [basePrompt, styleHint, forcedLines, redrawInstructions].join("\n");
+      // final prompt: base + style + forcedLines + redraw + preserve bg
+      const finalPrompt = [basePrompt, styleHint, forcedLines, STYLE_ENFORCEMENT, PRESERVE_BG_LINE, redrawInstructions].join("\n");
 
       const input = {
         prompt: finalPrompt,
@@ -316,7 +338,7 @@ Do NOT modify the background.
         output_format: "jpg",
         safety_tolerance: 2,
         prompt_upsampling: false,
-        prompt_strength: default_prompt_strength,
+        prompt_strength: 0.5,
         guidance_scale: default_guidance_scale,
         num_inference_steps: default_steps,
         seed,
