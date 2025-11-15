@@ -8,7 +8,6 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-// 🔥 FIXED SEED FOR IDENTICAL ANATOMY
 const GOBLIN_SEED = 42069;
 
 async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promise<Buffer> {
@@ -31,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
     }
 
-    console.log("🦝 Generating Precise Goblin NFT...");
+    console.log("🦝 Generating Family-Friendly Goblin NFT...");
     console.log("User PFP:", userPfpUrl);
 
     const output: any = await replicate.run(
@@ -39,65 +38,41 @@ export async function POST(req: NextRequest) {
       {
         input: {
           image: userPfpUrl,
-          prompt: `A chubby cute goblin character NFT with mathematically precise proportions.
+          prompt: `A cute kawaii chibi goblin mascot character, family-friendly collectible NFT art. 
+Adorable round chubby body, oversized head with big innocent eyes, tiny stubby arms and legs, 
+large pointed elf ears, friendly happy expression with big smile showing teeth. 
 
-🔒 MANDATORY EXACT MEASUREMENTS (NEVER DEVIATE):
+EXACT CONSISTENT PROPORTIONS:
+- Head: 30% of total height, perfect circle
+- Body: 40% torso with round belly, fully clothed in simple vest/shirt
+- Arms: 35% of body height, stubby with 3-finger hands
+- Legs: 30% of height, short stumpy with rounded feet
+- Ears: 15% of head height, pointed triangles at 45° angle
 
-BODY STRUCTURE:
-- Total character height: 100% baseline
-- Head size: exactly 30% of total height
-- Body (torso): exactly 40% of total height, round belly shape
-- Legs: exactly 30% of total height, short and stubby
+MANDATORY FEATURES FOR SAFETY:
+✓ Fully clothed character (vest, shirt, pants visible)
+✓ Cartoon style, G-rated family content
+✓ Bright cheerful colors from input image
+✓ Standing upright, neutral friendly pose
+✓ Clean background matching input image style
+✓ Bold black outlines, professional NFT art
+✓ Centered frontal view, symmetrical design
 
-HEAD DETAILS (30% height zone):
-- Head shape: perfect circle, centered on shoulders
-- Ears: pointed triangles, exactly 15% of head height, positioned at 45° angle
-- Eyes: large ovals, exactly 8% of head height, positioned 60% up from chin
-- Nose: small triangle, exactly 3% of head height, centered between eyes and mouth
-- Mouth: wide grin, exactly 12% of head width, showing 6 small teeth
-- Eye spacing: exactly 25% of head width between eye centers
+Extract dominant colors from input image for skin tone and clothing. 
+Premium collectible digital art, perfect PFP format, wholesome content.`,
 
-ARMS (positioned on upper torso):
-- Arm length: exactly 35% of body height
-- Arm width: exactly 8% of body width (stubby)
-- Hand size: exactly 12% of arm length
-- Fingers: 3 stubby fingers per hand, each 5% of hand size
-- Arm position: hanging naturally at sides, elbows at 45° bend
+          negative_prompt: `nsfw, adult content, inappropriate, suggestive, revealing clothing, nudity, 
+sexy, mature, realistic skin, human anatomy, violence, gore, weapons, dark themes, horror, scary, 
+disturbing, multiple characters, asymmetrical, rotation, side view, blurry, low quality, text, watermark`,
 
-LEGS (30% height zone):
-- Leg length: exactly 30% of total height
-- Leg width: exactly 15% of body width (thick and stumpy)
-- Feet: rounded ovals, exactly 20% of leg length
-- Toe count: 3 rounded toes per foot, barely visible
-- Leg stance: slightly bow-legged, 20% body width apart
-
-CONSISTENCY RULES:
-✓ Same exact proportions for every generation
-✓ Symmetrical left and right sides
-✓ Centered frontal view, no rotation
-✓ All body parts visible, nothing hidden
-✓ Bold 2px black outlines on all shapes
-
-COLOR CUSTOMIZATION (extract from input image):
-- Extract dominant color from input background → use as scene background
-- Extract 2nd most common color → use for goblin skin tone
-- Extract 3rd color → use for clothing/accessories
-- Match the lighting mood and atmosphere of input image
-- Apply input image's color temperature (warm/cool)
-
-Style: Premium NFT collectible, bold outlines, high detail, centered composition, perfect PFP format.`,
-
-          negative_prompt: `varying proportions, different anatomy, asymmetrical, inconsistent measurements, 
-changing body parts, rotation, side view, hidden limbs, realistic human, thin body, long limbs, normal ears, 
-blurry, low quality, multiple goblins, text, watermark, signature, cropped, distorted, uncentered`,
-
-          prompt_strength: 0.68, // 🔥 Balances anatomy consistency + color extraction
-          num_inference_steps: 60, // 🔥 More steps = more precision
+          prompt_strength: 0.65,
+          num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 11.0, // 🔥 MAXIMUM prompt adherence
+          guidance_scale: 9.5,
           scheduler: "DPMSolverMultistep",
-          seed: GOBLIN_SEED, // 🔥 SAME SEED = IDENTICAL ANATOMY
+          seed: GOBLIN_SEED,
+          disable_safety_checker: false, // 🔥 Keep enabled, use safe prompt instead
         }
       }
     );
@@ -126,6 +101,49 @@ blurry, low quality, multiple goblins, text, watermark, signature, cropped, dist
     });
   } catch (e: any) {
     console.error("Route error:", e);
+    
+    // 🔥 NSFW ERROR HANDLER - Retry with even safer prompt
+    if (e?.message?.includes("NSFW")) {
+      console.log("⚠️ NSFW detected, retrying with ultra-safe mode...");
+      
+      try {
+        const retryOutput: any = await replicate.run(
+          "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+          {
+            input: {
+              prompt: `Cute chibi kawaii goblin mascot toy, G-rated family-friendly collectible. 
+Round body, big head, tiny arms, tiny legs, big innocent eyes, friendly smile. 
+Fully clothed in vest and pants. Bold outlines, bright colors, cartoon style. 
+Professional toy collectible photography, centered, white background.`,
+              
+              negative_prompt: `nsfw, adult, inappropriate, human, realistic, scary`,
+              
+              num_inference_steps: 40,
+              width: 1024,
+              height: 1024,
+              guidance_scale: 7.0,
+              seed: GOBLIN_SEED,
+            }
+          }
+        );
+
+        const retryImageUrl = Array.isArray(retryOutput) ? retryOutput[0] : retryOutput;
+        const retryResponse = await fetch(retryImageUrl);
+        const retryBuf = Buffer.from(await retryResponse.arrayBuffer());
+        const retryCropped = await autocropToSquare(retryBuf, "#1a1a1a");
+        const retryDataUrl = `data:image/png;base64,${retryCropped.toString("base64")}`;
+
+        return NextResponse.json({
+          generated_image_url: retryDataUrl,
+          imageUrl: retryDataUrl,
+          success: true,
+          retried: true,
+        });
+      } catch (retryError: any) {
+        return NextResponse.json({ error: "NSFW filter too sensitive, try again" }, { status: 500 });
+      }
+    }
+
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
