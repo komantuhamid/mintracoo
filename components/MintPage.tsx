@@ -8,12 +8,18 @@ import {
   useConnect,
   useDisconnect,
   useSendTransaction,
-  useWaitForTransactionReceipt,
+  useWaitForTransactionReceipt
 } from 'wagmi';
 
-// ✅ CONTRACT ADDRESS & ABI
+// ✅ YOUR CONTRACT ADDRESS
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
-const MINT_ABI = parseAbi(['function mint(string memory tokenURI_) payable']);
+
+// ✅ CORRECT ABI FOR YOUR NEW CONTRACT
+const MINT_ABI = parseAbi([
+  'function mint(string memory tokenURI_) payable'
+]);
+
+// 🔥 YOUR HOSTED STYLE REFERENCE NFT (REPLACE THIS URL!)
 const STYLE_REFERENCE_URL = 'https://up6.cc/2025/10/176316542260411.png';
 
 export default function MintPage() {
@@ -25,18 +31,76 @@ export default function MintPage() {
     hash: txHash,
   });
 
-  // PROFILE/STATE VARS ⚡
-  const [profile, setProfile] = useState<any>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [profile, setProfile] = useState(null);
+  const [generatedImage, setGeneratedImage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(null);
+  const [isAppReady, setIsAppReady] = useState(false);
 
-  // LOAD PROFILE FROM FARCASTER MINIAPP SDK
+  const shortAddr = useMemo(
+    () => (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : ''),
+    [address]
+  );
+
   useEffect(() => {
-    sdk?.getUserInfo().then((res: any) => setProfile(res?.user));
+    const init = async () => {
+      try {
+        await sdk.actions.ready();
+        setIsAppReady(true);
+      } catch (e) {
+        setIsAppReady(true);
+      }
+    };
+    init();
   }, []);
 
-  // 🚀 GENERATE NFT IMAGE
+  useEffect(() => {
+    const autoConnect = async () => {
+      if (!isAppReady || isConnected) return;
+      try {
+        const context = await sdk.context;
+        if (context?.user && connectors.length > 0) {
+          await connect({ connector: connectors[0] });
+        }
+      } catch (e) {
+        console.log('Auto-connect error:', e);
+      }
+    };
+    autoConnect();
+  }, [isAppReady, isConnected, connectors, connect]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const context = await sdk.context;
+        const fid = context?.user?.fid;
+        const username = context?.user?.username;
+        const pfpUrl = context?.user?.pfpUrl;
+        if (fid) {
+          setProfile({
+            display_name: username || '',
+            username: username || '',
+            pfp_url: pfpUrl || null,
+            fid,
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (isPending) {
+      setMessage('⏳ Confirm in wallet...');
+    } else if (isConfirming) {
+      setMessage('⏳ Confirming...');
+    } else if (isConfirmed) {
+      setMessage('🎉 NFT Minted Successfully!');
+    }
+  }, [isPending, isConfirming, isConfirmed]);
+
+  // **EDIT THIS ONLY:**
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('🎨 Transforming you into a premium NFT...');
@@ -44,101 +108,100 @@ export default function MintPage() {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // ⚠️ ONLY edit this line:
         body: JSON.stringify({
-          pfpUrl: profile?.pfp_url, // <--- ⚡ FIXED: correct key for backend
+          pfpUrl: profile?.pfp_url, // ✅ backend kaytsenna "pfpUrl"
         }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Failed');
       setGeneratedImage(j.generated_image_url || j.imageUrl);
       setMessage('✅ Ready to mint!');
-    } catch (e: any) {
+    } catch (e) {
       setMessage(`❌ ${e?.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // MINT ONCHAIN
-  const mint = async () => {
-    if (!generatedImage) {
-      setMessage('Generate an NFT image first!');
-      return;
+  const performMint = async () => {
+    if (!address) return setMessage('❌ Connect wallet');
+    if (!generatedImage) return setMessage('❌ Generate image first');
+    setMessage('📝 Uploading to IPFS...');
+    try {
+      const uploadRes = await fetch('/api/create-signed-mint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address,
+          imageUrl: generatedImage,
+          username: profile?.username,
+          fid: profile?.fid,
+        }),
+      });
+      const uploadData = await uploadRes.json();
+      if (uploadData.error) throw new Error(uploadData.error);
+
+      const { metadataUri } = uploadData;
+      console.log('✅ Metadata URI:', metadataUri);
+      setMessage('🔐 Confirm in wallet...');
+      const data = encodeFunctionData({
+        abi: MINT_ABI,
+        functionName: 'mint',
+        args: [metadataUri],
+      });
+      console.log('✅ Encoded data:', data);
+
+      sendTransaction({
+        to: CONTRACT_ADDRESS,
+        data,
+        value: parseEther('0.0001'),
+        gas: 300000n,
+      });
+    } catch (e) {
+      console.error('❌ Mint error:', e);
+      setMessage(`❌ ${e?.message || 'Failed'}`);
     }
-    const tokenUri = generatedImage;
-    const data = encodeFunctionData({
-      abi: MINT_ABI,
-      functionName: 'mint',
-      args: [tokenUri],
-    });
-    sendTransaction({
-      to: CONTRACT_ADDRESS,
-      data,
-      value: parseEther('0.0001'),
-    });
   };
 
-  // JSX RENDER
   return (
-    <div style={{ padding: 24, maxWidth: 420, margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: 20 }}>
-        <img
-          src={profile?.pfp_url}
-          alt={profile?.username}
-          style={{ width: 86, height: 86, borderRadius: '50%', border: '4px solid #a15cff', margin: '0 auto 10px' }}
-        />
-        <div>
-          <strong>@{profile?.username}</strong>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>FID: {profile?.fid}</div>
-        </div>
-      </div>
+    <div>
+      <h2>🦝 Goblin Mint</h2>
 
-      <div className="image-preview-container" style={{ margin: '24px 0', padding: 18, borderRadius: 22, background: 'linear-gradient(135deg, #492b7cbb 0%, #200368ba 100%)' }}>
+      {/* User Profile Section */}
+      {profile && (
+        <div>
+          {profile.pfp_url && <img src={profile.pfp_url} alt="pfp" style={{ width: 96, borderRadius: 18 }} />}
+          <div>@{profile.username || 'User'}</div>
+          <div>FID: {profile.fid}</div>
+        </div>
+      )}
+
+      {/* Generated Image Section */}
+      <div style={{ margin: '24px 0' }}>
         {generatedImage ? (
-          <img src={generatedImage} alt="Generated NFT" style={{ maxWidth: '100%', borderRadius: 16 }} />
+          <img src={generatedImage} alt="nft" style={{ maxWidth: 320, borderRadius: 18 }} />
         ) : (
-          <div style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>No image generated</div>
+          <div>No image generated</div>
         )}
       </div>
 
-      <button
-        disabled={loading}
-        style={{
-          width: '100%',
-          background: 'linear-gradient(90deg, #ff42b2, #b24fff)',
-          color: '#fff',
-          padding: '15px 0',
-          border: 'none',
-          borderRadius: 10,
-          fontWeight: 600,
-          marginBottom: 12,
-          fontSize: 18,
-        }}
-        onClick={generateRaccoon}
-      >
-        🎨 Generate NFT
+      {/* Generate Button */}
+      <button disabled={loading} onClick={generateRaccoon}>
+        {loading ? '⏳ Generating...' : '🎨 Generate NFT'}
       </button>
-      <button
-        disabled={!generatedImage || isPending}
-        style={{
-          width: '100%',
-          background: !generatedImage ? '#282a35' : 'linear-gradient(90deg, #ffe579, #ffd02c)',
-          color: '#140223',
-          padding: '15px 0',
-          border: 'none',
-          borderRadius: 10,
-          fontWeight: 600,
-          marginBottom: 12,
-          fontSize: 18,
-          opacity: !generatedImage ? 0.5 : 1,
-        }}
-        onClick={mint}
-      >
-        💰 Mint (0.0001 ETH)
+      {/* Mint Button */}
+      <button disabled={isPending || isConfirming} onClick={performMint}>
+        {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
       </button>
-      <div style={{ marginTop: 6, color: '#b24fff' }}>
-        {message && <div>{message}</div>}
-      </div>
+      {/* Status Message */}
+      <div>{message && <div>{message}</div>}</div>
+      {/* Transaction Hash */}
+      {txHash && (
+        <div>
+          TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+        </div>
+      )}
     </div>
   );
 }
