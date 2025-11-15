@@ -16,14 +16,12 @@ export default function MintPage() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { sendTransaction, isPending, data: txHash } = useSendTransaction();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
-  const [profile, setProfile] = useState(null);
-  const [generatedImage, setGeneratedImage] = useState(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [isAppReady, setIsAppReady] = useState(false);
 
   const shortAddr = useMemo(
@@ -52,7 +50,7 @@ export default function MintPage() {
           await connect({ connector: connectors[0] });
         }
       } catch (e) {
-        console.log('Auto-connect error:', e);
+        // ignore
       }
     };
     autoConnect();
@@ -63,32 +61,26 @@ export default function MintPage() {
       try {
         const context = await sdk.context;
         const fid = context?.user?.fid;
-        const username = context?.user?.username;
         const pfpUrl = context?.user?.pfpUrl;
         if (fid) {
           setProfile({
-            username: username || '',
             pfp_url: pfpUrl || null,
             fid,
+            // Only include allowed props here
           });
         }
       } catch (e) {
-        console.error(e);
+        // ignore
       }
     })();
   }, []);
 
   useEffect(() => {
-    if (isPending) {
-      setMessage('⏳ Confirm in wallet...');
-    } else if (isConfirming) {
-      setMessage('⏳ Confirming...');
-    } else if (isConfirmed) {
-      setMessage('🎉 NFT Minted Successfully!');
-    }
+    if (isPending) setMessage('⏳ Confirm in wallet...');
+    else if (isConfirming) setMessage('⏳ Confirming...');
+    else if (isConfirmed) setMessage('🎉 NFT Minted Successfully!');
   }, [isPending, isConfirming, isConfirmed]);
 
-  // --- FIXED: Now sends correct key for backend ---
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('🎨 Transforming you into a premium NFT...');
@@ -97,14 +89,14 @@ export default function MintPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pfpUrl: profile?.pfp_url, // <--- THIS LINE FIXED
+          pfpUrl: profile?.pfp_url,
         }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Failed');
       setGeneratedImage(j.generated_image_url || j.imageUrl);
       setMessage('✅ Ready to mint!');
-    } catch (e) {
+    } catch (e: any) {
       setMessage(`❌ ${e?.message}`);
     } finally {
       setLoading(false);
@@ -122,7 +114,6 @@ export default function MintPage() {
         body: JSON.stringify({
           address,
           imageUrl: generatedImage,
-          username: profile?.username,
           fid: profile?.fid,
         }),
       });
@@ -143,7 +134,7 @@ export default function MintPage() {
         value: parseEther('0.0001'),
         gas: 300000n,
       });
-    } catch (e) {
+    } catch (e: any) {
       setMessage(`❌ ${e?.message || 'Failed'}`);
     }
   };
@@ -152,18 +143,15 @@ export default function MintPage() {
     <div>
       <h2>🦝 Goblin Mint</h2>
 
-      {/* User Profile Section */}
       {profile && (
         <div>
           {profile.pfp_url && (
             <img src={profile.pfp_url} alt="pfp" style={{ width: 96, borderRadius: 18 }} />
           )}
-          <div>@{profile.username || 'User'}</div>
           <div>FID: {profile.fid}</div>
         </div>
       )}
 
-      {/* Generated Image Section */}
       <div style={{ margin: '24px 0' }}>
         {generatedImage ? (
           <img src={generatedImage} alt="nft" style={{ maxWidth: 320, borderRadius: 18 }} />
@@ -172,17 +160,14 @@ export default function MintPage() {
         )}
       </div>
 
-      {/* Generate Button */}
       <button disabled={loading} onClick={generateRaccoon}>
         {loading ? '⏳ Generating...' : '🎨 Generate NFT'}
       </button>
-      {/* Mint Button */}
       <button disabled={isPending || isConfirming} onClick={performMint}>
         {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
       </button>
-      {/* Status Message */}
+
       <div>{message && <div>{message}</div>}</div>
-      {/* Transaction Hash */}
       {txHash && (
         <div>
           TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
