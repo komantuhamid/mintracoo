@@ -9,17 +9,14 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-// Random accessory lists (expand as needed)
 const HEAD_ITEMS = [ "wizard hat", "bandana", "spiky helmet", "goggles" ];
 const EYE_ITEMS = [ "big round eyes", "glowing eyes", "starry eyes", "striped eyelids" ];
 const MOUTH_ITEMS = [ "wide toothy grinning mouth", "fangs", "cute smile" ];
 const CLOTHING_ITEMS = [ "bubble vest", "patch jacket", "scarf", "space suit" ];
 const EXPRESSIONS = [ "cheek blush", "excited", "silly" ];
 
-// Pick a random item from an array
 function rand(arr: string[]) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-// Use pfp image to get top palette colors
 async function extractPaletteFromPFP(pfpUrl: string): Promise<string[]> {
   try {
     const res = await fetch(pfpUrl);
@@ -39,21 +36,19 @@ function buildPrompt(palette: string[]) {
   const eyeColor = palette[2] || accentColor;
   const detailColor = palette[3] || mainColor;
 
-  // Accessories, traits, expressions
   const headTrait = rand(HEAD_ITEMS);
   const eyeTrait = rand(EYE_ITEMS);
   const mouthTrait = rand(MOUTH_ITEMS);
   const clothingTrait = rand(CLOTHING_ITEMS);
   const expressionTrait = rand(EXPRESSIONS);
 
-  // Prompt enforcing color usage, strict matching, no background noise
   const prompt = [
     "ULTRA-FLAT STYLE, simple flat 2D cartoon illustration, clean vector art style, thick black outlines, bold cartoon lines",
     "absolutely flat shading, NO gradients, NO depth, zero dimension, children's book art style",
     "adorable round blob goblin creature monster with smooth skin",
     `skin and body color is ${mainColor}, accent color is ${accentColor}`,
     `big eyes colored ${eyeColor}, extra details in ${detailColor}`,
-    `BODY SIZE - 400x450px, chubby oval blob, legs 60x30px, arms 70x25px, round head 180px diameter, all perfectly proportional`,
+    "BODY SIZE - 400x450px, chubby oval blob, legs 60x30px, arms 70x25px, round head 180px diameter, all perfectly proportional",
     `features include: ${headTrait}, ${eyeTrait}, ${mouthTrait}, ${clothingTrait}, expression: ${expressionTrait}`,
     "CENTERED FRONT VIEW, standing upright full body, stubby legs, all features visible, centered composition",
     `ULTRA-ENFORCED BACKGROUND COLOR MATCHING. THE ENTIRE BACKGROUND MUST BE ${mainColor}`,
@@ -89,6 +84,7 @@ export async function POST(req: NextRequest) {
         input: {
           prompt,
           negative_prompt: negative,
+          image: userPfpUrl,
           num_inference_steps: 40,
           width: 1024,
           height: 1024,
