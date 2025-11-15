@@ -25,12 +25,17 @@ async function extractPaletteFromPFP(pfpUrl: string): Promise<string[]> {
   try {
     const res = await fetch(pfpUrl);
     const buffer = Buffer.from(await res.arrayBuffer());
-    const colors = await ColorThief.getPalette(buffer, 4);
+    const colorThief = new ColorThief();
+    const colors = await colorThief.getPalette(buffer, 4);
     return colors.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
   } catch (e) {
     console.error("Color extraction error:", e);
-    // fallback palette
-    return ["rgb(100, 200, 150)", "rgb(80, 150, 200)", "rgb(255, 180, 100)", "rgb(200, 100, 200)"];
+    return [
+      "rgb(100, 200, 150)",
+      "rgb(80, 150, 200)",
+      "rgb(255, 180, 100)",
+      "rgb(200, 100, 200)"
+    ];
   }
 }
 
@@ -63,7 +68,6 @@ function buildPrompt(palette: string[], trait: string) {
     "facing directly forward, centered composition",
     "standing upright full body visible, feet on ground",
 
-    // Background matches skin color
     `THE ENTIRE BACKGROUND MUST BE ${mainColor}`,
     `BACKGROUND COLOR IS EXACTLY ${mainColor}`,
     `${mainColor} FILLS THE COMPLETE BACKGROUND`,
@@ -134,11 +138,13 @@ export async function POST(req: NextRequest) {
     );
 
     const imageUrl = Array.isArray(output) ? output[0] : output;
+
     if (!imageUrl) {
       return NextResponse.json({ error: "No image generated" }, { status: 500 });
     }
 
     const imageResponse = await fetch(imageUrl);
+
     if (!imageResponse.ok) {
       return NextResponse.json({ error: `Fetch failed: ${imageResponse.status}` }, { status: 502 });
     }
@@ -152,7 +158,7 @@ export async function POST(req: NextRequest) {
       imageUrl: dataUrl,
       palette,
       trait,
-      success: true
+      success: true,
     });
 
   } catch (e: any) {
