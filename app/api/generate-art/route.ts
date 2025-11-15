@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
           image: userPfpUrl, // Base structure
           prompt: prompt, // Style instructions with reference URL
           negative_prompt: negative,
-          prompt_strength: 0.80, // 🔥 HIGH = More transformation
+          prompt_strength: 0.6, // 🔥 HIGH = More transformation
           num_inference_steps: 60,
           width: 1024,
           height: 1024,
