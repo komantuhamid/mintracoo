@@ -5,6 +5,10 @@ import Replicate from "replicate";
 import sharp from "sharp";
 import ColorThief from "colorthief";
 
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN || "",
+});
+
 // ALL ACCESSORIES (190 total)
 const HEAD_ITEMS = [
   "small leather cap on top of head", "tiny metal helmet on top of head",
