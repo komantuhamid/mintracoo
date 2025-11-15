@@ -9,7 +9,7 @@ const replicate = new Replicate({
 });
 
 /**
- * Auto-crops and centers to perfect 1024x1024 PFP
+ * Auto-crops and centers to 1024x1024
  */
 async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promise<Buffer> {
   return await sharp(inputBuffer)
@@ -22,34 +22,11 @@ async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promi
     .toBuffer();
 }
 
-/**
- * Builds dual-image style transfer prompt
- */
-function buildStyleTransferPrompt() {
-  const prompt = `
-Transform the person in the first image into a premium NFT version using the exact visual style of the style reference.
-Keep the person's face structure, pose, and identity completely intact, but apply the monster/creature style aesthetic.
-Apply reptile-like skin textures, dark scales with glowing edges, fiery glowing eyes with strong red/orange highlights, 
-and dramatic volumetric lighting. Maintain the hat and outfit but enhance them with the reference NFT aesthetic: 
-dark scales, glowing edges, sharp contrast, and the same color palette. The final result should look like the person 
-has transformed into a demonic/creature version with the same artistic style, texture, and color palette as the 
-reference NFT. Professional digital art, high detail, centered composition, perfect PFP format.
-`.trim();
-
-  const negative = `
-realistic photography, blurry, low quality, cropped, cut off, multiple people, 
-plain background, boring, text, watermark, signature, distorted anatomy, 
-missing limbs, off center, too small, too large, unprofessional
-`.trim();
-
-  return { prompt, negative };
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const userPfpUrl = body?.userPfpUrl; // User's Farcaster PFP
-    const styleReferenceUrl = body?.styleReferenceUrl; // Your monster NFT style
+    const userPfpUrl = body?.userPfpUrl;
+    const styleReferenceUrl = body?.styleReferenceUrl;
 
     if (!userPfpUrl || !styleReferenceUrl) {
       return NextResponse.json(
@@ -58,26 +35,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { prompt, negative } = buildStyleTransferPrompt();
-
-    console.log("🎨 Generating NFT with dual-image style transfer...");
+    console.log("🎨 Style Transfer with SDXL + IP-Adapter...");
     console.log("User PFP:", userPfpUrl);
     console.log("Style Reference:", styleReferenceUrl);
 
-    // 🔥 DUAL IMAGE: User PFP + Style Reference sent together
+    // 🔥 USE SDXL WITH IP-ADAPTER FOR TRUE STYLE TRANSFER
     const output: any = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+      "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
       {
         input: {
-          image: userPfpUrl, // Primary: Person to transform
-          prompt: `${prompt} Use the exact style from this reference: ${styleReferenceUrl}`,
-          negative_prompt: negative,
-          prompt_strength: 0.72,
-          num_inference_steps: 65,
-          width: 1024,
-          height: 1024,
-          guidance_scale: 9.5,
-          scheduler: "K_EULER_ANCESTRAL",
+          input_image: userPfpUrl, // Person to transform
+          style_image: styleReferenceUrl, // Monster style
+          prompt: `Transform this person into a premium monster NFT character. 
+Keep their face structure and pose but apply the glowing eyes, dark reptilian scales, 
+vibrant neon colors, geometric patterns, dramatic lighting, and mystical energy effects 
+from the style reference. The character should be centered, front-facing, with bold outlines, 
+and premium NFT aesthetic. Professional digital art, high detail, perfect PFP composition.`,
+          negative_prompt: `realistic, photographic, blurry, low quality, boring, plain background, 
+multiple people, text, watermark, signature, distorted, cropped, cut off, off-center`,
+          num_outputs: 1,
+          num_inference_steps: 50,
+          style_strength_ratio: 35, // 🔥 CRITICAL: Controls how much style is applied (20-50)
+          guidance_scale: 7.5,
+          seed: -1,
         }
       }
     );
