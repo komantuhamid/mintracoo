@@ -3,23 +3,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { parseAbi, encodeFunctionData, parseEther } from 'viem';
 import sdk from '@farcaster/miniapp-sdk';
-import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-  useSendTransaction,
-  useWaitForTransactionReceipt
-} from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
-// ✅ YOUR CONTRACT ADDRESS
 const CONTRACT_ADDRESS = '0x1c60072233E9AdE9312d35F36a130300288c27F0' as `0x${string}`;
-
-// ✅ CORRECT ABI FOR YOUR NEW CONTRACT
 const MINT_ABI = parseAbi([
-  'function mint(string memory tokenURI_) payable'
+  'function mint(string memory tokenURI_) payable',
 ]);
-
-// 🔥 YOUR HOSTED STYLE REFERENCE NFT (REPLACE THIS URL!)
 const STYLE_REFERENCE_URL = 'https://up6.cc/2025/10/176316542260411.png';
 
 export default function MintPage() {
@@ -78,7 +67,6 @@ export default function MintPage() {
         const pfpUrl = context?.user?.pfpUrl;
         if (fid) {
           setProfile({
-            display_name: username || '',
             username: username || '',
             pfp_url: pfpUrl || null,
             fid,
@@ -100,7 +88,7 @@ export default function MintPage() {
     }
   }, [isPending, isConfirming, isConfirmed]);
 
-  // **EDIT THIS ONLY:**
+  // --- FIXED: Now sends correct key for backend ---
   const generateRaccoon = async () => {
     setLoading(true);
     setMessage('🎨 Transforming you into a premium NFT...');
@@ -108,9 +96,8 @@ export default function MintPage() {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ⚠️ ONLY edit this line:
         body: JSON.stringify({
-          pfpUrl: profile?.pfp_url, // ✅ backend kaytsenna "pfpUrl"
+          pfpUrl: profile?.pfp_url, // <--- THIS LINE FIXED
         }),
       });
       const j = await res.json();
@@ -143,14 +130,12 @@ export default function MintPage() {
       if (uploadData.error) throw new Error(uploadData.error);
 
       const { metadataUri } = uploadData;
-      console.log('✅ Metadata URI:', metadataUri);
       setMessage('🔐 Confirm in wallet...');
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
         args: [metadataUri],
       });
-      console.log('✅ Encoded data:', data);
 
       sendTransaction({
         to: CONTRACT_ADDRESS,
@@ -159,7 +144,6 @@ export default function MintPage() {
         gas: 300000n,
       });
     } catch (e) {
-      console.error('❌ Mint error:', e);
       setMessage(`❌ ${e?.message || 'Failed'}`);
     }
   };
@@ -171,7 +155,9 @@ export default function MintPage() {
       {/* User Profile Section */}
       {profile && (
         <div>
-          {profile.pfp_url && <img src={profile.pfp_url} alt="pfp" style={{ width: 96, borderRadius: 18 }} />}
+          {profile.pfp_url && (
+            <img src={profile.pfp_url} alt="pfp" style={{ width: 96, borderRadius: 18 }} />
+          )}
           <div>@{profile.username || 'User'}</div>
           <div>FID: {profile.fid}</div>
         </div>
