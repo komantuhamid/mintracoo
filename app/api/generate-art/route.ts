@@ -8,9 +8,6 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-/**
- * Auto-crops and centers to 1024x1024
- */
 async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promise<Buffer> {
   return await sharp(inputBuffer)
     .trim()
@@ -35,27 +32,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("🎨 Style Transfer with SDXL + IP-Adapter...");
-    console.log("User PFP:", userPfpUrl);
-    console.log("Style Reference:", styleReferenceUrl);
+    console.log("🎨 Style Transfer with InstantID...");
 
-    // 🔥 USE SDXL WITH IP-ADAPTER FOR TRUE STYLE TRANSFER
+    // 🔥 ALTERNATIVE: InstantID for face-preserving style transfer
     const output: any = await replicate.run(
-      "tencentarc/photomaker:ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
+      "zsxkib/instant-id:8d710c0a93c0e01903a89c5284c9af022fc7c9b69ae0d4e75076d4c6e27d8b74",
       {
         input: {
-          input_image: userPfpUrl, // Person to transform
-          style_image: styleReferenceUrl, // Monster style
-          prompt: `Transform this person into a premium monster NFT character. 
-Keep their face structure and pose but apply the glowing eyes, dark reptilian scales, 
-vibrant neon colors, geometric patterns, dramatic lighting, and mystical energy effects 
-from the style reference. The character should be centered, front-facing, with bold outlines, 
-and premium NFT aesthetic. Professional digital art, high detail, perfect PFP composition.`,
-          negative_prompt: `realistic, photographic, blurry, low quality, boring, plain background, 
-multiple people, text, watermark, signature, distorted, cropped, cut off, off-center`,
-          num_outputs: 1,
-          num_inference_steps: 50,
-          style_strength_ratio: 35, // 🔥 CRITICAL: Controls how much style is applied (20-50)
+          image: userPfpUrl,
+          style_image: styleReferenceUrl,
+          prompt: `Transform into a premium monster NFT. Keep face structure, apply glowing eyes, 
+dark reptilian scales, vibrant neon patterns, geometric designs, mystical energy, dramatic lighting. 
+Centered composition, bold outlines, professional digital art, high detail PFP.`,
+          negative_prompt: `realistic, photo, blurry, bad quality, plain, boring, multiple people, 
+text, watermark, cropped, distorted, off-center`,
+          num_steps: 40,
+          style_strength: 0.75, // 🔥 Adjust 0.5-1.0 for style intensity
           guidance_scale: 7.5,
           seed: -1,
         }
@@ -70,7 +62,7 @@ multiple people, text, watermark, signature, distorted, cropped, cut off, off-ce
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
       return NextResponse.json(
-        { error: `Failed to fetch generated image: ${imageResponse.status}` },
+        { error: `Failed to fetch: ${imageResponse.status}` },
         { status: 502 }
       );
     }
