@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
           image: pfpUrl, // PFP
           prompt: prompt, // 1/1 style keywords
           negative_prompt: negative,
-          prompt_strength: 0.75, // 🔥 higher = more style, less realism
+          prompt_strength: 0.6, // 🔥 higher = more style, less realism
           num_inference_steps: 50,
           width: 1024,
           height: 1024,
