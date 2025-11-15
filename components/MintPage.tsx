@@ -106,7 +106,6 @@ export default function MintPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userPfpUrl: profile?.pfp_url,        // ✅ User's Farcaster PFP
-          styleReferenceUrl: STYLE_REFERENCE_URL // ✅ Your hosted monster NFT
         }),
       });
 
