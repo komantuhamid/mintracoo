@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 import sharp from "sharp";
-import ColorThief from "color-thief-node";
+import ColorThief from "colorthief";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
