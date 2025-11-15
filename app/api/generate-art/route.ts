@@ -53,11 +53,11 @@ export async function POST(req: NextRequest) {
           image: pfpUrl, // PFP
           prompt: prompt, // 1/1 style keywords
           negative_prompt: negative,
-          prompt_strength: 0.44, // 🔥 higher = more style, less realism
+          prompt_strength: 0.2, // 🔥 higher = more style, less realism
           num_inference_steps: 60,
           width: 1024,
           height: 1024,
-          guidance_scale: 50, // 🔥 stronger adherence to prompt
+          guidance_scale: 30, // 🔥 stronger adherence to prompt
           scheduler: "K_EULER_ANCESTRAL",
         }
       }
