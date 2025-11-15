@@ -19,25 +19,6 @@ async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promi
     .toBuffer();
 }
 
-function buildStyleTransferPrompt(styleReferenceUrl: string) {
-  const prompt = `
-A premium NFT portrait in the exact style of this reference image: ${styleReferenceUrl}.
-Transform the subject into a monster character with glowing yellow/orange eyes, dark reptilian scales, 
-geometric patterns, vibrant neon colors (green, red, blue, orange), mystical energy effects, 
-and dramatic volumetric lighting. The character should have the same visual aesthetic, texture quality, 
-color palette, and artistic style as the reference. Professional digital collectible art, centered composition, 
-bold black outlines, high detail PFP format, dark atmospheric background.
-`.trim();
-
-  const negative = `
-realistic photography, human skin, normal person, plain boring, blurry, low quality, 
-multiple people, text, watermark, signature, cropped, distorted, off-center, 
-simple cartoon, flat colors, low effort
-`.trim();
-
-  return { prompt, negative };
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -51,26 +32,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { prompt, negative } = buildStyleTransferPrompt(styleReferenceUrl);
-
-    console.log("🎨 Style Transfer Generation...");
+    console.log("🎨 Fooocus Style Transfer...");
     console.log("User PFP:", userPfpUrl);
     console.log("Style Reference:", styleReferenceUrl);
 
-    // 🔥 USE SDXL IMG2IMG WITH STRONG STYLE PROMPT
+    // 🔥 USE FOOOCUS WITH IMAGE PROMPT (ACTUALLY READS YOUR STYLE IMAGE!)
     const output: any = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+      "konieshadow/fooocus-api:fda927242b1db6affa1ece4f54c37f19b964666bf23b0d06ae2439067cd344a4",
       {
         input: {
-          image: userPfpUrl, // Base structure
-          prompt: prompt, // Style instructions with reference URL
-          negative_prompt: negative,
-          prompt_strength: 0.6, // 🔥 HIGH = More transformation
-          num_inference_steps: 60,
-          width: 1024,
-          height: 1024,
-          guidance_scale: 10.0, // 🔥 STRONG adherence to prompt
-          scheduler: "DPMSolverMultistep",
+          input_image: userPfpUrl, // Person base
+          style_selections: "Fooocus V2,Fooocus Enhance,Fooocus Sharp",
+          prompt: `Transform this person into a premium monster NFT character. Apply glowing yellow/orange eyes, 
+dark reptilian scales, geometric patterns, vibrant neon colors (green, red, blue, orange), mystical energy effects, 
+and dramatic lighting. Keep face structure and pose. Professional digital collectible art, centered, bold outlines, 
+high detail PFP format.`,
+          negative_prompt: `realistic photo, human skin, normal person, boring, blurry, bad quality, multiple people, text, watermark`,
+          image_prompts_0: styleReferenceUrl, // 🔥 YOUR STYLE REFERENCE (ACTUALLY USED!)
+          image_prompt_weight_0: 0.75, // 🔥 75% style strength
+          guidance_scale: 7.5,
+          sharpness: 2.0,
+          num_inference_steps: 40,
+          refiner_switch: 0.8,
         }
       }
     );
