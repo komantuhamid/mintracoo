@@ -1,4 +1,5 @@
 export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 
@@ -6,11 +7,28 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
+const STYLE_REFERENCE_URL = "https://up6.cc/2025/10/176307007680191.png";
+
 function buildPrompt() {
-  const prompt =
-    "A unique 1/1 NFT character, redrawn from the input image, keeping all core features and pose";
-  const negative =
-    "nsfw, nude, explicit, broken, abstract, mutation, deformed, unrealistic, messy, blurry, text, extra limbs";
+  // 🔥 SUPER STRONG Mad Lads style prompt
+  const prompt = `
+2D cartoon NFT character portrait, 
+Mad Lads style, thick bold black outlines, 
+flat cel shading, vibrant solid colors, 
+vintage comic book art, illustrated cartoon style, 
+textured retro background, no realistic details, 
+same character from input image but in cartoon style, 
+professional NFT artwork, safe for work
+`.trim();
+
+  const negative = `
+realistic, 3D render, photorealistic, detailed shading, 
+soft lighting, gradient shading, hyperrealistic, 
+photograph, blurry, nsfw, nude, explicit, 
+watermark, text, multiple people, hands, full body, 
+plain background, smooth cartoon, anime
+`.trim();
+
   return { prompt, negative };
 }
 
@@ -25,18 +43,21 @@ export async function POST(req: NextRequest) {
 
     const { prompt, negative } = buildPrompt();
 
+    console.log("🎨 Generating Mad Lads style NFT from PFP...");
+    console.log("PFP URL:", pfpUrl);
+
     const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
-          image: pfpUrl,
-          prompt: prompt,
+          image: pfpUrl, // PFP
+          prompt: prompt, // 1/1 style keywords
           negative_prompt: negative,
-          prompt_strength: 0.5,            // try 0.45~0.55 for more/less stylization
-          num_inference_steps: 44,
+          prompt_strength: 0.60, // 🔥 higher = more style, less realism
+          num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 9,               // 9 is a good starting point
+          guidance_scale: 8.0, // 🔥 stronger adherence to prompt
           scheduler: "K_EULER_ANCESTRAL",
         }
       }
@@ -54,6 +75,7 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
+
     const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
 
@@ -63,6 +85,7 @@ export async function POST(req: NextRequest) {
       success: true,
     });
   } catch (e: any) {
+    console.error("Route error:", e);
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
   }
 }
