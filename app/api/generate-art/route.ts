@@ -1,5 +1,6 @@
 // app/api/generate-art/route.ts
 // Enhanced: force per-trait selections applied to each generation to guarantee variation.
+// Safety additions: input validation, URL/content checks, rate limiting, parameter bounds.
 // - Node runtime
 // - Accepts pfpUrl/input_image/imageUrl
 // - Supports single or batch (count)
@@ -10,8 +11,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN || "";
+if (!REPLICATE_TOKEN) {
+  // This will throw at import time in server environments without token.
+  throw new Error("REPLICATE_API_TOKEN environment variable is required.");
+}
+
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN || "",
+  auth: REPLICATE_TOKEN,
 });
 
 /* ---------------------------
@@ -48,7 +55,6 @@ Preserve the input background exactly. Do NOT add particles, stars, sparkles, co
 // Strong body-lock instructions (explicit, repeatable)
 const BODY_LOCK_LINE = `
 CRITICAL: KEEP THE BODY & SILHOUETTE EXACT. Render the character's BODY layer exactly the SAME SHAPE, SAME POSE, SAME PROPORTIONS and in the SAME POSITION every generation.
-The character's body must occupy a fixed flat bounding box of exactly 400x450 pixels (centered) on the canvas — keep the body placement, limbs, and silhouette identical across all generated variants.
 Only change clothes/accessories/props/facial cosmetic details inside or on top of that fixed body silhouette. Do NOT move, resize, or reshape the body or change the pose.
 `;
 
@@ -247,6 +253,79 @@ const SKIN_TRAITS = [
    helpers
    --------------------------- */
 
+// Basic in-memory rate limiter (per-IP). This is ephemeral and resets on server restart.
+// Limits: 30 requests per 60 seconds per IP, and 3 parallel requests.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 30;
+const PARALLEL_LIMIT = 3;
+const rateMap = new Map<string, { timestamps: number[]; running: number }>();
+
+function rateCheck(ip: string) {
+  const now = Date.now();
+  if (!rateMap.has(ip)) rateMap.set(ip, { timestamps: [now], running: 0 });
+  const entry = rateMap.get(ip)!;
+
+  // drop old timestamps
+  entry.timestamps = entry.timestamps.filter((t) => now - t <= RATE_LIMIT_WINDOW_MS);
+  if (entry.timestamps.length >= RATE_LIMIT_MAX) return false;
+  entry.timestamps.push(now);
+  return true;
+}
+
+function parallelEnter(ip: string) {
+  if (!rateMap.has(ip)) rateMap.set(ip, { timestamps: [], running: 0 });
+  const entry = rateMap.get(ip)!;
+  if (entry.running >= PARALLEL_LIMIT) return false;
+  entry.running += 1;
+  return true;
+}
+function parallelExit(ip: string) {
+  const entry = rateMap.get(ip);
+  if (!entry) return;
+  entry.running = Math.max(0, entry.running - 1);
+}
+
+// Validate URL is http(s) and looks like an image; restrict to common hosts optionally
+function isValidImageUrl(urlStr: string) {
+  try {
+    const url = new URL(urlStr);
+    if (!["http:", "https:"].includes(url.protocol)) return false;
+    // basic extension check (may be short-circuited by hosts using redirects)
+    const path = url.pathname.toLowerCase();
+    if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".webp")) return true;
+    // allow unknown extension (some CDNs) but require https
+    return url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function headCheckImage(url: string) {
+  // Attempt a HEAD request; some hosts may not allow HEAD — fallback to GET with range
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    if (!res.ok) return { ok: false, status: res.status };
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.startsWith("image/")) return { ok: false, status: 415 };
+    const len = res.headers.get("content-length");
+    const size = len ? parseInt(len, 10) : undefined;
+    // limit to 8 MB
+    if (size && size > 8 * 1024 * 1024) return { ok: false, status: 413 };
+    return { ok: true, contentType: ct, size };
+  } catch (e) {
+    // try small GET
+    try {
+      const res2 = await fetch(url, { method: "GET", headers: { Range: "bytes=0-1023" } });
+      if (!res2.ok) return { ok: false, status: res2.status };
+      const ct2 = res2.headers.get("content-type") || "";
+      if (!ct2.startsWith("image/")) return { ok: false, status: 415 };
+      return { ok: true, contentType: ct2, size: undefined };
+    } catch (err) {
+      return { ok: false, status: 0 };
+    }
+  }
+}
+
 async function fetchImageAsDataUrl(url: string) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch image ${res.status}`);
@@ -269,14 +348,42 @@ function shuffle<T>(arr: T[]) {
    --------------------------- */
 
 export async function POST(req: NextRequest) {
+  // Basic IP detection for rate limiting
+  const ip = (req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown").split(",")[0].trim();
+
+  // Quick rate-limit guard
+  if (!rateCheck(ip)) {
+    return NextResponse.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
+  }
+  if (!parallelEnter(ip)) {
+    return NextResponse.json({ error: "Too many concurrent requests. Try again in a moment." }, { status: 429 });
+  }
+
   try {
     const body = await req.json();
     const pfpUrl = body?.pfpUrl || body?.input_image || body?.imageUrl;
-    if (!pfpUrl) return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
+    if (!pfpUrl) {
+      parallelExit(ip);
+      return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
+    }
 
-    const count = Math.max(1, Number(body?.count || 1));
-    const styleHint = body?.style ? ` Style hint: ${String(body.style)}.` : "";
-    const promptOverride = body?.prompt ? String(body.prompt) : undefined;
+    // Basic input validation
+    if (typeof pfpUrl !== "string" || !isValidImageUrl(pfpUrl)) {
+      parallelExit(ip);
+      return NextResponse.json({ error: "Invalid pfpUrl. Must be a valid HTTPS image URL." }, { status: 400 });
+    }
+
+    // Protect max count
+    const count = Math.max(1, Math.min(8, Number(body?.count || 1))); // cap at 8
+    const styleHint = body?.style ? ` Style hint: ${String(body.style)}` : "";
+    const promptOverride = body?.prompt ? String(body.prompt).slice(0, 4000) : undefined; // cap prompt length
+
+    // Check external image headers (content-type & size)
+    const head = await headCheckImage(pfpUrl);
+    if (!head.ok) {
+      parallelExit(ip);
+      return NextResponse.json({ error: "Failed to validate pfpUrl image or file too large", status: head.status || 400 }, { status: 400 });
+    }
 
     // Shuffle pools for this batch to avoid repeats
     const clothingPool = shuffle(CLOTHING_LIST);
@@ -295,12 +402,13 @@ Do NOT modify the background.
 
     const basePrompt = promptOverride ? promptOverride : MASTER_PROMPT;
 
-    const default_prompt_strength = typeof body?.prompt_strength === "number" ? body.prompt_strength : 0.5;
-    const default_guidance_scale = typeof body?.guidance_scale === "number" ? body.guidance_scale : 22;
-    const default_steps = typeof body?.num_inference_steps === "number" ? body.num_inference_steps : 50;
+    // Parameter bounds & sanitization
+    const default_prompt_strength = Math.max(0, Math.min(1, Number(body?.prompt_strength ?? 0.5)));
+    const default_guidance_scale = Math.max(1, Math.min(35, Number(body?.guidance_scale ?? 22)));
+    const default_steps = Math.max(10, Math.min(100, Number(body?.num_inference_steps ?? 50)));
+    const seedBase = typeof body?.seed === "number" ? Math.floor(Number(body.seed)) : undefined;
 
-    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
+    const delayMs = 300;
     const results: {
       replicate_url?: string;
       dataUrl?: string;
@@ -309,8 +417,12 @@ Do NOT modify the background.
       error?: string;
     }[] = [];
 
+    // Validate requested size and forbid huge canvases
+    const width = Math.min(1024, Math.max(128, Number(body?.width || 400)));
+    const height = Math.min(1024, Math.max(128, Number(body?.height || 450)));
+
     for (let i = 0; i < count; i++) {
-      const seed = typeof body?.seed === "number" ? body.seed + i : Math.floor(Math.random() * 1e9);
+      const seed = seedBase !== undefined ? seedBase + i : Math.floor(Math.random() * 1e9);
 
       // Choose trait items for this iteration (rotate through pool)
       const clothingChoice = clothingPool[i % clothingPool.length];
@@ -321,7 +433,7 @@ Do NOT modify the background.
       const accessoryChoice = accessoryPool[i % accessoryPool.length];
       const skinChoice = skinPool[i % skinPool.length];
 
-      // compose forced-traits sentences (with extreme repetition for compliance)
+      // compose forced-traits sentences (with repetition for compliance)
       const forcedLines = [
         `Force clothing: ${clothingChoice}.`,
         `Force headgear: ${headChoice}.`,
@@ -331,12 +443,9 @@ Do NOT modify the background.
         `Force accessory: ${accessoryChoice}.`,
         `Force skin trait: ${skinChoice}.`,
         `Do NOT preserve any previous clothing, accessories, hats or props.`,
-        // extra strong rule repetition
         `DO NOT modify the background under any circumstances.`,
         `DO NOT change the character species or head shape.`,
         `Ensure the character remains the same identity silhouette; only change the listed traits.`,
-        // body-lock repeated for model emphasis
-        BODY_LOCK_LINE,
         BODY_LOCK_LINE,
       ].join("\n");
 
@@ -350,17 +459,17 @@ Do NOT modify the background.
         redrawInstructions,
       ].join("\n");
 
+      // Model input; note: some parameters may be ignored by the model
       const input = {
         prompt: finalPrompt,
         negative_prompt: NEGATIVE_PROMPT,
         input_image: pfpUrl,
-        output_format: "png", // prefer png so transparency and edges are preserved
-        // try sending desired output size / bbox — model may respect it
-        width: 400,
-        height: 450,
+        output_format: "png",
+        width,
+        height,
         safety_tolerance: 2,
         prompt_upsampling: false,
-        prompt_strength: 0.6,
+        prompt_strength: default_prompt_strength,
         guidance_scale: default_guidance_scale,
         num_inference_steps: default_steps,
         seed,
@@ -369,6 +478,8 @@ Do NOT modify the background.
       try {
         const output = await replicate.run("black-forest-labs/flux-kontext-pro", { input });
         const firstUrl = Array.isArray(output) ? output[0] : output;
+        // Basic sanity: returned URL must be string
+        if (!firstUrl || typeof firstUrl !== "string") throw new Error("Invalid model output");
         const dataUrl = await fetchImageAsDataUrl(firstUrl);
 
         results.push({
@@ -386,15 +497,18 @@ Do NOT modify the background.
           },
         });
       } catch (err: any) {
+        // capture error per-iteration and continue
         results.push({ error: String(err?.message || err), seed });
       }
 
-      if (i < count - 1) await delay(300);
+      // polite delay
+      if (i < count - 1) await new Promise((r) => setTimeout(r, delayMs));
     }
 
     // Single response shape for backward compatibility
     if (count === 1) {
       const single = results[0];
+      parallelExit(ip);
       if (single?.error) return NextResponse.json({ error: single.error }, { status: 500 });
       return NextResponse.json(
         {
@@ -408,8 +522,10 @@ Do NOT modify the background.
       );
     }
 
+    parallelExit(ip);
     return NextResponse.json({ ok: true, results }, { status: 200 });
   } catch (err: any) {
+    parallelExit(ip);
     const msg = String(err?.message || err);
     if (msg.toLowerCase().includes("nsfw")) {
       return NextResponse.json({ error: "NSFW content detected. Please try a different image!" }, { status: 403 });
