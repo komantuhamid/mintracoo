@@ -34,20 +34,20 @@ export async function POST(req: NextRequest) {
       "nsfw, inappropriate, new objects, new traits, new accessories, floating shapes, extra limbs, multiple characters, abstract, background pattern, distortion, broken limbs",
     ].join(", ");
 
-    const output: any = await replicate.run(
+  const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
       {
         input: {
-          prompt,
+          image: pfpUrl, // goblin character from PFP
+          prompt: prompt, // Mad Lads style keywords
           negative_prompt: negative,
-          image: userPfpUrl,
-          num_inference_steps: 44,
+          prompt_strength: 0.60, // 🔥 higher = more style, less realism
+          num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 12,
+          guidance_scale: 8.0, // 🔥 stronger adherence to prompt
           scheduler: "K_EULER_ANCESTRAL",
-          seed: getSeed(userId),
-        },
+        }
       }
     );
 
