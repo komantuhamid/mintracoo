@@ -1,17 +1,12 @@
 // app/api/generate-art/route.ts
-// Next.js App Route (Node runtime) for NFT generation with Flux Kontext Pro.
-// - Accepts pfpUrl / input_image / imageUrl
-// - Composites the user PFP into a fixed goblin body template (so body/silhouette stays identical).
-// - Extracts average face color from the PFP (face-crop) and forces skin base color in the prompt.
-// - Forces per-trait selections (clothing, headgear, hands, eye_item, mouth, accessory, skinTrait).
-// - Enforces 2D NFT style and tries to avoid photoreal/3D outputs.
-// - Single-response compatibility: count === 1 returns { generated_image_url, imageUrl, seed, traits, success }.
+// Enhanced: force per-trait selections applied to each generation to guarantee variation.
+// - Node runtime
+// - Accepts pfpUrl/input_image/imageUrl
+// - Supports single or batch (count)
+// - Returns single dataURL when count===1, otherwise results array with metadata
 
 import Replicate from "replicate";
 import { NextRequest, NextResponse } from "next/server";
-import sharp from "sharp";
-import fs from "fs/promises";
-import path from "path";
 
 export const runtime = "nodejs";
 
@@ -19,13 +14,9 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-/* ---------------------------
-   CONFIG / PROMPTS / LISTS
-   --------------------------- */
-
-// MASTER_PROMPT — locked to GOBLIN identity; allows small cosmetic face changes
+// MASTER_PROMPT — locked to GOBLIN identity, allow eye style & small facial cosmetics
 const MASTER_PROMPT = `
-Transform this character into a randomized NFT variant while preserving the original background, pose, and environment exactly.
+Transform this character into a fully randomized NFT variant while preserving the original background, pose, and environment exactly.
 Do NOT modify the background in any way. Only change the allowed trait layers described below.
 
 IMPORTANT: This character is a GOBLIN. Preserve the goblin identity.
@@ -51,18 +42,8 @@ Stylization should affect ONLY the character and not the background or lighting.
 If any generation attempts to replace the head, change the species, or significantly alter facial proportions, discard and regenerate. Keep the base character identical across generations except for allowed cosmetic changes.
 `.trim();
 
-// Enforce 2D NFT look and ban photoreal/3D
-const STYLE_ENFORCEMENT = `
-Force art style: 2D flat vector / cel-shaded / cartoon NFT style, limited palette, bold outlines, clean flat colors, crisp shading, no photorealism.
-Do NOT produce 3D renders, baked lighting, film grain, DSLR/photo effects, raytraced reflections, realistic textures, or hyperrealistic skin.
-Use simple stylized shadows and highlights (cel shading), consistent line weight, and saturated but limited color palette typical for NFT collectibles.
-`.trim();
-
-const NEGATIVE_PROMPT = `
-photorealistic, real photo, 3D render, photoreal, ultra realistic, DSLR, bokeh, depth of field, octane render, unreal engine, cinema4d, vray, raytracing, film grain, over-detailed skin pores, hyperrealistic, studio lighting, HDR, blurry background, extra background elements, watermark
-`.trim();
-
-// Trait lists (unchanged content - expand if needed)
+// === TRAIT LISTS ===
+// Use the exact items you provided; feel free to expand these arrays.
 const CLOTHING_LIST = [
   "small leather vest worn on torso",
   "tiny torn rags covering body",
@@ -244,90 +225,7 @@ const SKIN_TRAITS = [
   "holographic sheen",
 ];
 
-/* ---------------------------
-   TEMPLATE / HEAD_BOX
-   --------------------------- */
-// Adjust TEMPLATE_PATH and HEAD_BOX pixels to match your template image dimensions and the head area.
-// The template should be same resolution used for generation (example: 1024x1024)
-const TEMPLATE_PATH = path.join(process.cwd(), "public", "templates", "goblin_template.png");
-// Example HEAD_BOX — tune depending on your template
-const HEAD_BOX = { left: 260, top: 140, width: 500, height: 500 };
-
-/* ---------------------------
-   HELPERS: image download, composite, color extraction
-   --------------------------- */
-
-async function downloadBuffer(url: string) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to download ${url}: ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
-}
-
-/**
- * Make data URL by pasting the pfp (resized/cover) into the template HEAD_BOX.
- * Returns data:image/png;base64,...
- */
-async function makeCompositeDataUrl(pfpUrl: string, templatePath: string, headBox: { left: number; top: number; width: number; height: number }) {
-  // read template (throws if not found)
-  const templateBuf = await fs.readFile(templatePath);
-  const pfpBuf = await downloadBuffer(pfpUrl);
-
-  // resize/crop face to head box
-  const faceBuf = await sharp(pfpBuf)
-    .resize(headBox.width, headBox.height, { fit: "cover", position: "centre" })
-    .toFormat("png")
-    .toBuffer();
-
-  // composite onto template
-  const outBuf = await sharp(templateBuf)
-    .composite([{ input: faceBuf, left: headBox.left, top: headBox.top }])
-    .png()
-    .toBuffer();
-
-  return `data:image/png;base64,${outBuf.toString("base64")}`;
-}
-
-/**
- * Extract average color of the face area by cropping the PFP to HEAD_BOX ratio then resizing to 1x1
- * Returns { r, g, b } with integer 0-255
- */
-async function getAverageFaceColorFromPfp(pfpUrl: string, headBox: { width: number; height: number }) {
-  const pfpBuf = await downloadBuffer(pfpUrl);
-
-  // To get a better face color, first center-crop the PFP to same aspect ratio as headBox, then resize to 1x1
-  const aspectW = headBox.width;
-  const aspectH = headBox.height;
-
-  // compute the best cover resize to preserve face region
-  const down = await sharp(pfpBuf)
-    .resize({ width: aspectW, height: aspectH, fit: "cover", position: "centre" })
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
-  // down.data contains raw pixel data for the resized image; we can average or just pick center pixel.
-  // Simpler and cheap: compute average of all pixels quickly
-  const { data, info } = down;
-  const channels = info.channels || 3;
-  let rSum = 0,
-    gSum = 0,
-    bSum = 0,
-    count = 0;
-
-  for (let i = 0; i < data.length; i += channels) {
-    rSum += data[i];
-    gSum += data[i + 1];
-    bSum += data[i + 2];
-    count++;
-  }
-  const r = Math.round(rSum / count);
-  const g = Math.round(gSum / count);
-  const b = Math.round(bSum / count);
-  return { r, g, b };
-}
-
-/**
- * Fetch an image URL and return data URL (used to embed replicate-hosted URL)
- */
+// helper to fetch image -> dataURL
 async function fetchImageAsDataUrl(url: string) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch image ${res.status}`);
@@ -335,10 +233,6 @@ async function fetchImageAsDataUrl(url: string) {
   const ct = res.headers.get("content-type") || "image/jpeg";
   return `data:${ct};base64,${buf.toString("base64")}`;
 }
-
-/* ---------------------------
-   Small utilities
-   --------------------------- */
 
 function shuffle<T>(arr: T[]) {
   const a = arr.slice();
@@ -348,10 +242,6 @@ function shuffle<T>(arr: T[]) {
   }
   return a;
 }
-
-/* ---------------------------
-   API: POST handler
-   --------------------------- */
 
 export async function POST(req: NextRequest) {
   try {
@@ -381,7 +271,7 @@ Do NOT modify the background.
     const basePrompt = promptOverride ? promptOverride : MASTER_PROMPT;
 
     const default_prompt_strength = typeof body?.prompt_strength === "number" ? body.prompt_strength : 0.45;
-    const default_guidance_scale = typeof body?.guidance_scale === "number" ? body.guidance_scale : 18;
+    const default_guidance_scale = typeof body?.guidance_scale === "number" ? body.guidance_scale : 22;
     const default_steps = typeof body?.num_inference_steps === "number" ? body.num_inference_steps : 50;
 
     const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -393,30 +283,6 @@ Do NOT modify the background.
       traits?: Record<string, string | string[]>;
       error?: string;
     }[] = [];
-
-    // 1) Build composite once per request — this ensures fixed body/silhouette for all gens
-    let compositeInputImage = pfpUrl;
-    try {
-      // only attempt composite if template exists
-      await fs.access(TEMPLATE_PATH);
-      compositeInputImage = await makeCompositeDataUrl(pfpUrl, TEMPLATE_PATH, HEAD_BOX);
-    } catch (e) {
-      // fallback: composite failed (no template or fetch error) — log and continue using original pfpUrl
-      console.warn(
-  "Composite failed (template missing or error), falling back to pfpUrl:",
-  String((e as any)?.message ?? e)
-);
-      compositeInputImage = pfpUrl;
-    }
-
-    // 2) Extract face average color (crop-like using HEAD_BOX aspect) to force skin base color
-    let skinRgb: { r: number; g: number; b: number } | null = null;
-    try {
-      skinRgb = await getAverageFaceColorFromPfp(pfpUrl, { width: HEAD_BOX.width, height: HEAD_BOX.height });
-    } catch (e) {
-      console.warn("Failed to get avg face color:", String((e as any)?.message ?? e));
-      skinRgb = null;
-    }
 
     for (let i = 0; i < count; i++) {
       const seed = typeof body?.seed === "number" ? body.seed + i : Math.floor(Math.random() * 1e9);
@@ -430,11 +296,6 @@ Do NOT modify the background.
       const accessoryChoice = accessoryPool[i % accessoryPool.length];
       const skinChoice = skinPool[i % skinPool.length];
 
-      // Compose skin color forcing line if we have a color
-      const skinColorLine = skinRgb
-        ? `Force skin base color: rgb(${skinRgb.r}, ${skinRgb.g}, ${skinRgb.b}). Match overall skin tone to the input PFP color but keep goblin stylization (greenish hues can be applied by the model if needed).`
-        : "";
-
       // Compose forced-traits sentences
       const forcedLines = [
         `Force clothing: ${clothingChoice}.`,
@@ -443,19 +304,15 @@ Do NOT modify the background.
         `Force eye item: ${eyeItemChoice}.`,
         `Force mouth item: ${mouthChoice}.`,
         `Force accessory: ${accessoryChoice}.`,
-        skinColorLine,
         `Force skin trait: ${skinChoice}.`,
-        `Do NOT preserve any previous clothing, accessories, hats or props.`,
-      ].filter(Boolean).join("\n");
+        `Do NOT preserve any previous clothing, accessories, hats or props.`
+      ].join("\n");
 
-      // Combine prompts: base + style enforcement + forced lines + rules
-      const finalPrompt = [basePrompt, styleHint, forcedLines, STYLE_ENFORCEMENT, redrawInstructions].join("\n");
-      const negativePrompt = NEGATIVE_PROMPT;
+      const finalPrompt = [basePrompt, styleHint, forcedLines, redrawInstructions].join("\n");
 
       const input = {
         prompt: finalPrompt,
-        negative_prompt: negativePrompt,
-        input_image: compositeInputImage, // composite ensures same body for all gens
+        input_image: pfpUrl,
         output_format: "jpg",
         safety_tolerance: 2,
         prompt_upsampling: false,
