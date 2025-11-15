@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
           width: 1024,
           height: 1024,
           guidance_scale: 12,
-          scheduler: "DPMSolverMultistep",
+          scheduler: "K_EULER_ANCESTRAL",
           seed: getSeed(userId),
         },
       }
