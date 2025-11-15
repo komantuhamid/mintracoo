@@ -13,7 +13,7 @@ function buildPrompt() {
   // 🔥 SUPER STRONG Mad Lads style prompt
   const prompt = `
 2D cartoon NFT character portrait, 
-Mad Lads style, thick bold black outlines, 
+thick bold black outlines, 
 flat cel shading, vibrant solid colors, 
 vintage comic book art, illustrated cartoon style, 
 textured retro background, no realistic details, 
@@ -53,11 +53,11 @@ export async function POST(req: NextRequest) {
           image: pfpUrl, // PFP
           prompt: prompt, // 1/1 style keywords
           negative_prompt: negative,
-          prompt_strength: 0.60, // 🔥 higher = more style, less realism
+          prompt_strength: 0.75, // 🔥 higher = more style, less realism
           num_inference_steps: 50,
           width: 1024,
           height: 1024,
-          guidance_scale: 8.0, // 🔥 stronger adherence to prompt
+          guidance_scale: 6.0, // 🔥 stronger adherence to prompt
           scheduler: "K_EULER_ANCESTRAL",
         }
       }
