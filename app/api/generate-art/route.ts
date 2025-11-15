@@ -1,25 +1,24 @@
-export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import Replicate from "replicate";
 import sharp from "sharp";
+import getColors from "get-image-colors"; // or use 'colorthief'/'fast-average-color-node'
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN || "",
 });
 
-const GOBLIN_SEED = 42069;
-
-async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promise<Buffer> {
-  return await sharp(inputBuffer)
-    .resize(1024, 1024, { fit: "contain", background: bgColor })
-    .png()
-    .toBuffer();
+async function extractPalette(imageUrl: string): Promise<string[]> {
+  // Fetch and buffer the image, extract dominant colors (as hex)
+  const res = await fetch(imageUrl);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const colors = await getColors(buffer, "image/jpeg");
+  return colors.map(c => c.hex());
 }
 
 function randomizeTrait() {
   const traits = [
-    "spiky hair", "glowing eyes", "tiny wings", "horns", "striped belly", "freckles", "antenna", "star badge", 
-    "bubble helmet", "gear-like ears", "patch on vest", "bandana", "fangs", "cheek blush", "tail", "head flower"
+    "spiky hair", "glowing eyes", "tiny wings", "striped belly", "freckles", "antenna", "star badge", 
+    "bubble helmet", "fangs", "cheek blush", "tail", "patch", "horns", "bandana"
   ];
   return traits[Math.floor(Math.random() * traits.length)];
 }
@@ -32,23 +31,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
     }
 
-    // Extract a random trait each time
+    // Extract palette
+    const paletteArr = await extractPalette(userPfpUrl);
+    const palette = paletteArr.join(", ");
     const extraTrait = randomizeTrait();
 
-    // Always use the PFP image for palette and background—never for pose/structure
     const sdxlPrompt = `
-A small, chubby, cute cartoon monster mascot, collectible NFT character inspired by Warplets.
-Character design:
-- Round body, short stubby arms/legs, oversized head, big innocent eyes, smiling mouth, and consistent size.
-- Background color palette and skin/clothes colors are EXTRACTED from the provided image (${userPfpUrl}).
-- ${extraTrait} as a unique collectible trait (changes every generation).
-- Symmetrical, standing past the center, in a clean PFP format.
-- Family-friendly, bold black outlines, simple plain background matching dominant color(s) from PFP image.
-- Professional NFT art, perfect for stickers or profile avatars.
+A small, chubby, cute monster NFT character with a simple round body, stubby legs/arms, oversized round head, big eyes, friendly smile.
+Color palette: ${palette}.
+Background and accent also use ${paletteArr[0]}.
+Wears: ${extraTrait}.
+Centered, front view, sticker profile, family-friendly, clean vector outlines, solid color background, not abstract, not human, not realistic.
     `.trim();
 
     const sdxlNegative = `
-human, realistic, nsfw, photo, text, watermark, dark, multiple characters, logo, photo artifacts, bad anatomy, cartoon errors, messy, abstract, severe distortion, violence
+realistic, photo, text, watermark, glitch, abstract, nsfw, distortion, bad hands, deformed, humans, multi-character, logo
     `.trim();
 
     const output: any = await replicate.run(
@@ -56,9 +53,7 @@ human, realistic, nsfw, photo, text, watermark, dark, multiple characters, logo,
       {
         input: {
           prompt: sdxlPrompt,
-          image: userPfpUrl,
           negative_prompt: sdxlNegative,
-          prompt_strength: 0.45, // lower for less direct img2img copying
           num_inference_steps: 45,
           width: 1024,
           height: 1024,
@@ -74,19 +69,16 @@ human, realistic, nsfw, photo, text, watermark, dark, multiple characters, logo,
       return NextResponse.json({ error: "No image generated" }, { status: 500 });
     }
     const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      return NextResponse.json({ error: `Failed: ${imageResponse.status}` }, { status: 502 });
-    }
     const imgBuf = Buffer.from(await imageResponse.arrayBuffer());
-    const croppedBuffer = await autocropToSquare(imgBuf, "#1a1a1a");
+    const croppedBuffer = await sharp(imgBuf).resize(1024, 1024).png().toBuffer();
     const dataUrl = `data:image/png;base64,${croppedBuffer.toString("base64")}`;
 
     return NextResponse.json({
       generated_image_url: dataUrl,
       imageUrl: dataUrl,
-      success: true,
-      pfp_palette_source: userPfpUrl,
-      applied_trait: extraTrait
+      palette,
+      trait: extraTrait,
+      success: true
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "server_error" }, { status: 500 });
