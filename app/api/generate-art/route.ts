@@ -264,7 +264,7 @@ async function downloadBuffer(url: string) {
 }
 
 /**
- * Make composite data URL by pasting the pfp (resized/cover) into the template HEAD_BOX.
+ * Make data URL by pasting the pfp (resized/cover) into the template HEAD_BOX.
  * Returns data:image/png;base64,...
  */
 async function makeCompositeDataUrl(pfpUrl: string, templatePath: string, headBox: { left: number; top: number; width: number; height: number }) {
@@ -402,7 +402,10 @@ Do NOT modify the background.
       compositeInputImage = await makeCompositeDataUrl(pfpUrl, TEMPLATE_PATH, HEAD_BOX);
     } catch (e) {
       // fallback: composite failed (no template or fetch error) — log and continue using original pfpUrl
-      console.warn("Composite failed (template missing or error), falling back to pfpUrl:", String(e?.message || e));
+      console.warn(
+  "Composite failed (template missing or error), falling back to pfpUrl:",
+  String((e as any)?.message ?? e)
+);
       compositeInputImage = pfpUrl;
     }
 
@@ -411,7 +414,7 @@ Do NOT modify the background.
     try {
       skinRgb = await getAverageFaceColorFromPfp(pfpUrl, { width: HEAD_BOX.width, height: HEAD_BOX.height });
     } catch (e) {
-      console.warn("Failed to get avg face color:", String(e?.message || e));
+      console.warn("Failed to get avg face color:", String((e as any)?.message ?? e));
       skinRgb = null;
     }
 
