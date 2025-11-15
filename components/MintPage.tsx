@@ -13,6 +13,9 @@ const MINT_ABI = parseAbi([
   'function mint(string memory tokenURI_) payable',
 ]);
 
+// 🔥 YOUR HOSTED STYLE REFERENCE NFT (REPLACE THIS URL!)
+const STYLE_REFERENCE_URL = 'https://up6.cc/2025/10/176316542260411.png';
+
 export default function MintPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
@@ -23,7 +26,7 @@ export default function MintPage() {
   });
 
   const [profile, setProfile] = useState<any>(null);
-  const [generatedImage, setGeneratedImage] = useState<any>(null);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isAppReady, setIsAppReady] = useState(false);
@@ -67,7 +70,7 @@ export default function MintPage() {
         const fid = context?.user?.fid;
         const username = context?.user?.username;
         const pfpUrl = context?.user?.pfpUrl;
-        
+
         if (fid) {
           setProfile({
             display_name: username || '',
@@ -92,20 +95,23 @@ export default function MintPage() {
     }
   }, [isPending, isConfirming, isConfirmed]);
 
+  // 🔥 UPDATED: Sends BOTH user PFP and style reference together
   const generateRaccoon = async () => {
     setLoading(true);
-    setMessage('🎨 Generating personalized Goblin...');
+    setMessage('🎨 Transforming you into a premium NFT...');
+    
     try {
       const res = await fetch('/api/generate-art', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          style: 'pixel raccoon',
-          pfpUrl: profile?.pfp_url  // ✅ ADD THIS - send the actual PFP image
+        body: JSON.stringify({
+          userPfpUrl: profile?.pfp_url,        // ✅ User's Farcaster PFP
         }),
       });
+
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Failed');
+      
       setGeneratedImage(j.generated_image_url || j.imageUrl);
       setMessage('✅ Ready to mint!');
     } catch (e: any) {
@@ -118,8 +124,9 @@ export default function MintPage() {
   const performMint = async () => {
     if (!address) return setMessage('❌ Connect wallet');
     if (!generatedImage) return setMessage('❌ Generate image first');
+    
     setMessage('📝 Uploading to IPFS...');
-
+    
     try {
       const uploadRes = await fetch('/api/create-signed-mint', {
         method: 'POST',
@@ -134,17 +141,20 @@ export default function MintPage() {
 
       const uploadData = await uploadRes.json();
       if (uploadData.error) throw new Error(uploadData.error);
+
       const { metadataUri } = uploadData;
       console.log('✅ Metadata URI:', metadataUri);
+      
       setMessage('🔐 Confirm in wallet...');
-
+      
       const data = encodeFunctionData({
         abi: MINT_ABI,
         functionName: 'mint',
         args: [metadataUri],
       });
-      console.log('✅ Encoded data:', data);
 
+      console.log('✅ Encoded data:', data);
+      
       sendTransaction({
         to: CONTRACT_ADDRESS,
         data,
@@ -158,82 +168,70 @@ export default function MintPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px', fontFamily: 'system-ui' }}>
-      <div style={{ maxWidth: '420px', margin: '0 auto', background: '#1e293b', borderRadius: '16px', padding: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-        <h1 style={{ textAlign: 'center', color: '#fff', marginBottom: '24px', fontSize: '28px' }}>
-          🦝 Goblin Mint
-        </h1>
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 text-white p-6">
+      <h1 className="text-4xl font-bold text-center mb-8">🦝 Goblin Mint</h1>
 
-        {/* User Profile Section */}
-        {profile && (
-          <div style={{ 
-            background: '#334155', 
-            borderRadius: '12px', 
-            padding: '16px', 
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            {profile.pfp_url && (
-              <img 
-                src={profile.pfp_url} 
-                alt="Profile" 
-                style={{ 
-                  width: '50px', 
-                  height: '50px', 
-                  borderRadius: '50%',
-                  border: '2px solid #10b981'
-                }} 
-              />
-            )}
-            <div style={{ flex: 1 }}>
-              <div style={{ color: '#fff', fontWeight: '600', fontSize: '16px' }}>
-                @{profile.username || 'User'}
-              </div>
-              <div style={{ color: '#94a3b8', fontSize: '13px', marginTop: '2px' }}>
-                FID: {profile.fid}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div style={{ background: '#334155', borderRadius: '12px', padding: '16px', marginBottom: '20px', minHeight: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {generatedImage ? (
-            <img src={generatedImage} alt="Generated" style={{ maxWidth: '100%', borderRadius: '8px' }} />
-          ) : (
-            <p style={{ color: '#94a3b8', textAlign: 'center' }}>No image generated</p>
+      {/* User Profile Section */}
+      {profile && (
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/20">
+          {profile.pfp_url && (
+            <img
+              src={profile.pfp_url}
+              alt="Profile"
+              className="w-20 h-20 rounded-full mx-auto mb-4 border-4 border-purple-500"
+            />
           )}
+          <p className="text-center font-semibold">@{profile.username || 'User'}</p>
+          <p className="text-center text-sm opacity-70">FID: {profile.fid}</p>
         </div>
+      )}
 
-        <button
-          onClick={generateRaccoon}
-          disabled={loading}
-          style={{ width: '100%', padding: '14px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' }}
-        >
-          {loading ? '⏳ Generating...' : '🎨 Generate Goblin'}
-        </button>
-
-        <button
-          onClick={performMint}
-          disabled={!generatedImage || isPending || isConfirming}
-          style={{ width: '100%', padding: '14px', background: !generatedImage ? '#475569' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: generatedImage ? 'pointer' : 'not-allowed', opacity: !generatedImage ? 0.5 : 1 }}
-        >
-          {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
-        </button>
-
-        {message && (
-          <div style={{ marginTop: '16px', padding: '12px', background: '#1e293b', borderRadius: '8px', color: '#cbd5e1', textAlign: 'center', fontSize: '14px', border: '1px solid #334155' }}>
-            {message}
-          </div>
-        )}
-
-        {txHash && (
-          <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>
-            TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+      {/* Generated Image Section */}
+      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/20">
+        {generatedImage ? (
+          <img
+            src={generatedImage}
+            alt="Generated"
+            className="w-full max-w-md mx-auto rounded-xl border-4 border-purple-500"
+          />
+        ) : (
+          <div className="w-full h-64 bg-gray-800/50 rounded-xl flex items-center justify-center">
+            <p className="text-gray-400">No image generated</p>
           </div>
         )}
       </div>
+
+      {/* Generate Button */}
+      <button
+        onClick={generateRaccoon}
+        disabled={loading || !profile?.pfp_url}
+        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-xl mb-4 transition-all shadow-lg"
+      >
+        {loading ? '⏳ Generating...' : '🎨 Generate NFT'}
+      </button>
+
+      {/* Mint Button */}
+      <button
+        onClick={performMint}
+        disabled={!generatedImage || isPending || isConfirming || !isConnected}
+        className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-xl mb-4 transition-all shadow-lg"
+      >
+        {isPending || isConfirming ? '⏳ Minting...' : '💰 Mint (0.0001 ETH)'}
+      </button>
+
+      {/* Status Message */}
+      {message && (
+        <div className="bg-blue-500/20 border border-blue-500 rounded-xl p-4 text-center">
+          {message}
+        </div>
+      )}
+
+      {/* Transaction Hash */}
+      {txHash && (
+        <div className="mt-4 text-center text-sm opacity-70">
+          TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+        </div>
+      )}
     </div>
   );
 }
