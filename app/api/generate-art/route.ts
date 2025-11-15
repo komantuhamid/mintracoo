@@ -21,6 +21,59 @@ async function autocropToSquare(inputBuffer: Buffer, bgColor = "#1a1a1a"): Promi
     .toBuffer();
 }
 
+/**
+ * ✅ VERIFY IF USER'S PFP LOOKS LIKE A WARPLET CHARACTER
+ * Uses AI vision - no need for 10k reference images!
+ */
+async function verifyIsWarpletStyle(userPfpUrl: string): Promise<{isValid: boolean; message: string}> {
+  try {
+    console.log("🔍 Checking if PFP matches Warplets art style...");
+
+    const output: any = await replicate.run(
+      "yorickvp/llava-13b:80537f9eead1a5bfa72d5ac6ea6414379be41d4d4f6679fd776e9535d1eb58bb",
+      {
+        input: {
+          image: userPfpUrl,
+          prompt: `Look at this image. Answer ONLY "YES" or "NO".
+
+Is this a WARPLETS NFT character with these EXACT traits:
+1. Cute monster/creature (NOT human, NOT realistic animal)
+2. Chubby/round body with short arms and legs
+3. Big expressive eyes (often glowing or colorful)
+4. Sharp teeth or fangs clearly visible in mouth
+5. Cartoonish/illustrated NFT art style (NOT photograph, NOT 3D render)
+6. Colorful textured skin (scales, fur, or patterns)
+7. Standing/sitting pose against simple background
+
+Answer:`,
+          max_tokens: 5,
+          temperature: 0.1,
+        }
+      }
+    );
+
+    const response = (Array.isArray(output) ? output.join('') : output).trim().toUpperCase();
+    
+    console.log("AI Response:", response);
+    
+    if (response.includes("YES")) {
+      console.log("✅ Valid Warplet detected!");
+      return { isValid: true, message: "Valid Warplet character detected" };
+    }
+
+    console.log("❌ Not a Warplet character");
+    return { 
+      isValid: false, 
+      message: "❌ Your profile picture must be a Warplet NFT character. Please change your PFP to a Warplet to generate art!" 
+    };
+
+  } catch (error) {
+    console.error("Vision verification error:", error);
+    // Fail open (allow generation) if verification fails
+    return { isValid: true, message: "Verification skipped due to error" };
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -30,8 +83,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "pfpUrl required" }, { status: 400 });
     }
 
-    console.log("🦝 Generating Family-Friendly Goblin NFT...");
-    console.log("User PFP:", userPfpUrl);
+    // 🔥 VERIFY USER'S PFP MATCHES WARPLETS STYLE
+    const verification = await verifyIsWarpletStyle(userPfpUrl);
+    
+    if (!verification.isValid) {
+      return NextResponse.json({
+        error: "invalid_pfp",
+        message: verification.message,
+        opensea_url: "https://opensea.io/collection/the-warplets"
+      }, { status: 403 });
+    }
+
+    console.log("🦝 Generating Warplet-Style Goblin NFT...");
 
     const output: any = await replicate.run(
       "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
@@ -49,7 +112,7 @@ EXACT CONSISTENT PROPORTIONS:
 - Legs: 30% of height, short stumpy with rounded feet
 - Ears: 15% of head height, pointed triangles at 45° angle
 
-MANDATORY FEATURES FOR SAFETY:
+MANDATORY FEATURES:
 ✓ Fully clothed character (vest, shirt, pants visible)
 ✓ Cartoon style, G-rated family content
 ✓ Bright cheerful colors from input image
@@ -72,7 +135,6 @@ disturbing, multiple characters, asymmetrical, rotation, side view, blurry, low 
           guidance_scale: 9.5,
           scheduler: "DPMSolverMultistep",
           seed: GOBLIN_SEED,
-          disable_safety_checker: false, // 🔥 Keep enabled, use safe prompt instead
         }
       }
     );
@@ -99,25 +161,21 @@ disturbing, multiple characters, asymmetrical, rotation, side view, blurry, low 
       imageUrl: dataUrl,
       success: true,
     });
+
   } catch (e: any) {
     console.error("Route error:", e);
     
-    // 🔥 NSFW ERROR HANDLER - Retry with even safer prompt
+    // NSFW retry logic
     if (e?.message?.includes("NSFW")) {
-      console.log("⚠️ NSFW detected, retrying with ultra-safe mode...");
+      console.log("⚠️ NSFW detected, retrying...");
       
       try {
         const retryOutput: any = await replicate.run(
           "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
           {
             input: {
-              prompt: `Cute chibi kawaii goblin mascot toy, G-rated family-friendly collectible. 
-Round body, big head, tiny arms, tiny legs, big innocent eyes, friendly smile. 
-Fully clothed in vest and pants. Bold outlines, bright colors, cartoon style. 
-Professional toy collectible photography, centered, white background.`,
-              
+              prompt: `Cute chibi kawaii goblin mascot toy, G-rated family-friendly. Round body, big head, tiny arms, tiny legs, big eyes, friendly smile. Fully clothed. Bold outlines, bright colors, cartoon style.`,
               negative_prompt: `nsfw, adult, inappropriate, human, realistic, scary`,
-              
               num_inference_steps: 40,
               width: 1024,
               height: 1024,
@@ -140,7 +198,7 @@ Professional toy collectible photography, centered, white background.`,
           retried: true,
         });
       } catch (retryError: any) {
-        return NextResponse.json({ error: "NSFW filter too sensitive, try again" }, { status: 500 });
+        return NextResponse.json({ error: "NSFW filter issue" }, { status: 500 });
       }
     }
 
