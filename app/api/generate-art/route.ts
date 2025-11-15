@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       {
         input: {
           prompt:
-            "ransform this character into an NFT variant with completely new random traits. Keep only the character's body shape and identity. Replace the clothing with new random NFT clothes such as jacket, hoodie, armor, robe, or themed outfits. Add random accessories like gold chains, earrings, piercings, rings, or cigars. Change the headgear into something new like a crown, cap, beanie, cowboy hat, or bandana. Modify the eyes into NFT-style traits such as laser eyes, glowing eyes, sleepy eyes, angry eyes, or cyber eyes. Change the background into a colorful NFT background such as gradients, patterns, cosmic scenes, or neon effects. Alter skin traits by changing colors, markings, spots, textures, or glow. Strong stylization, full makeover, highly creative NFT trait generation",
+            "Generate this character as part of a large NFT collection with 70–200 possible traits. Keep only the character’s identity while converting the rest into trait-compatible layers: outfit layer, accessory layer, headgear layer, eyes layer, background layer, and skin layer. Each layer must be clean, sharp, and fully stylized. Produce highly interchangeable traits such as multiple outfit categories (casual, armor, luxury, sci-fi, fantasy), many accessories (earrings, piercings, chains, relics, tech implants), diverse headgear (caps, crowns, helmets, wizard hats, beanies), expressive eyes (laser, glowing, sleepy, angry, cyber, elemental), and a wide background pack (gradients, patterns, cosmic, city, natural, glitch). Strong stylization for generative NFT layering.",
           input_image: pfpUrl,
           output_format: "jpg",
            safety_tolerance: 2,
