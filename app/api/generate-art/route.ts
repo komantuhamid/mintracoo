@@ -43,10 +43,8 @@ You MUST NOT modify the background or change the body pose/silhouette.
 - Strong stylization allowed, but keep final output in clear 2D NFT collectible style.
 `.trim();
 
-// NFT style enforcement block (inserted to force collection-style look)
 const STYLE_ENFORCEMENT = `
 Force art style: 2D flat vector / cel-shaded / cartoon NFT style, limited palette, bold outlines, clean flat colors, crisp shading, no photorealism.
-Place character centered inside a rounded-square crop/frame with uniform solid background color matching the input background.
 Do NOT produce 3D renders, baked lighting, film grain, DSLR/photo effects, raytraced reflections, realistic skin pores, or hyperrealistic textures.
 `.trim();
 
@@ -406,7 +404,7 @@ Do NOT modify the background.
 
     // Parameter bounds & sanitization
     const default_prompt_strength = Math.max(0, Math.min(1, Number(body?.prompt_strength ?? 0.5)));
-    const default_guidance_scale = Math.max(1, Math.min(35, Number(body?.guidance_scale ?? 24)));
+    const default_guidance_scale = Math.max(1, Math.min(35, Number(body?.guidance_scale ?? 22)));
     const default_steps = Math.max(10, Math.min(100, Number(body?.num_inference_steps ?? 50)));
     const seedBase = typeof body?.seed === "number" ? Math.floor(Number(body.seed)) : undefined;
 
@@ -420,8 +418,8 @@ Do NOT modify the background.
     }[] = [];
 
     // Validate requested size and forbid huge canvases
-    const width = Math.min(1024, Math.max(128, Number(body?.width || 1024)));
-    const height = Math.min(1024, Math.max(128, Number(body?.height || 1024)));
+    const width = Math.min(1024, Math.max(128, Number(body?.width || 400)));
+    const height = Math.min(1024, Math.max(128, Number(body?.height || 450)));
 
     for (let i = 0; i < count; i++) {
       const seed = seedBase !== undefined ? seedBase + i : Math.floor(Math.random() * 1e9);
@@ -451,12 +449,12 @@ Do NOT modify the background.
         BODY_LOCK_LINE,
       ].join("\n");
 
-      // final prompt: NFT style enforcement first so style is applied globally
+      // final prompt: base + style + forcedLines + preserve bg + redraw instructions
       const finalPrompt = [
-        STYLE_ENFORCEMENT,
         basePrompt,
         styleHint,
         forcedLines,
+        STYLE_ENFORCEMENT,
         PRESERVE_BG_LINE,
         redrawInstructions,
       ].join("\n");
